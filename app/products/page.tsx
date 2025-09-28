@@ -1,21 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ProductGrid from '@/components/ProductGrid';
 import { useDigitalCart } from '@/hooks/useDigitalCart';
 import type { ShopifyProduct } from '@/types/shopify';
 
 export default function ProductsPage() {
   const { addProductToCart } = useDigitalCart();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'TITLE' | 'PRICE' | 'BEST_SELLING' | 'CREATED_AT' | 'UPDATED_AT'>('UPDATED_AT');
   const [sortReverse, setSortReverse] = useState(false);
 
   // Handle product click (navigate to product page)
   const handleProductClick = (product: ShopifyProduct) => {
-    console.log('Product clicked:', product.title);
-    // TODO: Navigate to product detail page
-    // router.push(`/products/${product.handle}`);
+    router.push(`/products/${product.handle}`);
   };
 
   // Handle add to cart

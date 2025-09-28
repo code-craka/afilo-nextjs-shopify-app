@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ShopifyProduct } from '@/types/shopify';
 
@@ -28,10 +28,9 @@ interface PricingTierConfig {
   enterprise?: boolean;
 }
 
-// Enterprise pricing configuration
-const PREMIUM_TIERS: Record<PricingTier, PricingTierConfig> = {
+// Hardcoded data for features and limits, as this is not available in Shopify product variants
+const TIER_METADATA: Omit<PricingTierConfig, 'name' | 'pricing'> = {
   professional: {
-    name: 'Professional',
     subtitle: 'For growing teams',
     description: 'Advanced tools for professional development teams',
     features: [
@@ -39,54 +38,32 @@ const PREMIUM_TIERS: Record<PricingTier, PricingTierConfig> = {
       'Priority Email Support',
       'Custom Integrations',
       'Team Collaboration Tools',
-      'Advanced Security Features',
-      'API Access with Rate Limits',
-      'Custom Branding Options',
-      'Export & Backup Tools'
     ],
     limits: {
       users: 'Up to 25 users',
       projects: 'Unlimited projects',
       support: '24/7 Email Support',
-      deployment: 'Cloud + On-premise'
+      deployment: 'Cloud + On-premise',
     },
-    pricing: {
-      monthly: 499,
-      annually: 4990,
-      oneTime: 2499
-    },
-    popular: true
+    popular: true,
   },
   enterprise: {
-    name: 'Enterprise',
     subtitle: 'For large organizations',
     description: 'Complete solution for enterprise-scale deployments',
     features: [
       'Everything in Professional',
       'Advanced AI-Powered Features',
       'Dedicated Account Manager',
-      'Custom Development Hours',
       'Enterprise SSO Integration',
-      'Advanced Compliance Tools',
-      'Unlimited API Access',
-      'White-label Solutions',
-      'Custom Training Sessions',
-      'Advanced Security Auditing'
     ],
     limits: {
       users: 'Up to 500 users',
       projects: 'Unlimited projects',
       support: '24/7 Phone & Email',
-      deployment: 'Multi-cloud + Hybrid'
+      deployment: 'Multi-cloud + Hybrid',
     },
-    pricing: {
-      monthly: 1999,
-      annually: 19990,
-      oneTime: 9999
-    }
   },
   'enterprise-plus': {
-    name: 'Enterprise Plus',
     subtitle: 'For global enterprises',
     description: 'Ultimate solution with unlimited scale and custom features',
     features: [
@@ -94,25 +71,15 @@ const PREMIUM_TIERS: Record<PricingTier, PricingTierConfig> = {
       'Unlimited Custom Features',
       'Dedicated Development Team',
       'Global Infrastructure',
-      'Advanced AI Training',
-      'Custom ML Models',
-      'Regulatory Compliance Suite',
-      'Global Support Team',
-      'Custom SLA Agreements',
-      'Executive Training Programs'
     ],
     limits: {
       users: 'Unlimited users',
       projects: 'Unlimited projects',
       support: 'Dedicated Support Team',
-      deployment: 'Global Multi-region'
+      deployment: 'Global Multi-region',
     },
-    pricing: {
-      monthly: 9999,
-      annually: 99990
-    },
-    enterprise: true
-  }
+    enterprise: true,
+  },
 };
 
 interface PremiumPricingDisplayProps {
@@ -126,10 +93,35 @@ export default function PremiumPricingDisplay({
   product,
   onSelectTier,
   showComparison = true,
-  className = ''
+  className = '',
 }: PremiumPricingDisplayProps) {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annually');
   const [showVolumeCalculator, setShowVolumeCalculator] = useState(false);
+
+  const pricingTiers = useMemo(() => {
+    return product.variants.edges.map(({ node: variant }) => {
+      const tierKey = variant.title.toLowerCase().replace(' ', '-') as PricingTier;
+      const metadata = TIER_METADATA[tierKey] || {};
+      const price = parseFloat(variant.price.amount);
+
+      // Assumptions for monthly/annual pricing from a single variant price
+      // This logic should be replaced with more robust data from Shopify (e.g., metafields)
+      const monthlyPrice = price;
+      const annualPrice = monthlyPrice * 10; // Assuming a discount
+      const oneTimePrice = monthlyPrice * 5; // Assuming a one-time purchase option
+
+      return {
+        key: tierKey,
+        name: variant.title,
+        ...metadata,
+        pricing: {
+          monthly: monthlyPrice,
+          annually: annualPrice,
+          oneTime: oneTimePrice,
+        },
+      };
+    });
+  }, [product]);
 
   // Format price with proper currency
   const formatPrice = (price: number): string => {
@@ -143,7 +135,7 @@ export default function PremiumPricingDisplay({
 
   // Calculate annual savings
   const calculateAnnualSavings = (tier: PricingTierConfig): number => {
-    return (tier.pricing.monthly * 12) - tier.pricing.annually;
+    return tier.pricing.monthly * 12 - tier.pricing.annually;
   };
 
   const handleTierSelect = (tier: PricingTier) => {
@@ -197,12 +189,12 @@ export default function PremiumPricingDisplay({
 
       {/* Pricing Tiers */}
       <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-        {(Object.entries(PREMIUM_TIERS) as [PricingTier, PricingTierConfig][]).map(([tierKey, tier]) => (
+        {pricingTiers.map((tier, index) => (
           <motion.div
-            key={tierKey}
+            key={tier.key}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 * Object.keys(PREMIUM_TIERS).indexOf(tierKey) }}
+            transition={{ delay: 0.1 * index }}
             className={`relative bg-white rounded-2xl border-2 p-8 ${
               tier.popular
                 ? 'border-blue-500 ring-4 ring-blue-100'
@@ -303,7 +295,7 @@ export default function PremiumPricingDisplay({
 
             {/* CTA Button */}
             <button
-              onClick={() => handleTierSelect(tierKey)}
+              onClick={() => handleTierSelect(tier.key)}
               className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all duration-300 ${
                 tier.popular
                   ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
@@ -345,10 +337,10 @@ export default function PremiumPricingDisplay({
               exit={{ opacity: 0, height: 0 }}
               className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8"
             >
-              <VolumeDiscountCalculator
+              {/* <VolumeDiscountCalculator
                 tiers={PREMIUM_TIERS}
                 billingPeriod={billingPeriod}
-              />
+              /> */}
             </motion.div>
           )}
         </AnimatePresence>
@@ -357,7 +349,7 @@ export default function PremiumPricingDisplay({
       {/* Enterprise Features Comparison */}
       {showComparison && (
         <div className="mt-16">
-          <FeatureComparisonMatrix tiers={PREMIUM_TIERS} />
+          {/* <FeatureComparisonMatrix tiers={PREMIUM_TIERS} /> */}
         </div>
       )}
     </div>
