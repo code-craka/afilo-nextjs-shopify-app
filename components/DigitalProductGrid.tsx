@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { getProducts, getProductsSimple } from '@/lib/shopify';
+import { getProductsSimple } from '@/lib/shopify';
 import { useDigitalCart } from '@/hooks/useDigitalCart';
-import type { ShopifyProduct, ProductsQueryParams } from '@/types/shopify';
+import type { ShopifyProduct } from '@/types/shopify';
 import type { LicenseType } from '@/store/digitalCart';
 
 // Types
@@ -30,7 +30,6 @@ interface DigitalProductCardProps {
 const getTechStackFromProduct = (product: ShopifyProduct): string[] => {
   const title = product.title.toLowerCase();
   const description = product.description.toLowerCase();
-  const productType = product.productType?.toLowerCase() || '';
   const tags = product.tags || [];
 
   const techStack: string[] = [];
@@ -98,7 +97,6 @@ const getLicenseType = (product: ShopifyProduct): LicenseType => {
 
 const getDigitalProductType = (product: ShopifyProduct): { type: string; color: string; icon: string } => {
   const title = product.title.toLowerCase();
-  const description = product.description.toLowerCase();
   const productType = product.productType?.toLowerCase() || '';
 
   if (title.includes('template') || productType.includes('template')) {
@@ -530,7 +528,7 @@ export default function DigitalProductGrid({
   // Load products on mount and when query changes
   useEffect(() => {
     loadProducts();
-  }, [searchQuery, sortBy, sortReverse]);
+  }, [searchQuery, sortBy, sortReverse, loadProducts]);
 
   // Loading state
   if (loading && products.length === 0) {

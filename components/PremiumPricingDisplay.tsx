@@ -132,15 +132,6 @@ export default function PremiumPricingDisplay({
   const [selectedTier, setSelectedTier] = useState<PricingTier>('professional');
   const [showVolumeCalculator, setShowVolumeCalculator] = useState(false);
 
-  // Calculate volume discounts
-  const calculateVolumeDiscount = (basePrice: number, users: number): number => {
-    if (users >= 500) return 0.25; // 25% discount for 500+ users
-    if (users >= 100) return 0.20; // 20% discount for 100+ users
-    if (users >= 50) return 0.15;  // 15% discount for 50+ users
-    if (users >= 25) return 0.10;  // 10% discount for 25+ users
-    return 0;
-  };
-
   // Format price with proper currency
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat('en-US', {

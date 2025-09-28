@@ -52,6 +52,22 @@ interface QuoteBuilderState {
   };
 }
 
+export interface EnterpriseQuote {
+  businessRequirements: Partial<BusinessRequirement>;
+  selectedRequirements: QuoteRequirement[];
+  customRequests: string;
+  contactInfo: {
+    name: string;
+    email: string;
+    company: string;
+    title: string;
+    phone: string;
+  };
+  roiProjection: ROIProjection;
+  totalCost: number;
+  timeline: string;
+}
+
 const ENTERPRISE_REQUIREMENTS: QuoteRequirement[] = [
   // Infrastructure
   {
@@ -205,7 +221,7 @@ const ENTERPRISE_REQUIREMENTS: QuoteRequirement[] = [
 ];
 
 interface EnterpriseQuoteBuilderProps {
-  onSubmitQuote?: (quote: any) => void;
+  onSubmitQuote?: (quote: EnterpriseQuote) => void;
   className?: string;
 }
 
@@ -387,7 +403,6 @@ export default function EnterpriseQuoteBuilder({
             <ROICalculator
               pricing={pricing}
               selectedRequirements={state.selectedRequirements}
-              businessRequirements={state.businessRequirements}
               formatCurrency={formatCurrency}
               onBack={() => setState(prev => ({ ...prev, step: 'customization' }))}
               onNext={() => setState(prev => ({ ...prev, step: 'review' }))}
@@ -410,7 +425,7 @@ export default function EnterpriseQuoteBuilder({
               formatCurrency={formatCurrency}
               onContactInfoChange={(contactInfo) => setState(prev => ({ ...prev, contactInfo }))}
               onBack={() => setState(prev => ({ ...prev, step: 'pricing' }))}
-              onSubmit={() => onSubmitQuote?.({ ...state, pricing })}
+              onSubmit={() => onSubmitQuote?.({ ...state, roiProjection: pricing, totalCost: pricing.implementation, timeline: state.businessRequirements.timeline || 'flexible' })}
             />
           </motion.div>
         )}
@@ -674,7 +689,6 @@ function CustomizationSelector({
 interface ROICalculatorProps {
   pricing: ROIProjection;
   selectedRequirements: QuoteRequirement[];
-  businessRequirements: Partial<BusinessRequirement>;
   formatCurrency: (amount: number) => string;
   onBack: () => void;
   onNext: () => void;
@@ -683,7 +697,6 @@ interface ROICalculatorProps {
 function ROICalculator({
   pricing,
   selectedRequirements,
-  businessRequirements,
   formatCurrency,
   onBack,
   onNext

@@ -18,7 +18,7 @@ import {
   CartLineUpdateInput,
   ShopifyHandle,
   ShopifyID
-} from '@/types/shopify';
+} from '../types/shopify';
 
 // Environment Configuration
 const SHOPIFY_CONFIG: ShopifyConfig = {
@@ -250,7 +250,7 @@ const sleep = (ms: number): Promise<void> =>
 // HTTP Client with retry logic
 async function shopifyFetch<T>(
   query: string,
-  variables?: Record<string, any>,
+  variables?: Record<string, unknown>,
   retryCount = 0
 ): Promise<T> {
   const url = `https://${SHOPIFY_CONFIG.domain}/api/${SHOPIFY_CONFIG.apiVersion}/graphql.json`;
@@ -370,9 +370,7 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Sho
     last,
     after,
     before,
-    query,
-    sortKey = 'UPDATED_AT',
-    reverse = false
+    query
   } = params;
 
   // Simplified query without sortKey first to test
@@ -625,7 +623,7 @@ export async function createCart(input: CartCreateInput = {}): Promise<ShopifyCa
     ${MONEY_FRAGMENT}
   `;
 
-  const result = await shopifyFetch<{ cartCreate: { cart: ShopifyCart; userErrors: any[] } }>(
+  const result = await shopifyFetch<{ cartCreate: { cart: ShopifyCart; userErrors: Array<{ field?: string[]; message: string; code?: string }> } }>(
     query,
     { input }
   );
@@ -678,7 +676,7 @@ export async function addCartLines(cartId: ShopifyID, lines: CartLineAddInput[])
     ${MONEY_FRAGMENT}
   `;
 
-  const result = await shopifyFetch<{ cartLinesAdd: { cart: ShopifyCart; userErrors: any[] } }>(
+  const result = await shopifyFetch<{ cartLinesAdd: { cart: ShopifyCart; userErrors: Array<{ field?: string[]; message: string; code?: string }> } }>(
     query,
     { cartId, lines }
   );
@@ -713,7 +711,7 @@ export async function updateCartLines(cartId: ShopifyID, lines: CartLineUpdateIn
     ${MONEY_FRAGMENT}
   `;
 
-  const result = await shopifyFetch<{ cartLinesUpdate: { cart: ShopifyCart; userErrors: any[] } }>(
+  const result = await shopifyFetch<{ cartLinesUpdate: { cart: ShopifyCart; userErrors: Array<{ field?: string[]; message: string; code?: string }> } }>(
     query,
     { cartId, lines }
   );
@@ -748,7 +746,7 @@ export async function removeCartLines(cartId: ShopifyID, lineIds: ShopifyID[]): 
     ${MONEY_FRAGMENT}
   `;
 
-  const result = await shopifyFetch<{ cartLinesRemove: { cart: ShopifyCart; userErrors: any[] } }>(
+  const result = await shopifyFetch<{ cartLinesRemove: { cart: ShopifyCart; userErrors: Array<{ field?: string[]; message: string; code?: string }> } }>(
     query,
     { cartId, lineIds }
   );
@@ -764,7 +762,39 @@ export async function removeCartLines(cartId: ShopifyID, lineIds: ShopifyID[]): 
 }
 
 // Debug product query - step by step field testing
-export async function debugProductQuery(): Promise<{ success: boolean; message: string; details?: any }> {
+export interface DebugProductResponse {
+  success: boolean;
+  message: string;
+  details?: {
+    productCount: number;
+    products: Array<{
+      id: string;
+      title: string;
+      handle: string;
+      description: string;
+      availableForSale: boolean;
+      vendor: string;
+      priceRange: {
+        minVariantPrice: {
+          amount: string;
+          currencyCode: string;
+        };
+        maxVariantPrice: {
+          amount: string;
+          currencyCode: string;
+        };
+      };
+      variantCount: number;
+      imageCount: number;
+    }>;
+  } | {
+    type: string;
+    retryable: boolean;
+    graphqlErrors?: ShopifyGraphQLResponse['errors'];
+  };
+}
+
+export async function debugProductQuery(): Promise<DebugProductResponse> {
   try {
     // Progressive field testing to identify problematic fields
     const query = `
@@ -840,14 +870,14 @@ export async function debugProductQuery(): Promise<{ success: boolean; message: 
       }
     `;
 
-    const result = await shopifyFetch<{ products: any }>(query);
+    const result = await shopifyFetch<{ products: ShopifyProductsResponse['products'] }>(query);
 
     return {
       success: true,
       message: 'Products query successful',
       details: {
         productCount: result.products.edges.length,
-        products: result.products.edges.map((edge: any) => ({
+        products: result.products.edges.map((edge) => ({
           id: edge.node.id,
           title: edge.node.title,
           handle: edge.node.handle,
@@ -874,7 +904,7 @@ export async function debugProductQuery(): Promise<{ success: boolean; message: 
 }
 
 // Simple working products query for ProductGrid
-export async function getProductsSimple(params: ProductsQueryParams = {}): Promise<any[]> {
+export async function getProductsSimple(params: ProductsQueryParams = {}): Promise<ShopifyProduct[]> {
   const {
     first = 20,
     last,
@@ -907,9 +937,14 @@ export async function getProductsSimple(params: ProductsQueryParams = {}): Promi
               title
               handle
               description
+              descriptionHtml
               availableForSale
+              createdAt
+              updatedAt
+              publishedAt
               vendor
               productType
+              tags
               priceRange {
                 minVariantPrice {
                   amount
@@ -965,6 +1000,10 @@ export async function getProductsSimple(params: ProductsQueryParams = {}): Promi
                 name
                 values
               }
+              seo {
+                title
+                description
+              }
             }
           }
           pageInfo {
@@ -978,7 +1017,7 @@ export async function getProductsSimple(params: ProductsQueryParams = {}): Promi
     `;
 
     console.log('🚀 Executing GraphQL query...');
-    const result = await shopifyFetch<{ products: any }>(gqlQuery, {
+    const result = await shopifyFetch<ShopifyProductsResponse>(gqlQuery, {
       first,
       last,
       after,
@@ -987,9 +1026,9 @@ export async function getProductsSimple(params: ProductsQueryParams = {}): Promi
     });
 
     console.log('✅ Query successful, product count:', result.products.edges.length);
-    console.log('📦 Products data:', result.products.edges.map((edge: any) => edge.node.title));
+    console.log('📦 Products data:', result.products.edges.map((edge) => edge.node.title));
 
-    return result.products.edges.map((edge: any) => edge.node);
+    return result.products.edges.map((edge) => edge.node);
 
   } catch (error) {
     console.error('❌ getProductsSimple failed:', error);
@@ -1001,7 +1040,22 @@ export async function getProductsSimple(params: ProductsQueryParams = {}): Promi
 }
 
 // Test API Connection
-export async function testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
+interface TestConnectionResponse {
+  success: boolean;
+  message: string;
+  details?: {
+    shopName: string;
+    domain: string;
+    currency: string;
+    description: string;
+  } | {
+    type: string;
+    retryable: boolean;
+    graphqlErrors?: ShopifyGraphQLResponse['errors'];
+  };
+}
+
+export async function testConnection(): Promise<TestConnectionResponse> {
   try {
     const query = `
       query TestConnection {
@@ -1018,7 +1072,7 @@ export async function testConnection(): Promise<{ success: boolean; message: str
       }
     `;
 
-    const result = await shopifyFetch<{ shop: any }>(query);
+    const result = await shopifyFetch<{ shop: { name: string; description: string; primaryDomain: { url: string }; paymentSettings: { currencyCode: string } } }>(query);
 
     return {
       success: true,

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 
 // Types for metrics and client data
 interface LiveMetric {
@@ -327,7 +326,7 @@ export default function LiveMetricsDashboard() {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setSelectedTab(tab.id as any)}
+            onClick={() => setSelectedTab(tab.id as 'metrics' | 'clients' | 'performance')}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium transition-all ${
               selectedTab === tab.id
                 ? 'bg-white text-gray-900 shadow-sm'

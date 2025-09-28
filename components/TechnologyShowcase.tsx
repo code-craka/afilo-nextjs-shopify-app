@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 
 // Types for technology showcase
 interface TechStack {
@@ -310,7 +309,7 @@ export default function TechnologyShowcase() {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setSelectedTab(tab.id as any)}
+            onClick={() => setSelectedTab(tab.id as 'architecture' | 'security' | 'awards' | 'stack')}
             className={`flex items-center gap-2 px-4 py-3 rounded-md font-medium transition-all ${
               selectedTab === tab.id
                 ? 'bg-white text-gray-900 shadow-sm'

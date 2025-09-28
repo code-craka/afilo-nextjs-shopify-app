@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import PremiumPricingDisplay from '@/components/PremiumPricingDisplay';
 import SubscriptionManager from '@/components/SubscriptionManager';
-import EnterpriseQuoteBuilder from '@/components/EnterpriseQuoteBuilder';
+import EnterpriseQuoteBuilder, { type EnterpriseQuote } from '@/components/EnterpriseQuoteBuilder';
 import EnterprisePortal from '@/components/EnterprisePortal';
 import type { ShopifyProduct } from '@/types/shopify';
 import type { Subscription } from '@/components/SubscriptionManager';
@@ -175,12 +175,12 @@ export default function EnterprisePage() {
     // Handle tier selection - integrate with Shopify checkout
   };
 
-  const handleSubscriptionAction = (action: string, subscriptionId: string, ...args: any[]) => {
+  const handleSubscriptionAction = (action: string, subscriptionId: string, ...args: unknown[]) => {
     console.log('Subscription action:', action, 'for:', subscriptionId, 'args:', args);
     // Handle subscription management
   };
 
-  const handleQuoteSubmit = (quote: any) => {
+  const handleQuoteSubmit = (quote: EnterpriseQuote) => {
     console.log('Enterprise quote submitted:', quote);
     // Handle quote submission - send to sales team
   };
@@ -269,7 +269,7 @@ export default function EnterprisePage() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveSection(tab.id as any)}
+                onClick={() => setActiveSection(tab.id as 'pricing' | 'subscriptions' | 'quote' | 'portal')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
                   activeSection === tab.id
                     ? 'border-blue-500 text-blue-600'

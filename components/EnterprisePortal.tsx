@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Types for Enterprise Portal
@@ -353,7 +353,7 @@ export default function EnterprisePortal() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'users' | 'analytics' | 'billing' | 'support')}
               className={`flex items-center gap-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
@@ -686,8 +686,8 @@ export default function EnterprisePortal() {
                   <p className="text-gray-600">Monitor platform usage and performance metrics</p>
                 </div>
                 <select
-                  value={analyticsePeriod}
-                  onChange={(e) => setAnalyticsPeriod(e.target.value as any)}
+                  value={analyticsperiod}
+                  onChange={(e) => setAnalyticsPeriod(e.target.value as 'daily' | 'weekly' | 'monthly')}
                   className="border border-gray-300 rounded-lg px-3 py-2"
                 >
                   <option value="daily">Daily</option>

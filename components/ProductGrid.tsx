@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { getProducts, getProductsSimple } from '@/lib/shopify';
+import { getProductsSimple } from '@/lib/shopify';
 import type { ShopifyProduct, ProductsQueryParams } from '@/types/shopify';
 
 // Types
@@ -30,7 +30,6 @@ interface ProductCardProps {
 const getTechStackFromProduct = (product: ShopifyProduct): string[] => {
   const title = product.title.toLowerCase();
   const description = product.description.toLowerCase();
-  const productType = product.productType?.toLowerCase() || '';
   const tags = product.tags || [];
 
   const techStack: string[] = [];
@@ -94,7 +93,6 @@ const getLicenseType = (product: ShopifyProduct): string => {
 const getDigitalProductType = (product: ShopifyProduct): { type: string; color: string; icon: string } => {
   const title = product.title.toLowerCase();
   const productType = product.productType?.toLowerCase() || '';
-  const description = product.description.toLowerCase();
 
   if (title.includes('template') || productType.includes('template')) {
     return { type: 'Template', color: 'bg-purple-100 text-purple-800', icon: '📄' };
@@ -731,7 +729,7 @@ export default function ProductGrid({
       console.log('📦 Using initial products:', initialProducts.length);
       setProducts(initialProducts);
     }
-  }, [loadProducts, initialProducts.length]);
+  }, [loadProducts, initialProducts, queryParams]);
 
   // Retry function
   const retry = () => {

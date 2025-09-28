@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDigitalCart } from '@/hooks/useDigitalCart';
 
@@ -17,7 +16,6 @@ export default function DigitalCartWidget() {
     adjustTeamSize
   } = useDigitalCart();
 
-  const [isExpanded, setIsExpanded] = useState(false);
 
   // Don't render if no items
   if (items.length === 0) return null;
@@ -137,7 +135,7 @@ export default function DigitalCartWidget() {
                           <span className="text-sm font-medium text-gray-700">License:</span>
                           <select
                             value={item.licenseType}
-                            onChange={(e) => changeLicense(item.id, e.target.value as any)}
+                            onChange={(e) => changeLicense(item.id, e.target.value as 'Personal' | 'Commercial' | 'Extended' | 'Enterprise')}
                             className="text-sm border border-gray-300 rounded px-2 py-1"
                           >
                             <option value="Personal">Personal</option>

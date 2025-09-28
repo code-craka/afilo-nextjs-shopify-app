@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Subscription types
@@ -50,7 +50,6 @@ export default function SubscriptionManager({
 }: SubscriptionManagerProps) {
   const [selectedSubscription, setSelectedSubscription] = useState<string | null>(null);
   const [showUsageDetails, setShowUsageDetails] = useState<Record<string, boolean>>({});
-  const [billingHistory, setBillingHistory] = useState<BillingRecord[]>([]);
 
   // Get subscription status styling
   const getStatusStyle = (status: Subscription['status']) => {
@@ -142,7 +141,6 @@ export default function SubscriptionManager({
 
       {/* Billing History */}
       <BillingHistory
-        subscriptions={subscriptions}
         formatCurrency={formatCurrency}
         formatDate={formatDate}
       />
@@ -430,12 +428,11 @@ interface BillingRecord {
 }
 
 interface BillingHistoryProps {
-  subscriptions: Subscription[];
   formatCurrency: (amount: number, currency: string) => string;
   formatDate: (dateString: string) => string;
 }
 
-function BillingHistory({ subscriptions, formatCurrency, formatDate }: BillingHistoryProps) {
+function BillingHistory({ formatCurrency, formatDate }: BillingHistoryProps) {
   // Mock billing history - in real app, this would come from props or API
   const billingHistory: BillingRecord[] = [
     {

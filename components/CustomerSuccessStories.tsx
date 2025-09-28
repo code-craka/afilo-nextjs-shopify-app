@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 
 // Types for customer success stories
 interface CustomerSuccess {
@@ -447,7 +446,7 @@ export default function CustomerSuccessStories() {
         ].map((category) => (
           <button
             key={category.id}
-            onClick={() => setSelectedCategory(category.id as any)}
+            onClick={() => setSelectedCategory(category.id as 'all' | 'fortune500' | 'technology' | 'financial' | 'healthcare')}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
               selectedCategory === category.id
                 ? 'bg-blue-600 text-white'
@@ -522,7 +521,7 @@ export default function CustomerSuccessStories() {
 
               {/* Testimonial Preview */}
               <blockquote className="text-sm text-gray-700 italic border-l-4 border-blue-500 pl-4 mb-4">
-                "{story.testimonial.quote.substring(0, 120)}..."
+                &ldquo;{story.testimonial.quote.substring(0, 120)}...&rdquo;
               </blockquote>
 
               <div className="flex items-center justify-between">
@@ -605,7 +604,7 @@ export default function CustomerSuccessStories() {
                     {/* Full Testimonial */}
                     <div className="bg-white rounded-lg p-6 border border-gray-200">
                       <blockquote className="text-gray-700 italic mb-4">
-                        "{story.testimonial.quote}"
+                        &ldquo;{story.testimonial.quote}&rdquo;
                       </blockquote>
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gray-300 rounded-full"></div>

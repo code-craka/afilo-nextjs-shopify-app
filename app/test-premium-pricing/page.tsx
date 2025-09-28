@@ -369,7 +369,7 @@ export default function TestPremiumPricingPage() {
                 <li>• Enterprise products show ENTERPRISE badges</li>
                 <li>• Subscription pricing shows /month</li>
                 <li>• Premium buttons are purple gradient</li>
-                <li>• "Start Subscription" instead of "Add to Cart"</li>
+                <li>• &ldquo;Start Subscription&rdquo; instead of &ldquo;Add to Cart&rdquo;</li>
               </ul>
             </div>
             <div>

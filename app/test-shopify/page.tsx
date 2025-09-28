@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { testConnection, getProducts, getCollections, debugProductQuery, getProductsSimple } from '@/lib/shopify';
+import { testConnection, getProducts, getCollections, debugProductQuery, getProductsSimple, type DebugProductResponse } from '@/lib/shopify';
 import type { ShopifyProduct, ShopifyCollection } from '@/types/shopify';
 
 export default function TestShopifyPage() {
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
   } | null>(null);
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [collections, setCollections] = useState<ShopifyCollection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<DebugProductResponse | null>(null);
 
   const runTests = async () => {
     setLoading(true);
@@ -67,7 +67,7 @@ export default function TestShopifyPage() {
       
       // If it's a ShopifyAPIError with GraphQL errors, show detailed information
       if (err && typeof err === 'object' && 'graphqlErrors' in err) {
-        const shopifyError = err as any;
+        const shopifyError = err as { graphqlErrors: unknown[] };
         console.error('GraphQL Errors:', shopifyError.graphqlErrors);
         setError(`${errorMessage}\n\nGraphQL Errors: ${JSON.stringify(shopifyError.graphqlErrors, null, 2)}`);
       } else {

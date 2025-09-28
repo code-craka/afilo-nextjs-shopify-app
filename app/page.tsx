@@ -7,7 +7,6 @@ import LiveMetricsDashboard from "@/components/LiveMetricsDashboard";
 import TechnologyShowcase from "@/components/TechnologyShowcase";
 import CustomerSuccessStories from "@/components/CustomerSuccessStories";
 import { useDigitalCart } from "@/hooks/useDigitalCart";
-import type { ShopifyProduct } from "@/types/shopify";
 
 export default function Home() {
   const { addProductToCart } = useDigitalCart();
