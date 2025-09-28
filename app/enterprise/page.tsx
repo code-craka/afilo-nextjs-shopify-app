@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import PremiumPricingDisplay from '@/components/PremiumPricingDisplay';
 import SubscriptionManager from '@/components/SubscriptionManager';
 import EnterpriseQuoteBuilder from '@/components/EnterpriseQuoteBuilder';
+import EnterprisePortal from '@/components/EnterprisePortal';
 import type { ShopifyProduct } from '@/types/shopify';
 import type { Subscription } from '@/components/SubscriptionManager';
 
@@ -167,7 +168,7 @@ const MOCK_SUBSCRIPTIONS: Subscription[] = [
 ];
 
 export default function EnterprisePage() {
-  const [activeSection, setActiveSection] = useState<'pricing' | 'subscriptions' | 'quote'>('pricing');
+  const [activeSection, setActiveSection] = useState<'pricing' | 'subscriptions' | 'quote' | 'portal'>('pricing');
 
   const handleTierSelect = (tier: string, billing: string) => {
     console.log('Selected tier:', tier, 'billing:', billing);
@@ -263,7 +264,8 @@ export default function EnterprisePage() {
             {[
               { id: 'pricing', name: 'Enterprise Pricing', icon: '💰' },
               { id: 'subscriptions', name: 'Subscription Management', icon: '📊' },
-              { id: 'quote', name: 'Custom Quote Builder', icon: '📋' }
+              { id: 'quote', name: 'Custom Quote Builder', icon: '📋' },
+              { id: 'portal', name: 'Enterprise Portal', icon: '🏢' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -327,6 +329,17 @@ export default function EnterprisePage() {
             <EnterpriseQuoteBuilder
               onSubmitQuote={handleQuoteSubmit}
             />
+          </motion.div>
+        )}
+
+        {activeSection === 'portal' && (
+          <motion.div
+            key="portal"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <EnterprisePortal />
           </motion.div>
         )}
       </div>
