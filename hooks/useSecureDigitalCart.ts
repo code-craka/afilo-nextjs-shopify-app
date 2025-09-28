@@ -1,13 +1,16 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { useDigitalCartStore, type DigitalCartItem, type LicenseType, type EducationalTier, type SubscriptionInterval } from '@/store/digitalCart';
+import { useSecureDigitalCartStore, type DigitalCartItem, type LicenseType, type EducationalTier, type SubscriptionInterval } from '@/store/secureDigitalCart';
 import type { ShopifyProduct } from '@/types/shopify';
 
-// Cart operations hook for digital products
-export const useDigitalCart = () => {
-  // Get cart state and actions from store
+// CRITICAL SECURITY: This hook NEVER handles cart secret keys
+// All cart operations use secure server-side APIs
+
+export const useSecureDigitalCart = () => {
+  // Get secure cart state and actions from store
   const {
+    cartSession,
     items,
     isOpen,
     isLoading,
@@ -16,9 +19,13 @@ export const useDigitalCart = () => {
     userRegion,
     userEducationalStatus,
     preferredCurrency,
-    appliedBundles,
 
-    // Actions
+    // Secure server-side actions
+    createSecureCart,
+    addItemToSecureCart,
+    proceedToSecureCheckout,
+
+    // Client-side actions
     addItem,
     updateItem,
     removeItem,
@@ -28,19 +35,17 @@ export const useDigitalCart = () => {
     updateSubscriptionInterval,
     setEducationalStatus,
     applyEducationalDiscount,
-    applyBundle,
-    removeBundle,
     toggleCart,
     setLoading,
     setError,
     setUserRegion,
     calculateTotals,
-    validateLicenseSelection,
-    validateQuantityLimits
-  } = useDigitalCartStore();
+    clearSession,
+    validateSession
+  } = useSecureDigitalCartStore();
 
-  // Add product to cart with digital-specific configuration
-  const addProductToCart = useCallback(async (
+  // Add product to secure cart (both client-side state and server-side cart)
+  const addProductToSecureCart = useCallback(async (
     product: ShopifyProduct,
     options: {
       licenseType?: LicenseType;
@@ -69,7 +74,7 @@ export const useDigitalCart = () => {
       const version = extractVersionNumber(product);
       const productType = getDigitalProductType(product);
 
-      // Create cart item
+      // Create cart item for client-side state
       const cartItem: Omit<DigitalCartItem, 'id' | 'addedAt'> = {
         productId: product.id,
         variantId: options.variantId || variant.id,
@@ -117,8 +122,20 @@ export const useDigitalCart = () => {
         version
       };
 
-      // Add to cart
+      // Add to client-side state first (for immediate UI feedback)
       addItem(cartItem);
+
+      // Add to secure server-side cart
+      const serverSuccess = await addItemToSecureCart(cartItem);
+
+      if (!serverSuccess) {
+        // If server operation failed, remove from client state
+        const addedItemId = items[items.length - 1]?.id;
+        if (addedItemId) {
+          removeItem(addedItemId);
+        }
+        throw new Error('Failed to add item to secure cart');
+      }
 
       // Auto-open cart for immediate feedback
       if (!isOpen) {
@@ -126,6 +143,7 @@ export const useDigitalCart = () => {
       }
 
       return { success: true, itemId: cartItem.productId };
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add item to cart';
       setError(errorMessage);
@@ -133,22 +151,32 @@ export const useDigitalCart = () => {
     } finally {
       setLoading(false);
     }
-  }, [addItem, isOpen, toggleCart, setLoading, setError, userEducationalStatus]);
+  }, [
+    addItem,
+    addItemToSecureCart,
+    removeItem,
+    items,
+    isOpen,
+    toggleCart,
+    setLoading,
+    setError,
+    userEducationalStatus
+  ]);
 
   // Quick purchase for instant checkout
   const quickPurchase = useCallback(async (
     product: ShopifyProduct,
     licenseType: LicenseType = 'Personal'
   ) => {
-    const result = await addProductToCart(product, { licenseType, quantity: 1 });
+    const result = await addProductToSecureCart(product, { licenseType, quantity: 1 });
 
     if (result.success) {
-      // Proceed to Shopify checkout
-      return proceedToCheckout();
+      // Proceed to secure checkout
+      return proceedToSecureCheckout();
     }
 
     return result;
-  }, [addProductToCart]);
+  }, [addProductToSecureCart, proceedToSecureCheckout]);
 
   // License upgrade/downgrade
   const changeLicense = useCallback((itemId: string, newLicenseType: LicenseType) => {
@@ -158,29 +186,21 @@ export const useDigitalCart = () => {
       return false;
     }
 
-    // Validate new license supports current quantity
-    if (!validateQuantityLimits(itemId, item.quantity)) {
-      const maxSeats = getLicenseMaxSeats(newLicenseType);
-      // Auto-adjust quantity to fit new license
-      updateQuantity(itemId, Math.min(item.quantity, maxSeats));
-    }
-
     updateLicenseType(itemId, newLicenseType);
     return true;
-  }, [items, updateLicenseType, updateQuantity, validateQuantityLimits, setError]);
+  }, [items, updateLicenseType, setError]);
 
   // Team license management
   const adjustTeamSize = useCallback((itemId: string, newQuantity: number) => {
-    if (!validateQuantityLimits(itemId, newQuantity)) {
-      const item = items.find(i => i.id === itemId);
-      const maxSeats = item ? getLicenseMaxSeats(item.licenseType) : 1;
-      setError(`Maximum ${maxSeats} seats allowed for this license type`);
+    const item = items.find(i => i.id === itemId);
+    if (!item) {
+      setError('Item not found in cart');
       return false;
     }
 
     updateQuantity(itemId, newQuantity);
     return true;
-  }, [items, updateQuantity, validateQuantityLimits, setError]);
+  }, [items, updateQuantity, setError]);
 
   // Educational discount management
   const applyEducationalStatus = useCallback((tier: EducationalTier) => {
@@ -192,58 +212,31 @@ export const useDigitalCart = () => {
     });
   }, [items, setEducationalStatus, applyEducationalDiscount]);
 
-  // Proceed to Shopify checkout
+  // Secure checkout with validation
   const proceedToCheckout = useCallback(async () => {
     if (items.length === 0) {
       setError('Cart is empty');
       return { success: false, error: 'Cart is empty' };
     }
 
+    // Validate session before checkout
+    if (!validateSession()) {
+      setError('Cart session expired. Please refresh your cart.');
+      return { success: false, error: 'Cart session expired' };
+    }
+
     setLoading(true);
 
     try {
-      // Validate cart on server before checkout
-      const validationResponse = await fetch('/api/cart/validate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: items.map(item => ({
-            productId: item.productId,
-            variantId: item.variantId,
-            quantity: item.quantity,
-            licenseType: item.licenseType,
-            educationalTier: item.educationalDiscount.tier,
-            clientPrice: item.educationalDiscount.appliedPrice
-          })),
-          userRegion
-        }),
-      });
+      const result = await proceedToSecureCheckout();
 
-      if (!validationResponse.ok) {
-        throw new Error('Cart validation failed');
+      if (result.success && result.checkoutUrl) {
+        // Redirect to Shopify checkout
+        window.location.href = result.checkoutUrl;
       }
 
-      const validation = await validationResponse.json();
+      return result;
 
-      if (!validation.valid) {
-        if (validation.discrepancies) {
-          throw new Error('Price validation failed. Please refresh your cart.');
-        }
-        throw new Error(validation.error || 'Cart validation failed');
-      }
-
-      // Prepare Shopify checkout payload
-      const checkoutPayload = await prepareShopifyCheckout();
-
-      // Create Shopify checkout session
-      const checkoutUrl = await createShopifyCheckout(checkoutPayload);
-
-      // Redirect to Shopify checkout
-      window.location.href = checkoutUrl;
-
-      return { success: true, checkoutUrl };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Checkout failed';
       setError(errorMessage);
@@ -251,93 +244,48 @@ export const useDigitalCart = () => {
     } finally {
       setLoading(false);
     }
-  }, [items, userRegion, setLoading, setError]);
+  }, [
+    items,
+    validateSession,
+    proceedToSecureCheckout,
+    setLoading,
+    setError
+  ]);
 
-  // Prepare Shopify checkout data
-  const prepareShopifyCheckout = useCallback(async () => {
-    const lineItems = items.map(item => ({
-      variantId: item.variantId,
-      quantity: item.quantity,
-      customAttributes: [
-        { key: 'license_type', value: item.licenseType },
-        { key: 'subscription_interval', value: item.subscriptionInterval },
-        { key: 'educational_tier', value: item.educationalDiscount.tier },
-        { key: 'team_size', value: item.quantity.toString() },
-        { key: 'tech_stack', value: item.techStack.join(', ') },
-        { key: 'digital_delivery', value: 'true' }
-      ]
-    }));
-
-    return {
-      lineItems,
-      customAttributes: [
-        { key: 'cart_type', value: 'digital_products' },
-        { key: 'user_region', value: userRegion },
-        { key: 'total_savings', value: totals.savings.toString() },
-        { key: 'applied_bundles', value: appliedBundles.join(', ') }
-      ],
-      note: `Digital commerce order - ${items.length} license(s) - Total savings: $${totals.savings.toFixed(2)}`
-    };
-  }, [items, userRegion, totals.savings, appliedBundles]);
-
-  // Create Shopify checkout session
-  const createShopifyCheckout = useCallback(async (payload: any): Promise<string> => {
-    try {
-      console.log('Creating Shopify checkout with payload:', payload);
-
-      // Call our secure server-side API to create the cart
-      const response = await fetch('/api/cart/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to create checkout`);
-      }
-
-      const result = await response.json();
-
-      if (!result.success || !result.cart?.checkoutUrl) {
-        throw new Error(result.error || 'Invalid checkout response');
-      }
-
-      return result.cart.checkoutUrl;
-    } catch (error) {
-      console.error('Shopify checkout creation failed:', error);
-      throw error instanceof Error ? error : new Error('Unknown checkout error');
+  // Initialize secure cart if needed
+  const initializeSecureCart = useCallback(async () => {
+    if (!cartSession && items.length > 0) {
+      return await createSecureCart();
     }
-  }, []);
+    return true;
+  }, [cartSession, items, createSecureCart]);
 
-  // Validate cart before checkout
+  // Cart validation
   const validateCart = useCallback(() => {
     const errors: string[] = [];
 
     items.forEach(item => {
-      // Validate license selection
-      if (!validateLicenseSelection(item.id)) {
-        errors.push(`Invalid license configuration for ${item.title}`);
-      }
-
-      // Validate quantity limits
-      if (!validateQuantityLimits(item.id, item.quantity)) {
-        errors.push(`Quantity exceeds limit for ${item.title}`);
-      }
-
       // Validate pricing
       if (item.price <= 0) {
         errors.push(`Invalid pricing for ${item.title}`);
       }
+
+      // Validate quantity limits
+      if (item.quantity <= 0 || (item.maxSeats && item.quantity > item.maxSeats)) {
+        errors.push(`Invalid quantity for ${item.title}`);
+      }
     });
+
+    // Validate session
+    if (!validateSession()) {
+      errors.push('Cart session expired');
+    }
 
     return {
       isValid: errors.length === 0,
       errors
     };
-  }, [items, validateLicenseSelection, validateQuantityLimits]);
+  }, [items, validateSession]);
 
   // Cart summary with digital-specific information
   const cartSummary = useMemo(() => {
@@ -355,11 +303,13 @@ export const useDigitalCart = () => {
       hasBundleDiscount,
       totalSavings: totals.savings,
       estimatedDelivery: 'Instant', // Digital products
-      requiresActivation: items.some(item => item.deliveryInfo.activationRequired)
+      requiresActivation: items.some(item => item.deliveryInfo.activationRequired),
+      hasSecureSession: !!cartSession,
+      sessionValid: validateSession()
     };
-  }, [items, totals]);
+  }, [items, totals, cartSession, validateSession]);
 
-  // Return hook interface
+  // Return secure hook interface
   return {
     // State
     items,
@@ -370,12 +320,14 @@ export const useDigitalCart = () => {
     cartSummary,
     userRegion,
     userEducationalStatus,
+    cartSession,
 
-    // Cart operations
-    addProductToCart,
+    // Secure cart operations
+    addProductToSecureCart,
     removeItem,
     clearCart,
     toggleCart,
+    initializeSecureCart,
 
     // License management
     changeLicense,
@@ -385,10 +337,14 @@ export const useDigitalCart = () => {
     // Educational discounts
     applyEducationalStatus,
 
-    // Checkout
+    // Secure checkout
     quickPurchase,
     proceedToCheckout,
     validateCart,
+
+    // Session management
+    clearSession,
+    validateSession,
 
     // Utility functions
     setUserRegion,
@@ -397,7 +353,7 @@ export const useDigitalCart = () => {
   };
 };
 
-// Helper functions for product analysis
+// Helper functions for product analysis (moved from original hook)
 function determineDefaultLicenseType(product: ShopifyProduct): LicenseType {
   const price = parseFloat(product.variants?.edges?.[0]?.node?.price?.amount || '0');
 
@@ -454,7 +410,7 @@ function hasDemoDetection(product: ShopifyProduct): boolean {
 }
 
 function extractVersionNumber(product: ShopifyProduct): string | undefined {
-  const versionRegex = /v?(\\d+\\.?\\d*\\.?\\d*)/i;
+  const versionRegex = /v?(\d+\.?\d*\.?\d*)/i;
   const titleMatch = product.title.match(versionRegex);
   const descMatch = product.description.match(versionRegex);
 
@@ -489,12 +445,12 @@ function getDigitalProductType(product: ShopifyProduct): { type: string; color: 
 }
 
 function getLicenseTerms(licenseType: LicenseType) {
-  const { LICENSE_DEFINITIONS } = require('@/store/digitalCart');
+  const { LICENSE_DEFINITIONS } = require('@/store/secureDigitalCart');
   return LICENSE_DEFINITIONS[licenseType].features;
 }
 
 function getLicenseMaxSeats(licenseType: LicenseType): number {
-  const { LICENSE_DEFINITIONS } = require('@/store/digitalCart');
+  const { LICENSE_DEFINITIONS } = require('@/store/secureDigitalCart');
   return LICENSE_DEFINITIONS[licenseType].maxSeats;
 }
 
