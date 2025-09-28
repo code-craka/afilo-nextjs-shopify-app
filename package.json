@@ -1,12 +1,48 @@
 {
   "name": "afilo-nextjs-shopify-app",
-  "version": "0.1.0",
+  "version": "2.2.0",
+  "description": "A cutting-edge headless e-commerce platform specializing in digital software products - Built with Next.js 15, TypeScript, and Shopify Storefront API",
+  "homepage": "https://app.afilo.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/code-craka/afilo-nextjs-shopify-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/code-craka/afilo-nextjs-shopify-app/issues"
+  },
+  "author": {
+    "name": "Rihan",
+    "url": "https://github.com/code-craka"
+  },
+  "license": "MIT",
+  "keywords": [
+    "nextjs",
+    "shopify",
+    "ecommerce",
+    "digital-marketplace",
+    "typescript",
+    "tailwindcss",
+    "headless-commerce",
+    "software-products",
+    "digital-commerce",
+    "license-management"
+  ],
+  "engines": {
+    "node": ">=18.17.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.6",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit",
+    "prettier": "prettier --write .",
+    "prettier:check": "prettier --check .",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -31,6 +67,8 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "markdownlint": "^0.38.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -45,5 +45,6 @@ package-lock.json
 yarn.lock
 
 .claude/mcp-config.json
+.claude/context/*.md
 
 # Only keep pnpm-lock.yaml

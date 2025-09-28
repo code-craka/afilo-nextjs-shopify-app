@@ -1,0 +1,76 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 8
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+        
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      
+    - name: Run build
+      run: pnpm run build
+      env:
+        NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN: ${{ secrets.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN }}
+        NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN }}
+        NEXT_PUBLIC_CUSTOMER_ACCOUNT_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_CUSTOMER_ACCOUNT_CLIENT_ID }}
+        
+    - name: Deploy to Vercel
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        vercel-args: '--prod'
+        
+    - name: Create Release
+      if: success()
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ github.run_number }}
+        name: Release v${{ github.run_number }}
+        body: |
+          🚀 **Afilo Digital Marketplace - Production Release**
+          
+          **Author**: Rihan (@code-craka)
+          **Deployment**: app.afilo.io
+          
+          ### Changes in this release:
+          ${{ github.event.head_commit.message }}
+          
+          ### Technical Details:
+          - **Build**: #${{ github.run_number }}
+          - **Commit**: ${{ github.sha }}
+          - **Branch**: ${{ github.ref_name }}
+          - **Date**: ${{ github.event.head_commit.timestamp }}
+          
+          ### Deployments:
+          - 🌐 **Frontend**: [app.afilo.io](https://app.afilo.io)
+          - 👤 **Customer Portal**: [account.afilo.io](https://account.afilo.io)
+          
+          Built with ❤️ by Rihan | Powered by Next.js & Shopify
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
