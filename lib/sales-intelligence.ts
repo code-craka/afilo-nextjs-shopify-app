@@ -1,6 +1,5 @@
 // Sales Intelligence System for Afilo Enterprise Platform
-import type { UserProfile, EnterpriseNeedsAssessment } from './ai-recommendation-engine';
-import { trackEvent, trackSalesFunnel, trackQuoteEvent } from './analytics';
+import { trackEvent, trackSalesFunnel } from './analytics';
 
 export interface Lead {
   id: string;
@@ -658,10 +657,13 @@ export class SalesIntelligenceEngine {
     recommendations: string[];
   }[]> {
     const bottlenecks = [];
-    const stages = ['discovery', 'qualification', 'proposal', 'negotiation'];
+    const stages: Opportunity['stage'][] = ['discovery', 'qualification', 'proposal', 'negotiation'];
 
     for (const stage of stages) {
-      const conversionKey = `${stage}_to_${this.getNextStage(stage)}`;
+      const nextStage = this.getNextStage(stage);
+      if (!nextStage) continue; // Skip if no next stage
+      
+      const conversionKey = `${stage}_to_${nextStage}`;
       const currentRate = this.conversionRates.get(conversionKey) || 0;
       const benchmark = this.getBenchmarkConversionRate(conversionKey);
       const improvementOpportunity = benchmark - currentRate;
@@ -698,6 +700,8 @@ export class SalesIntelligenceEngine {
     previousStage: Opportunity['stage']
   ): Promise<void> {
     // Implement stage-specific automations
+    console.log(`Stage transition: ${opportunity.id} moved from ${previousStage} to ${newStage}`);
+    
     switch (newStage) {
       case 'qualification':
         await this.scheduleQualificationCall(opportunity);
@@ -738,11 +742,26 @@ export class SalesIntelligenceEngine {
 
   private calculateConversionRates(opportunities: Opportunity[]): PipelineMetrics['conversionRates'] {
     // Calculate actual conversion rates from historical data
+    const totalOpportunities = opportunities.length;
+    if (totalOpportunities === 0) {
+      // Return default rates when no data
+      return {
+        mql_to_sql: 0.25,
+        sql_to_opportunity: 0.35,
+        opportunity_to_customer: 0.28,
+        overall: 0.25 * 0.35 * 0.28
+      };
+    }
+
+    // Calculate actual conversion rates based on opportunities data
+    const closedWon = opportunities.filter(opp => opp.stage === 'closed_won').length;
+    const opportunityToCustomer = totalOpportunities > 0 ? closedWon / totalOpportunities : 0.28;
+
     return {
       mql_to_sql: this.conversionRates.get('mql_to_sql') || 0.25,
       sql_to_opportunity: this.conversionRates.get('sql_to_opportunity') || 0.35,
-      opportunity_to_customer: this.conversionRates.get('opportunity_to_customer') || 0.28,
-      overall: 0.25 * 0.35 * 0.28 // Combined conversion rate
+      opportunity_to_customer: opportunityToCustomer,
+      overall: 0.25 * 0.35 * opportunityToCustomer // Combined conversion rate
     };
   }
 
@@ -784,11 +803,13 @@ export class SalesIntelligenceEngine {
   }
 
   private async calculateVelocity(period: PipelineMetrics['period']): Promise<PipelineMetrics['velocity']> {
-    // Calculate deals closed per month and trends
+    // Calculate deals closed per month and trends based on period
+    const baseVelocity = period === 'current_month' ? 12 : period === 'current_quarter' ? 36 : 144; // deals per period
+    
     return {
-      current: 12, // deals per month
+      current: baseVelocity, // deals per period
       trend: 0.15, // 15% increase
-      projection: 14 // projected deals for next period
+      projection: Math.round(baseVelocity * 1.15) // projected deals for next period
     };
   }
 
@@ -808,12 +829,14 @@ export class SalesIntelligenceEngine {
   }
 
   private async getHistoricalData(period: SalesForecasting['period']): Promise<SalesForecasting['historicalData']> {
-    // Get historical sales data for forecasting
+    // Get historical sales data for forecasting based on period
+    const periodSuffix = period === 'monthly' ? 'M' : period === 'quarterly' ? 'Q' : 'Y';
+    
     return [
-      { period: '2024-Q1', revenue: 2500000, deals: 25, averageDealSize: 100000 },
-      { period: '2024-Q2', revenue: 2800000, deals: 28, averageDealSize: 100000 },
-      { period: '2024-Q3', revenue: 3200000, deals: 32, averageDealSize: 100000 },
-      { period: '2024-Q4', revenue: 3600000, deals: 36, averageDealSize: 100000 }
+      { period: `2024-${periodSuffix}1`, revenue: 2500000, deals: 25, averageDealSize: 100000 },
+      { period: `2024-${periodSuffix}2`, revenue: 2800000, deals: 28, averageDealSize: 100000 },
+      { period: `2024-${periodSuffix}3`, revenue: 3200000, deals: 32, averageDealSize: 100000 },
+      { period: `2024-${periodSuffix}4`, revenue: 3600000, deals: 36, averageDealSize: 100000 }
     ];
   }
 
@@ -821,11 +844,17 @@ export class SalesIntelligenceEngine {
     historicalData: SalesForecasting['historicalData'],
     period: SalesForecasting['period']
   ): Promise<SalesForecasting['predictions']> {
-    // AI-based forecasting would go here
+    // AI-based forecasting using historical data and period
+    const avgRevenue = historicalData.reduce((sum, data) => sum + data.revenue, 0) / historicalData.length;
+    const growthRate = 0.15; // 15% growth rate
+    const nextPeriodRevenue = Math.round(avgRevenue * (1 + growthRate));
+    
+    const periodLabel = period === 'monthly' ? '2025-M1' : period === 'quarterly' ? '2025-Q1' : '2025-Y1';
+    
     return [
       {
-        period: '2025-Q1',
-        predictedRevenue: 4000000,
+        period: periodLabel,
+        predictedRevenue: nextPeriodRevenue,
         confidence: 0.85,
         factors: ['Historical growth trend', 'Pipeline strength', 'Market conditions']
       }
@@ -844,17 +873,53 @@ export class SalesIntelligenceEngine {
 
   private calculateTrends(historicalData: SalesForecasting['historicalData']): SalesForecasting['trends'] {
     // Calculate trends from historical data
+    if (historicalData.length < 2) {
+      // Return default trends when insufficient data
+      return {
+        revenue: 0.20, // 20% growth
+        dealCount: 0.15, // 15% growth  
+        dealSize: 0.05, // 5% growth
+        cycleTime: -0.10 // 10% reduction in cycle time
+      };
+    }
+
+    // Calculate actual trends from historical data
+    const firstPeriod = historicalData[0];
+    const lastPeriod = historicalData[historicalData.length - 1];
+    
+    const revenueGrowth = (lastPeriod.revenue - firstPeriod.revenue) / firstPeriod.revenue;
+    const dealGrowth = (lastPeriod.deals - firstPeriod.deals) / firstPeriod.deals;
+    const dealSizeGrowth = (lastPeriod.averageDealSize - firstPeriod.averageDealSize) / firstPeriod.averageDealSize;
+
     return {
-      revenue: 0.20, // 20% growth
-      dealCount: 0.15, // 15% growth
-      dealSize: 0.05, // 5% growth
-      cycleTime: -0.10 // 10% reduction in cycle time
+      revenue: revenueGrowth,
+      dealCount: dealGrowth,
+      dealSize: dealSizeGrowth,
+      cycleTime: -0.10 // 10% reduction in cycle time (static for now)
     };
   }
 
   private calculateAverageTimeInStage(opportunities: Opportunity[], stage: Opportunity['stage']): number {
-    // Calculate average time spent in each stage
-    return 30; // Simplified: 30 days average
+    // Calculate actual average time spent in each stage from opportunities data
+    const stageOpportunities = opportunities.filter(opp => {
+      return opp.timeline.some(timeline => timeline.stage === stage);
+    });
+
+    if (stageOpportunities.length === 0) return 30; // Default: 30 days average
+
+    const totalTime = stageOpportunities.reduce((sum, opp) => {
+      const stageTimeline = opp.timeline.filter(t => t.stage === stage);
+      if (stageTimeline.length === 0) return sum;
+
+      // Calculate time between first and last occurrence of this stage
+      const firstStageDate = stageTimeline[0].date;
+      const lastStageDate = stageTimeline[stageTimeline.length - 1].date;
+      const timeInStage = (lastStageDate.getTime() - firstStageDate.getTime()) / (1000 * 60 * 60 * 24);
+      
+      return sum + Math.max(timeInStage, 1); // At least 1 day
+    }, 0);
+
+    return Math.round(totalTime / stageOpportunities.length);
   }
 
   private getStageConversionRate(stage: Opportunity['stage']): number {
@@ -864,15 +929,15 @@ export class SalesIntelligenceEngine {
     return this.conversionRates.get(`${stage}_to_${nextStage}`) || 0.5;
   }
 
-  private getNextStage(stage: Opportunity['stage']): string | null {
-    const stageFlow = {
+  private getNextStage(stage: Opportunity['stage']): Opportunity['stage'] | null {
+    const stageFlow: Partial<Record<Opportunity['stage'], Opportunity['stage']>> = {
       discovery: 'qualification',
       qualification: 'proposal',
       proposal: 'negotiation',
       negotiation: 'closed_won'
     };
 
-    return stageFlow[stage as keyof typeof stageFlow] || null;
+    return stageFlow[stage] || null;
   }
 
   private getBenchmarkConversionRate(conversionKey: string): number {
