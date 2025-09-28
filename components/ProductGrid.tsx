@@ -201,12 +201,48 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
   // Debug logging (remove in production)
   // console.log('🎯 ProductCard rendering:', { title: product.title, techStack, licenseType, digitalType });
 
-  // Format price
+  // Format price with premium/subscription detection
   const formatPrice = (amount: string, currencyCode: string) => {
+    const price = parseFloat(amount);
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currencyCode,
-    }).format(parseFloat(amount));
+    }).format(price);
+  };
+
+  // Detect if this is a premium subscription product
+  const isPremiumProduct = () => {
+    const price = parseFloat(defaultVariant?.price?.amount || product.priceRange?.minVariantPrice?.amount || '0');
+    return price >= 999; // Products priced $999+ are considered premium
+  };
+
+  // Detect if this is an enterprise product
+  const isEnterpriseProduct = () => {
+    const title = product.title.toLowerCase();
+    const tags = product.tags || [];
+    return title.includes('enterprise') || tags.includes('enterprise') ||
+           title.includes('professional') || tags.includes('professional');
+  };
+
+  // Get subscription billing info
+  const getSubscriptionInfo = () => {
+    const title = product.title.toLowerCase();
+    const description = product.description.toLowerCase();
+    const tags = product.tags || [];
+
+    if (title.includes('monthly') || description.includes('monthly') || tags.includes('monthly')) {
+      return { billing: 'Monthly', period: '/month' };
+    }
+    if (title.includes('annual') || description.includes('annual') || tags.includes('annual')) {
+      return { billing: 'Annual', period: '/year' };
+    }
+
+    // For premium products, default to monthly subscription
+    if (isPremiumProduct()) {
+      return { billing: 'Monthly', period: '/month' };
+    }
+
+    return { billing: 'One-time', period: '' };
   };
 
   // Handle add to cart
@@ -410,9 +446,30 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
             <div className="flex items-center space-x-2">
               {defaultVariant?.price ? (
                 <>
-                  <span className="font-bold text-lg text-gray-900">
-                    {formatPrice(defaultVariant.price.amount, defaultVariant.price.currencyCode)}
-                  </span>
+                  <div className="flex flex-col">
+                    <div className="flex items-center space-x-1">
+                      <span className={`font-bold text-lg ${isPremiumProduct() ? 'text-purple-700' : 'text-gray-900'}`}>
+                        {formatPrice(defaultVariant.price.amount, defaultVariant.price.currencyCode)}
+                      </span>
+                      {getSubscriptionInfo().period && (
+                        <span className="text-sm text-gray-600 font-medium">
+                          {getSubscriptionInfo().period}
+                        </span>
+                      )}
+                    </div>
+                    {isPremiumProduct() && (
+                      <div className="flex items-center gap-1">
+                        <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                          PREMIUM
+                        </span>
+                        {isEnterpriseProduct() && (
+                          <span className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                            ENTERPRISE
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {defaultVariant.compareAtPrice && (
                     <span className="text-sm text-gray-500 line-through">
                       {formatPrice(defaultVariant.compareAtPrice.amount, defaultVariant.compareAtPrice.currencyCode)}
@@ -420,18 +477,48 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
                   )}
                 </>
               ) : product.priceRange?.minVariantPrice ? (
-                <span className="font-bold text-lg text-gray-900">
-                  {formatPrice(product.priceRange.minVariantPrice.amount, product.priceRange.minVariantPrice.currencyCode)}
-                </span>
+                <>
+                  <div className="flex flex-col">
+                    <div className="flex items-center space-x-1">
+                      <span className={`font-bold text-lg ${isPremiumProduct() ? 'text-purple-700' : 'text-gray-900'}`}>
+                        {formatPrice(product.priceRange.minVariantPrice.amount, product.priceRange.minVariantPrice.currencyCode)}
+                      </span>
+                      {getSubscriptionInfo().period && (
+                        <span className="text-sm text-gray-600 font-medium">
+                          {getSubscriptionInfo().period}
+                        </span>
+                      )}
+                    </div>
+                    {isPremiumProduct() && (
+                      <div className="flex items-center gap-1">
+                        <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                          PREMIUM
+                        </span>
+                        {isEnterpriseProduct() && (
+                          <span className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                            ENTERPRISE
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : (
                 <span className="font-bold text-lg text-gray-900">Free</span>
               )}
             </div>
 
-            {/* License Type */}
-            <span className="text-xs text-gray-600 font-medium">
-              {licenseType} License
-            </span>
+            {/* License Type & Subscription Info */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-gray-600 font-medium">
+                {licenseType} License
+              </span>
+              {getSubscriptionInfo().billing !== 'One-time' && (
+                <span className="text-xs text-blue-600 font-medium">
+                  {getSubscriptionInfo().billing} Subscription
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Digital Status */}
@@ -450,25 +537,42 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
 
         {/* Action Buttons Row */}
         <div className="flex gap-2 pt-2">
-          {/* Quick Add to Cart */}
+          {/* Quick Add to Cart / Subscribe */}
           {isAvailable && onAddToCart && (
             <button
               onClick={handleAddToCart}
               disabled={isLoading}
-              className="flex-1 bg-black text-white text-sm font-medium px-3 py-2 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              aria-label={`Add ${product.title} to cart`}
+              className={`flex-1 ${isPremiumProduct()
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700'
+                : 'bg-black hover:bg-gray-800'
+              } text-white text-sm font-medium px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${isPremiumProduct()
+                ? 'focus:ring-purple-500'
+                : 'focus:ring-black'
+              } disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2`}
+              aria-label={`${isPremiumProduct() ? 'Subscribe to' : 'Add'} ${product.title} ${isPremiumProduct() ? '' : 'to cart'}`}
             >
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin" />
-                  Adding...
+                  {isPremiumProduct() ? 'Subscribing...' : 'Adding...'}
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 1.5M7 13h10m-10 0l1.5-1.5m8.5 1.5H9" />
-                  </svg>
-                  Add to Cart
+                  {isPremiumProduct() ? (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                      Start Subscription
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 1.5M7 13h10m-10 0l1.5-1.5m8.5 1.5H9" />
+                      </svg>
+                      Add to Cart
+                    </>
+                  )}
                 </>
               )}
             </button>
