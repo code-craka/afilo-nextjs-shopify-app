@@ -1,20 +1,21 @@
-# Afilo Next.js Shopify App - Claude Code Configuration
+# Afilo Enterprise Digital Marketplace - Claude Code Configuration
 
 ## Project Overview
 
-Digital commerce platform specializing in software products, using Next.js 15 as frontend and Shopify as backend for digital goods, licensing, and instant downloads.
+Enterprise-grade digital marketplace commanding Fortune 500 pricing - Premium AI-powered software platform built with Next.js 15, TypeScript, and Shopify. Specializes in high-value software products with enterprise pricing ($499-$9,999+/month).
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15.5.4 (App Router), TypeScript, Tailwind CSS v4, ShadCN UI, Framer Motion
-- **Backend**: Shopify (Storefront API, Customer Account API, Webhooks)
-- **State Management**: Zustand + React Query (planned)
-- **Styling**: Tailwind CSS v4 (no config file needed), ShadCN components
-- **Animations**: Framer Motion for micro-interactions
-- **Deployment**: Vercel (frontend), Shopify (backend)
-- **Authentication**: Shopify Customer Account API
-- **Payments**: Shopify Checkout
-- **Domain**: app.afilo.io (frontend), account.afilo.io (customer accounts)
+- **Frontend**: Next.js 15.5.4 (App Router), React 19.1.0, TypeScript 5.6 (Strict Mode)
+- **Styling**: Tailwind CSS v4 (zero config), ShadCN UI with enterprise patterns
+- **Animations**: Framer Motion 12.23.22 for premium interactions
+- **State Management**: Zustand 5.0.8 with persistence for enterprise cart & subscriptions
+- **Backend**: Shopify Storefront API v2024.10 with enhanced enterprise features
+- **Authentication**: Shopify Customer Account API with enterprise SSO support
+- **Payments**: Shopify Checkout with subscription billing integration
+- **Enterprise Features**: Premium pricing, subscription management, custom quote builder
+- **Deployment**: Vercel (app.afilo.io) with enterprise portal (app.afilo.io/enterprise)
+- **Package Manager**: pnpm 8.15.6 (required - never use npm)
 
 ## Development Workflow
 
@@ -59,9 +60,33 @@ Digital commerce platform specializing in software products, using Next.js 15 as
 - **Digital Delivery**: Instant access with <50ms response time
 - **Shopify Checkout**: Seamless handoff with <100ms redirect
 
-## Digital Commerce Features
+## Enterprise Features (Phase 1)
 
-### ProductGrid Component (Enhanced)
+### Premium Pricing System
+- **Professional Plan**: $499-$2,499/month for up to 25 users
+- **Enterprise Plan**: $1,999-$9,999/month for up to 500 users
+- **Enterprise Plus**: $9,999+/month for unlimited users
+- **Volume Discounts**: 10-25% discounts for bulk licensing (25-500+ users)
+- **Educational Discounts**: 50% student, 30% teacher, 40% institution
+- **Annual Billing**: 17% savings with annual subscriptions
+
+### Subscription Management
+- **Trial Periods**: 14-day free trials with conversion tracking
+- **Usage Analytics**: Real-time monitoring of users, projects, API calls, storage
+- **Billing History**: Complete transaction and invoice management
+- **Plan Upgrades/Downgrades**: Seamless tier changes with prorated billing
+- **Payment Methods**: Credit cards, bank accounts, enterprise invoicing
+
+### Enterprise Quote Builder
+- **ROI Calculator**: 3-year investment projections with payback analysis
+- **Custom Requirements**: Infrastructure, integration, customization, compliance
+- **Implementation Estimates**: $50K-$500K enterprise deployments
+- **Volume Pricing**: Automatic bulk discount calculations
+- **Professional Services**: Dedicated teams, training, white-label options
+
+### Advanced Digital Commerce
+
+#### ProductGrid Component (Enhanced)
 
 **Digital Product Showcase:**
 - Smart tech stack detection (React, Python, AI, TypeScript, etc.)
@@ -84,24 +109,36 @@ Digital commerce platform specializing in software products, using Next.js 15 as
 - System requirements display (planned)
 - Digital status indicators
 
-### File Structure
+### Enterprise File Structure
 
 ```
 components/
-├── ProductGrid.tsx          # Enhanced digital commerce product grid
-└── ui/                      # ShadCN UI components
+├── PremiumPricingDisplay.tsx     # Enterprise pricing tiers ($499-$9,999+/month)
+├── SubscriptionManager.tsx       # Complete subscription lifecycle management
+├── EnterpriseQuoteBuilder.tsx    # Custom quote system with ROI projections
+├── ProductGrid.tsx              # Enhanced digital commerce product grid
+├── DigitalProductGrid.tsx       # Alternative cart-integrated grid
+├── DigitalCartWidget.tsx        # Advanced cart system with licensing
+└── ui/                          # ShadCN UI components with enterprise patterns
 
 lib/
-├── shopify.ts              # Shopify API client with error handling
-└── utils.ts                # Utility functions
+├── shopify.ts                   # Enhanced Shopify API client with subscriptions
+└── utils.ts                     # Utility functions
+
+store/
+└── digitalCart.ts               # Enterprise cart & licensing state (Zustand)
+
+hooks/
+└── useDigitalCart.ts            # Cart operations with advanced licensing
 
 types/
-└── shopify.ts              # Comprehensive TypeScript interfaces
+└── shopify.ts                   # Enhanced Shopify & enterprise types
 
 app/
-├── page.tsx                # Homepage with featured products
-├── products/page.tsx       # Full product catalog
-└── test-shopify/page.tsx   # API testing page
+├── page.tsx                     # Premium homepage with Fortune 500 branding
+├── enterprise/page.tsx          # Enterprise portal with pricing & features
+├── products/page.tsx            # Full product catalog
+└── test-shopify/page.tsx        # API testing page
 ```
 
 ### API Integration

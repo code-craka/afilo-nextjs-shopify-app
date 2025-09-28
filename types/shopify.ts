@@ -140,7 +140,7 @@ export interface ShopifyCart {
 }
 
 // API Response Types
-export interface ShopifyGraphQLResponse<T = any> {
+export interface ShopifyGraphQLResponse<T = unknown> {
   data?: T;
   errors?: Array<{
     message: string;
@@ -149,7 +149,7 @@ export interface ShopifyGraphQLResponse<T = any> {
       column: number;
     }>;
     path?: string[];
-    extensions?: Record<string, any>;
+    extensions?: Record<string, unknown>;
   }>;
   extensions?: {
     cost?: {
@@ -288,6 +288,84 @@ export interface ShopifyConfig {
   retries?: number;
   retryDelay?: number;
   timeout?: number;
+}
+
+// Subscription Types for Enterprise Features
+export interface ShopifySubscriptionPlan {
+  id: string;
+  name: string;
+  billingInterval: 'monthly' | 'annually';
+  trialDays?: number;
+  price: ShopifyMoney;
+}
+
+export interface ShopifySubscriptionContract {
+  id: string;
+  status: 'active' | 'cancelled' | 'expired' | 'paused';
+  customer: {
+    id: string;
+    email: string;
+  };
+  lines: Array<{
+    productVariant: ShopifyProductVariant;
+    quantity: number;
+    currentPrice: ShopifyMoney;
+  }>;
+  billingPolicy: {
+    interval: 'month' | 'year';
+    intervalCount: number;
+  };
+  deliveryPolicy: {
+    interval: 'month' | 'year';
+    intervalCount: number;
+  };
+  nextBillingDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Enhanced Product Types for Enterprise Software
+export interface EnterpriseProductMetadata {
+  softwareCategory: 'ai-tool' | 'template' | 'script' | 'plugin' | 'theme' | 'application' | 'api-service' | 'dataset';
+  techStack: string[];
+  licenseTypes: ('personal' | 'commercial' | 'extended' | 'enterprise' | 'developer')[];
+  deploymentOptions: ('cloud' | 'on-premise' | 'hybrid' | 'saas')[];
+  subscriptionSupported: boolean;
+  trialPeriodDays?: number;
+  minimumUsers?: number;
+  maximumUsers?: number;
+  complianceStandards: string[];
+  integrationCapabilities: string[];
+  supportLevel: 'community' | 'standard' | 'premium' | 'enterprise';
+  documentation: {
+    available: boolean;
+    types: ('api-docs' | 'user-manual' | 'video-tutorials' | 'implementation-guide')[];
+  };
+  demoAvailable: boolean;
+  customImplementationAvailable: boolean;
+  version: string;
+  releaseNotes?: string;
+  systemRequirements: {
+    os: string[];
+    memory: string;
+    storage: string;
+    browser?: string[];
+  };
+}
+
+// Pricing Tier Configuration
+export interface PricingTierVariant extends ShopifyProductVariant {
+  tierType: 'professional' | 'enterprise' | 'enterprise-plus';
+  userLimits: {
+    minimum: number;
+    maximum: number;
+  };
+  features: string[];
+  billingOptions: ('monthly' | 'annually' | 'one-time')[];
+  volumeDiscounts: Array<{
+    minimumQuantity: number;
+    discountPercentage: number;
+  }>;
 }
 
 // Utility Types
