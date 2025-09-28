@@ -27,7 +27,7 @@ const mockPremiumProducts: ShopifyProduct[] = [
         {
           node: {
             id: 'gid://shopify/ProductImage/1',
-            url: 'https://cdn.shopify.com/s/files/1/0123/4567/8901/products/ai-generator.jpg?v=1640995200',
+            url: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop',
             altText: 'AI Image Generator Enterprise',
             width: 800,
             height: 600
@@ -56,7 +56,7 @@ const mockPremiumProducts: ShopifyProduct[] = [
     },
     featuredImage: {
       id: 'gid://shopify/ProductImage/1',
-      url: 'https://cdn.shopify.com/s/files/1/0123/4567/8901/products/ai-generator.jpg?v=1640995200',
+      url: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop',
       altText: 'AI Image Generator Enterprise',
       width: 800,
       height: 600
@@ -84,7 +84,7 @@ const mockPremiumProducts: ShopifyProduct[] = [
         {
           node: {
             id: 'gid://shopify/ProductImage/2',
-            url: 'https://cdn.shopify.com/s/files/1/0123/4567/8901/products/react-template.jpg?v=1640995200',
+            url: 'https://images.unsplash.com/photo-1633356122102-3fe601e05bd2?w=800&h=600&fit=crop',
             altText: 'React E-commerce Template',
             width: 800,
             height: 600
@@ -113,7 +113,7 @@ const mockPremiumProducts: ShopifyProduct[] = [
     },
     featuredImage: {
       id: 'gid://shopify/ProductImage/2',
-      url: 'https://cdn.shopify.com/s/files/1/0123/4567/8901/products/react-template.jpg?v=1640995200',
+      url: 'https://images.unsplash.com/photo-1633356122102-3fe601e05bd2?w=800&h=600&fit=crop',
       altText: 'React E-commerce Template',
       width: 800,
       height: 600
@@ -141,7 +141,7 @@ const mockPremiumProducts: ShopifyProduct[] = [
         {
           node: {
             id: 'gid://shopify/ProductImage/3',
-            url: 'https://cdn.shopify.com/s/files/1/0123/4567/8901/products/python-analytics.jpg?v=1640995200',
+            url: 'https://images.unsplash.com/photo-1526379879527-8559ecfcaec0?w=800&h=600&fit=crop',
             altText: 'Python Data Analysis Script',
             width: 800,
             height: 600
@@ -170,7 +170,7 @@ const mockPremiumProducts: ShopifyProduct[] = [
     },
     featuredImage: {
       id: 'gid://shopify/ProductImage/3',
-      url: 'https://cdn.shopify.com/s/files/1/0123/4567/8901/products/python-analytics.jpg?v=1640995200',
+      url: 'https://images.unsplash.com/photo-1526379879527-8559ecfcaec0?w=800&h=600&fit=crop',
       altText: 'Python Data Analysis Script',
       width: 800,
       height: 600
