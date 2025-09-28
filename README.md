@@ -227,7 +227,11 @@ Create a `.env.local` file in the root directory:
 ```env
 # Shopify Configuration (Required)
 NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=fzjdsw-ma.myshopify.com
-NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_storefront_token
+
+# Shopify Storefront API Access Token (SERVER-SIDE ONLY)
+# This is a secret and should NOT be prefixed with NEXT_PUBLIC_
+# Grant "unauthenticated_read_product_listings" and "unauthenticated_read_checkouts" scopes.
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_server_side_storefront_token
 
 # Customer Accounts (Optional)
 NEXT_PUBLIC_CUSTOMER_ACCOUNT_CLIENT_ID=your_client_id

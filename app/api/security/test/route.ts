@@ -146,7 +146,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<SecurityTe
 async function testEnvironmentVariables(): Promise<SecurityTestResult> {
   const requiredVars = [
     'NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN',
-    'NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN',
+    'SHOPIFY_STOREFRONT_ACCESS_TOKEN',
     'LICENSE_SIGNING_SECRET'
   ];
 
@@ -444,7 +444,7 @@ async function testErrorHandlingSecurity(): Promise<SecurityTestResult> {
 async function testShopifyIntegrationSecurity(): Promise<SecurityTestResult> {
   const hasShopifyConfig = !!(
     process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN &&
-    process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN
+    process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN
   );
 
   if (!hasShopifyConfig) {

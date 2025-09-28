@@ -23,7 +23,7 @@
 ```env
 # Required for deployment
 NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=fzjdsw-ma.myshopify.com
-NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_storefront_token
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_server_side_storefront_token
 
 # Optional
 NEXT_PUBLIC_CUSTOMER_ACCOUNT_CLIENT_ID=your_client_id
@@ -197,7 +197,7 @@ Add these secrets in GitHub repository settings:
 ```env
 # Shopify Configuration
 NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN
-NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN
+SHOPIFY_STOREFRONT_ACCESS_TOKEN
 NEXT_PUBLIC_CUSTOMER_ACCOUNT_CLIENT_ID
 
 # Vercel Deployment
