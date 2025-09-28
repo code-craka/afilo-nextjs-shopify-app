@@ -4,6 +4,7 @@ declare global {
     gtag?: (...args: unknown[]) => void;
     hj?: (...args: unknown[]) => void;
     Intercom?: (...args: unknown[]) => void;
+    dataLayer?: unknown[];
   }
 }
 
@@ -34,11 +35,9 @@ export const initGA = () => {
     script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`;
     document.head.appendChild(script);
 
-    window.gtag = function() {
-      // eslint-disable-next-line prefer-rest-params
-      (window as any).dataLayer = (window as any).dataLayer || [];
-      // eslint-disable-next-line prefer-rest-params
-      (window as any).dataLayer.push(arguments);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function(...args: unknown[]) {
+      window.dataLayer?.push(args);
     };
 
     window.gtag('js', new Date());
@@ -170,17 +169,18 @@ export const HOTJAR_ID = process.env.NEXT_PUBLIC_HOTJAR_ID;
 
 export const initHotjar = () => {
   if (typeof window !== 'undefined' && HOTJAR_ID) {
-    (function(h: any, o: any, t: any, j: any, a?: any, r?: any) {
-      h.hj = h.hj || function() {
-        (h.hj.q = h.hj.q || []).push(arguments);
-      };
-      h._hjSettings = { hjid: HOTJAR_ID, hjsv: 6 };
-      a = o.getElementsByTagName('head')[0];
-      r = o.createElement('script');
-      r.async = 1;
-      r.src = t + h._hjSettings.hjid + j + h._hjSettings.hjsv;
-      a.appendChild(r);
-    })(window, document, 'https://static.hotjar.com/c/hotjar-', '.js?sv=');
+    const script = document.createElement('script');
+    script.innerHTML = `
+      (function(h,o,t,j,a,r){
+        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+        h._hjSettings={hjid:${HOTJAR_ID},hjsv:6};
+        a=o.getElementsByTagName('head')[0];
+        r=o.createElement('script');r.async=1;
+        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+        a.appendChild(r);
+      })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+    `;
+    document.head.appendChild(script);
   }
 };
 
@@ -189,48 +189,15 @@ export const INTERCOM_APP_ID = process.env.NEXT_PUBLIC_INTERCOM_APP_ID;
 
 export const initIntercom = (userData?: Record<string, unknown>) => {
   if (typeof window !== 'undefined' && INTERCOM_APP_ID) {
-    (function() {
-      const w = window;
-      const ic = w.Intercom;
-      if (typeof ic === 'function') {
-        ic('reattach_activator');
-        ic('update', { app_id: INTERCOM_APP_ID, ...userData });
-      } else {
-        const d = document;
-        const i = function() {
-          // eslint-disable-next-line prefer-rest-params
-          i.c(arguments);
-        };
-        i.q = [];
-        i.c = function(args: any) {
-          i.q.push(args);
-        };
-        w.Intercom = i;
-        const l = function() {
-          const s = d.createElement('script');
-          s.type = 'text/javascript';
-          s.async = true;
-          s.src = 'https://widget.intercom.io/widget/' + INTERCOM_APP_ID;
-          const x = d.getElementsByTagName('script')[0];
-          x.parentNode?.insertBefore(s, x);
-        };
-        if (document.readyState === 'complete') {
-          l();
-        } else if (w.attachEvent) {
-          w.attachEvent('onload', l);
-        } else {
-          w.addEventListener('load', l, false);
-        }
-      }
-    })();
-
-    // Boot Intercom with user data
-    if (window.Intercom) {
-      window.Intercom('boot', {
-        app_id: INTERCOM_APP_ID,
-        ...userData,
-      });
-    }
+    const script = document.createElement('script');
+    script.innerHTML = `
+      window.intercomSettings = {
+        app_id: "${INTERCOM_APP_ID}",
+        ${userData ? Object.entries(userData).map(([key, value]) => `${key}: "${value}"`).join(',') : ''}
+      };
+      (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',intercomSettings);}else{var d=document;var i=function(){i.c(arguments)};i.q=[];i.c=function(args){i.q.push(args)};w.Intercom=i;function l(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/${INTERCOM_APP_ID}';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);}if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
+    `;
+    document.head.appendChild(script);
   }
 };
 

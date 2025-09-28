@@ -129,7 +129,6 @@ export default function PremiumPricingDisplay({
   className = ''
 }: PremiumPricingDisplayProps) {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annually');
-  const [selectedTier, setSelectedTier] = useState<PricingTier>('professional');
   const [showVolumeCalculator, setShowVolumeCalculator] = useState(false);
 
   // Format price with proper currency
@@ -148,7 +147,6 @@ export default function PremiumPricingDisplay({
   };
 
   const handleTierSelect = (tier: PricingTier) => {
-    setSelectedTier(tier);
     onSelectTier?.(tier, billingPeriod);
   };
 
