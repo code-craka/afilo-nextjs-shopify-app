@@ -1,7 +1,14 @@
 // Server-side Shopify API client with proper authentication
 // CRITICAL: This runs server-side ONLY - never expose to client
 
-import { ShopifyGraphQLResponse, ShopifyError } from '@/types/shopify';
+import { 
+  ShopifyGraphQLResponse, 
+  ShopifyError, 
+  ShopifyCart, 
+  CartCreateInput, 
+  CartLineAddInput, 
+  CartLineUpdateInput 
+} from '../types/shopify';
 
 // Server-side configuration (environment variables)
 const SHOPIFY_SERVER_CONFIG = {
@@ -238,7 +245,7 @@ export async function shopifyFetch<T>(
 
 // Server-side cart operations using official Shopify mutations
 
-export async function serverCreateCart(input: any) {
+export async function serverCreateCart(input: CartCreateInput) {
   const CART_CREATE_MUTATION = `
     mutation cartCreate($input: CartInput!) {
       cartCreate(input: $input) {
@@ -318,13 +325,13 @@ export async function serverCreateCart(input: any) {
 
   return shopifyFetch<{
     cartCreate: {
-      cart: any;
+      cart: ShopifyCart;
       userErrors: Array<{ field?: string[]; message: string }>;
     };
   }>(CART_CREATE_MUTATION, { input });
 }
 
-export async function serverAddCartLines(cartId: string, lines: any[]) {
+export async function serverAddCartLines(cartId: string, lines: CartLineAddInput[]) {
   const CART_LINES_ADD_MUTATION = `
     mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
       cartLinesAdd(cartId: $cartId, lines: $lines) {
@@ -377,13 +384,13 @@ export async function serverAddCartLines(cartId: string, lines: any[]) {
 
   return shopifyFetch<{
     cartLinesAdd: {
-      cart: any;
+      cart: ShopifyCart;
       userErrors: Array<{ field?: string[]; message: string }>;
     };
   }>(CART_LINES_ADD_MUTATION, { cartId, lines });
 }
 
-export async function serverUpdateCartLines(cartId: string, lines: any[]) {
+export async function serverUpdateCartLines(cartId: string, lines: CartLineUpdateInput[]) {
   const CART_LINES_UPDATE_MUTATION = `
     mutation cartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
       cartLinesUpdate(cartId: $cartId, lines: $lines) {
@@ -430,7 +437,7 @@ export async function serverUpdateCartLines(cartId: string, lines: any[]) {
 
   return shopifyFetch<{
     cartLinesUpdate: {
-      cart: any;
+      cart: ShopifyCart;
       userErrors: Array<{ field?: string[]; message: string }>;
     };
   }>(CART_LINES_UPDATE_MUTATION, { cartId, lines });
@@ -473,7 +480,7 @@ export async function serverRemoveCartLines(cartId: string, lineIds: string[]) {
 
   return shopifyFetch<{
     cartLinesRemove: {
-      cart: any;
+      cart: ShopifyCart;
       userErrors: Array<{ field?: string[]; message: string }>;
     };
   }>(CART_LINES_REMOVE_MUTATION, { cartId, lineIds });
@@ -552,7 +559,7 @@ export async function serverGetCart(cartId: string) {
     }
   `;
 
-  return shopifyFetch<{ cart: any }>(CART_QUERY, { cartId });
+  return shopifyFetch<{ cart: ShopifyCart }>(CART_QUERY, { cartId });
 }
 
 // Export configuration for debugging (server-side only)
