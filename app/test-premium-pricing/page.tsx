@@ -182,6 +182,57 @@ const mockPremiumProducts: ShopifyProduct[] = [
   }
 ];
 
+// Mock subscription data for testing
+const mockSubscriptions = [
+  {
+    id: 'sub_1',
+    productName: 'AI Image Generator Tool - Enterprise Edition',
+    planName: 'Enterprise Plan',
+    status: 'active' as const,
+    billingPeriod: 'monthly' as const,
+    currentPrice: 1999,
+    currency: 'USD',
+    nextBillingDate: '2025-02-28',
+    usageMetrics: {
+      users: { current: 45, limit: 500 },
+      projects: { current: 23, limit: 100 },
+      apiCalls: { current: 89000, limit: 100000 },
+      storage: { current: 850, limit: 1000, unit: 'GB' },
+    },
+    features: ['Unlimited AI generation', 'Priority support', 'Advanced analytics'],
+    paymentMethod: {
+      type: 'card' as const,
+      last4: '4242',
+      brand: 'Visa',
+      expiryDate: '12/27'
+    }
+  },
+  {
+    id: 'sub_2',
+    productName: 'React E-commerce Template - Enterprise Package',
+    planName: 'Professional Plan',
+    status: 'trial' as const,
+    billingPeriod: 'annually' as const,
+    currentPrice: 24990,
+    currency: 'USD',
+    nextBillingDate: '2025-02-15',
+    trialEndsAt: '2025-02-15',
+    usageMetrics: {
+      users: { current: 12, limit: 25 },
+      projects: { current: 8, limit: 50 },
+      apiCalls: { current: 15000, limit: 50000 },
+      storage: { current: 200, limit: 500, unit: 'GB' },
+    },
+    features: ['Template library', 'Custom components', 'Email support'],
+    paymentMethod: {
+      type: 'card' as const,
+      last4: '9876',
+      brand: 'MasterCard',
+      expiryDate: '09/26'
+    }
+  }
+];
+
 export default function TestPremiumPricingPage() {
   const [activeTab, setActiveTab] = useState<'products' | 'pricing' | 'subscriptions' | 'quotes'>('products');
 
@@ -255,6 +306,7 @@ export default function TestPremiumPricingPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Enterprise Pricing Tiers</h2>
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <PremiumPricingDisplay
+                  product={mockPremiumProducts[0]}
                   onSelectTier={(tier: string, billing: string) => {
                     console.log('💎 Enterprise tier selected:', { tier, billing });
                     alert(`Selected ${tier} tier with ${billing} billing`);
@@ -269,7 +321,29 @@ export default function TestPremiumPricingPage() {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Subscription Management</h2>
               <div className="bg-white rounded-lg shadow-lg p-6">
-                <SubscriptionManager />
+                <SubscriptionManager
+                  subscriptions={mockSubscriptions}
+                  onUpgrade={(subscriptionId, newPlan) => {
+                    console.log('📈 Upgrade requested:', { subscriptionId, newPlan });
+                    alert(`Upgrading subscription ${subscriptionId} to ${newPlan}`);
+                  }}
+                  onDowngrade={(subscriptionId, newPlan) => {
+                    console.log('📉 Downgrade requested:', { subscriptionId, newPlan });
+                    alert(`Downgrading subscription ${subscriptionId} to ${newPlan}`);
+                  }}
+                  onCancel={(subscriptionId) => {
+                    console.log('❌ Cancellation requested:', subscriptionId);
+                    alert(`Cancelling subscription ${subscriptionId}`);
+                  }}
+                  onReactivate={(subscriptionId) => {
+                    console.log('🔄 Reactivation requested:', subscriptionId);
+                    alert(`Reactivating subscription ${subscriptionId}`);
+                  }}
+                  onUpdatePayment={(subscriptionId) => {
+                    console.log('💳 Payment update requested:', subscriptionId);
+                    alert(`Updating payment method for subscription ${subscriptionId}`);
+                  }}
+                />
               </div>
             </div>
           )}

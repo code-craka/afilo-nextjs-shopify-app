@@ -255,7 +255,7 @@ function SubscriptionCard({
                 </span>
                 <span className={`text-xs ${isNearLimit ? 'text-orange-600' : 'text-gray-600'}`}>
                   {metric.current.toLocaleString()}/{metric.limit === 999999 ? '∞' : metric.limit.toLocaleString()}
-                  {metric.unit && ` ${metric.unit}`}
+                  {'unit' in metric && metric.unit ? ` ${metric.unit}` : ''}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -542,7 +542,7 @@ function UsageAnalytics({ subscriptions, calculateUsagePercentage }: UsageAnalyt
                   </div>
                   <div className="text-xs text-gray-600">
                     {metric.current.toLocaleString()} / {metric.limit === 999999 ? '∞' : metric.limit.toLocaleString()}
-                    {metric.unit && ` ${metric.unit}`}
+                    {'unit' in metric && metric.unit ? ` ${metric.unit}` : ''}
                   </div>
                 </div>
               );
