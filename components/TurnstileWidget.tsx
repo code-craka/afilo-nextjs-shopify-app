@@ -7,7 +7,7 @@ type TurnstileWidgetProps = {
   onVerify: (token: string) => void;
   onExpire?: () => void;
   className?: string;
-  theme?: "light" | "dark";
+  theme?: "light" | "dark" | "auto";
 };
 
 declare global {

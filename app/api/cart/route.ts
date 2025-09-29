@@ -19,10 +19,10 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ cart });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API /cart GET Error:', error);
     return NextResponse.json(
-      { message: 'Failed to fetch cart.', error: error.message },
+      { message: 'Failed to fetch cart.', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -34,10 +34,10 @@ export async function POST(request: Request) {
     const { lines } = await request.json();
     const cart: ShopifyCart = await createCart({ lines });
     return NextResponse.json({ cart });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API /cart POST Error:', error);
     return NextResponse.json(
-      { message: 'Failed to create cart.', error: error.message },
+      { message: 'Failed to create cart.', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -54,10 +54,10 @@ export async function DELETE(request: Request) {
 
     const cart: ShopifyCart = await removeCartLines(cartId, lineIds);
     return NextResponse.json({ cart });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API /cart DELETE Error:', error);
     return NextResponse.json(
-      { message: 'Failed to remove cart lines.', error: error.message },
+      { message: 'Failed to remove cart lines.', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

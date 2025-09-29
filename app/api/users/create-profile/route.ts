@@ -8,7 +8,7 @@ const sql = neon(process.env.DATABASE_URL!);
 export async function POST(request: Request) {
   try {
     // Verify the request is authenticated
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -53,7 +53,8 @@ export async function POST(request: Request) {
 
     // Get Clerk user public metadata to store subscription status
     try {
-      const user = await clerkClient.users.getUser(clerkUserId);
+      const client = await clerkClient();
+      const user = await client.users.getUser(clerkUserId);
 
       // Check if user was created via OAuth
       const isOAuthUser = user.emailAddresses.some(
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
       );
 
       // Update user metadata
-      await clerkClient.users.updateUser(clerkUserId, {
+      await client.users.updateUser(clerkUserId, {
         publicMetadata: {
           ...user.publicMetadata,
           profileId: result[0].id,

@@ -13,10 +13,10 @@ export async function POST(request: Request) {
 
     const cart: ShopifyCart = await addCartLines(cartId, lines);
     return NextResponse.json({ cart });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API /cart/lines POST Error:', error);
     return NextResponse.json(
-      { message: 'Failed to add lines to cart.', error: error.message },
+      { message: 'Failed to add lines to cart.', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -33,10 +33,10 @@ export async function PUT(request: Request) {
 
     const cart: ShopifyCart = await updateCartLines(cartId, lines);
     return NextResponse.json({ cart });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API /cart/lines PUT Error:', error);
     return NextResponse.json(
-      { message: 'Failed to update cart lines.', error: error.message },
+      { message: 'Failed to update cart lines.', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

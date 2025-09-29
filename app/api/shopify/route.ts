@@ -6,28 +6,36 @@ export async function POST(request: Request) {
     const { query, variables } = await request.json();
 
     if (!query) {
-      return NextResponse.json({ error: 'Missing GraphQL query.' }, { status: 400 });
-    }
-
-    const data = await shopifyFetch<any>(query, variables);
-
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error('API Proxy Error:', error);
-
-    // Check if it's a ShopifyServerError to get more details
-    if (error.name === 'ShopifyServerError') {
       return NextResponse.json(
-        {
-          message: error.message,
-          type: error.type,
-          graphqlErrors: error.graphqlErrors,
-        },
-        { status: error.statusCode || 500 }
+        { error: 'Missing GraphQL query.' },
+        { status: 400 }
       );
     }
 
-    // Generic error
+    const data = await shopifyFetch(query, variables);
+
+    return NextResponse.json(data, { status: 200 });
+  } catch (error: unknown) {
+    console.error('API Proxy Error:', error);
+
+    if (error instanceof Error && error.name === 'ShopifyServerError') {
+      const shopifyError = error as Error & {
+        statusCode?: number;
+        type?: string;
+        graphqlErrors?: unknown[];
+      };
+
+      return NextResponse.json(
+        {
+          message: shopifyError.message,
+          type: shopifyError.type,
+          graphqlErrors: shopifyError.graphqlErrors ?? null,
+        },
+        { status: shopifyError.statusCode || 500 }
+      );
+    }
+
+    // fallback generic error
     return NextResponse.json(
       { message: 'An internal server error occurred.' },
       { status: 500 }

@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const sortBy = searchParams.get('sortBy') as ProductSortKeys | null;
     const sortReverse = searchParams.get('sortReverse');
 
-    const params: any = {
+    const params: Record<string, unknown> = {
       first: first ? parseInt(first, 10) : 20,
       after: after || undefined,
       query: query || undefined,
@@ -24,11 +24,11 @@ export async function GET(request: Request) {
     const products: ShopifyProduct[] = await getProducts(params);
 
     return NextResponse.json({ products });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API /products/route Error:', error);
 
     return NextResponse.json(
-      { message: 'Failed to fetch products.', error: error.message },
+      { message: 'Failed to fetch products.', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

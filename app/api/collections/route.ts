@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const sortBy = searchParams.get('sortBy') as CollectionSortKeys | null;
     const sortReverse = searchParams.get('sortReverse');
 
-    const params: any = {
+    const params: Record<string, unknown> = {
       first: first ? parseInt(first, 10) : 20,
       query: query || undefined,
       sortKey: sortBy || 'UPDATED_AT',
@@ -21,10 +21,10 @@ export async function GET(request: Request) {
     const collections: ShopifyCollection[] = await getCollections(params);
 
     return NextResponse.json({ collections });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API /collections/route Error:', error);
     return NextResponse.json(
-      { message: 'Failed to fetch collections.', error: error.message },
+      { message: 'Failed to fetch collections.', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

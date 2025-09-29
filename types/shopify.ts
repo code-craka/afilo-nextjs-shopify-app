@@ -198,6 +198,24 @@ export interface ShopifyCollectionsResponse {
   };
 }
 
+// Sort key enums for GraphQL queries
+export type ProductSortKeys =
+  | 'TITLE'
+  | 'PRODUCT_TYPE'
+  | 'VENDOR'
+  | 'UPDATED_AT'
+  | 'CREATED_AT'
+  | 'BEST_SELLING'
+  | 'PRICE'
+  | 'ID'
+  | 'RELEVANCE';
+
+export type CollectionSortKeys =
+  | 'TITLE'
+  | 'UPDATED_AT'
+  | 'ID'
+  | 'RELEVANCE';
+
 export interface ShopifyCollectionResponse {
   collection: ShopifyCollection | null;
 }

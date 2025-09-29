@@ -371,7 +371,7 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Redirect authenticated users away from auth pages
   if (isPublicRoute(req) && (req.nextUrl.pathname === '/sign-in' || req.nextUrl.pathname === '/sign-up')) {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (userId) {
       const dashboardUrl = new URL('/dashboard', req.url);
       return NextResponse.redirect(dashboardUrl);
