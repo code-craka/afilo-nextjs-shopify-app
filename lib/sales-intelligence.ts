@@ -205,7 +205,7 @@ export interface SalesForecasting {
 export class SalesIntelligenceEngine {
   private leads: Map<string, Lead> = new Map();
   private opportunities: Map<string, Opportunity> = new Map();
-  private scoringCriteria: LeadScoringCriteria;
+  private scoringCriteria!: LeadScoringCriteria;
   private conversionRates: Map<string, number> = new Map();
   private industryBenchmarks: Map<string, number> = new Map();
 
@@ -658,7 +658,7 @@ export class SalesIntelligenceEngine {
     recommendations: string[];
   }[]> {
     const bottlenecks = [];
-    const stages = ['discovery', 'qualification', 'proposal', 'negotiation'];
+    const stages: Opportunity['stage'][] = ['discovery', 'qualification', 'proposal', 'negotiation'];
 
     for (const stage of stages) {
       const conversionKey = `${stage}_to_${this.getNextStage(stage)}`;

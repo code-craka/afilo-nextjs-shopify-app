@@ -73,7 +73,7 @@ const SECURITY_HEADERS: SecurityHeaders = {
 };
 
 // Blocked IP addresses (in production, use external threat intelligence)
-const BLOCKED_IPS = new Set([
+const BLOCKED_IPS = new Set<string>([
   // Add known malicious IPs here
 ]);
 
