@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, StorageValue } from 'zustand/middleware';
 import { SecureCartStorage } from '@/lib/encryption';
 
 // CRITICAL SECURITY: This store NEVER contains cart secret keys
@@ -329,18 +329,26 @@ const secureCartPersistence = {
   storage: {
     getItem: async (name: string) => {
       try {
-        const data = await SecureCartStorage.load();
-        return data ? JSON.stringify(data) : null;
+        // `SecureCartStorage.load()` decrypts and returns the stored object,
+        // which is expected to be in the `StorageValue` format.
+        const storedValue = await SecureCartStorage.load<{
+          state: Partial<SecureDigitalCartState>;
+          version?: number;
+        }>();
+        return storedValue;
       } catch (error) {
         console.error('Failed to load secure cart data:', error);
         return null;
       }
     },
 
-    setItem: async (name: string, value: string) => {
+    setItem: async (
+      name: string,
+      value: StorageValue<Partial<SecureDigitalCartState>>
+    ) => {
       try {
-        const data = JSON.parse(value);
-        await SecureCartStorage.save(data);
+        // `SecureCartStorage.save()` encrypts and saves the object directly.
+        await SecureCartStorage.save(value);
       } catch (error) {
         console.error('Failed to save secure cart data:', error);
       }
