@@ -14,7 +14,7 @@ class CartEncryption {
   private static readonly SALT_LENGTH = 16;
 
   // Generate a key from password using PBKDF2
-  private static async deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+  private static async deriveKey(password: string, salt: BufferSource): Promise<CryptoKey> {
     const encoder = new TextEncoder();
     const passwordBuffer = encoder.encode(password);
 
@@ -51,10 +51,10 @@ class CartEncryption {
     const userAgent = navigator.userAgent;
     const language = navigator.language;
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const screen = `${screen.width}x${screen.height}x${screen.colorDepth}`;
+    const screenDetails = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`;
 
     // Create a consistent but unique identifier
-    const fingerprint = `${userAgent}|${language}|${timezone}|${screen}`;
+    const fingerprint = `${userAgent}|${language}|${timezone}|${screenDetails}`;
 
     // Add a static salt for additional security
     const staticSalt = 'afilo-enterprise-cart-v1';
@@ -63,8 +63,10 @@ class CartEncryption {
   }
 
   // Generate random bytes
-  private static generateRandomBytes(length: number): Uint8Array {
-    return crypto.getRandomValues(new Uint8Array(length));
+  private static generateRandomBytes(length: number): ArrayBuffer {
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    return array.buffer;
   }
 
   // Convert array buffer to base64
@@ -88,7 +90,7 @@ class CartEncryption {
   }
 
   // Encrypt cart data
-  static async encrypt(data: any): Promise<EncryptedData> {
+  static async encrypt<T>(data: T): Promise<EncryptedData> {
     try {
       // Check if Web Crypto API is available
       if (!crypto.subtle) {
@@ -130,7 +132,7 @@ class CartEncryption {
   }
 
   // Decrypt cart data
-  static async decrypt(encryptedData: EncryptedData): Promise<any> {
+  static async decrypt<T>(encryptedData: EncryptedData): Promise<T> {
     try {
       // Check if Web Crypto API is available
       if (!crypto.subtle) {
@@ -170,19 +172,21 @@ class CartEncryption {
   }
 
   // Check if data appears to be encrypted
-  static isEncrypted(data: any): boolean {
+  static isEncrypted(data: unknown): data is EncryptedData {
+    if (typeof data !== 'object' || data === null) {
+      return false;
+    }
+    const d = data as Record<string, unknown>;
     return (
-      typeof data === 'object' &&
-      data !== null &&
-      typeof data.iv === 'string' &&
-      typeof data.encryptedData === 'string' &&
-      typeof data.salt === 'string'
+      typeof d.iv === 'string' &&
+      typeof d.encryptedData === 'string' &&
+      typeof d.salt === 'string'
     );
   }
 
   // Fallback for when encryption is not available
   static fallbackStorage = {
-    set: (key: string, data: any): void => {
+    set: <T>(key: string, data: T): void => {
       try {
         localStorage.setItem(key, JSON.stringify(data));
       } catch (error) {
@@ -190,10 +194,10 @@ class CartEncryption {
       }
     },
 
-    get: (key: string): any => {
+    get: <T>(key: string): T | null => {
       try {
         const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : null;
+        return item ? (JSON.parse(item) as T) : null;
       } catch (error) {
         console.warn('Failed to read from localStorage:', error);
         return null;
@@ -208,11 +212,11 @@ export class SecureCartStorage {
   private static encryptionEnabled = true;
 
   // Save cart data securely
-  static async save(cartData: any): Promise<void> {
+  static async save<T>(cartData: T): Promise<void> {
     try {
       if (this.encryptionEnabled && crypto.subtle) {
         // Encrypt and store
-        const encrypted = await CartEncryption.encrypt(cartData);
+        const encrypted = await CartEncryption.encrypt<T>(cartData);
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(encrypted));
       } else {
         // Fallback to plain storage with warning
@@ -227,7 +231,7 @@ export class SecureCartStorage {
   }
 
   // Load cart data securely
-  static async load(): Promise<any> {
+  static async load<T>(): Promise<T | null> {
     try {
       const storedData = localStorage.getItem(this.STORAGE_KEY);
 
@@ -240,14 +244,14 @@ export class SecureCartStorage {
       // Check if data is encrypted
       if (CartEncryption.isEncrypted(parsedData)) {
         if (this.encryptionEnabled && crypto.subtle) {
-          return await CartEncryption.decrypt(parsedData);
+          return await CartEncryption.decrypt<T>(parsedData);
         } else {
           console.warn('Cannot decrypt cart data - Web Crypto API not available');
           return null;
         }
       } else {
         // Data is not encrypted (legacy format)
-        return parsedData;
+        return parsedData as T;
       }
 
     } catch (error) {

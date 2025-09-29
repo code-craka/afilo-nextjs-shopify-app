@@ -1,12 +1,19 @@
 // Server-side Shopify API client with proper authentication
 // CRITICAL: This runs server-side ONLY - never expose to client
 
-import { ShopifyGraphQLResponse, ShopifyError } from '@/types/shopify';
+import {
+  ShopifyGraphQLResponse,
+  ShopifyError,
+  ShopifyCart,
+  CartCreateInput,
+  CartLineAddInput,
+  CartLineUpdateInput
+} from '@/types/shopify';
 
 // Server-side configuration (environment variables)
 const SHOPIFY_SERVER_CONFIG = {
   domain: process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN!,
-  storefrontAccessToken: process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
+  storefrontAccessToken: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
   adminAccessToken: process.env.SHOPIFY_ADMIN_ACCESS_TOKEN, // Optional for admin API
   apiVersion: '2024-10',
   retries: 3,
@@ -17,7 +24,7 @@ const SHOPIFY_SERVER_CONFIG = {
 // Validate required environment variables
 if (!SHOPIFY_SERVER_CONFIG.domain || !SHOPIFY_SERVER_CONFIG.storefrontAccessToken) {
   throw new Error(
-    'Missing required Shopify environment variables. Check NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN and NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN'
+    'Missing required Shopify environment variables. Check NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN and SHOPIFY_STOREFRONT_ACCESS_TOKEN'
   );
 }
 
@@ -238,7 +245,7 @@ export async function shopifyFetch<T>(
 
 // Server-side cart operations using official Shopify mutations
 
-export async function serverCreateCart(input: any) {
+export async function serverCreateCart(input: CartCreateInput) {
   const CART_CREATE_MUTATION = `
     mutation cartCreate($input: CartInput!) {
       cartCreate(input: $input) {
@@ -318,13 +325,13 @@ export async function serverCreateCart(input: any) {
 
   return shopifyFetch<{
     cartCreate: {
-      cart: any;
+      cart: ShopifyCart;
       userErrors: Array<{ field?: string[]; message: string }>;
     };
   }>(CART_CREATE_MUTATION, { input });
 }
 
-export async function serverAddCartLines(cartId: string, lines: any[]) {
+export async function serverAddCartLines(cartId: string, lines: CartLineAddInput[]) {
   const CART_LINES_ADD_MUTATION = `
     mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
       cartLinesAdd(cartId: $cartId, lines: $lines) {
@@ -377,13 +384,13 @@ export async function serverAddCartLines(cartId: string, lines: any[]) {
 
   return shopifyFetch<{
     cartLinesAdd: {
-      cart: any;
+      cart: ShopifyCart;
       userErrors: Array<{ field?: string[]; message: string }>;
     };
   }>(CART_LINES_ADD_MUTATION, { cartId, lines });
 }
 
-export async function serverUpdateCartLines(cartId: string, lines: any[]) {
+export async function serverUpdateCartLines(cartId: string, lines: CartLineUpdateInput[]) {
   const CART_LINES_UPDATE_MUTATION = `
     mutation cartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
       cartLinesUpdate(cartId: $cartId, lines: $lines) {
@@ -430,7 +437,7 @@ export async function serverUpdateCartLines(cartId: string, lines: any[]) {
 
   return shopifyFetch<{
     cartLinesUpdate: {
-      cart: any;
+      cart: ShopifyCart;
       userErrors: Array<{ field?: string[]; message: string }>;
     };
   }>(CART_LINES_UPDATE_MUTATION, { cartId, lines });
@@ -473,7 +480,7 @@ export async function serverRemoveCartLines(cartId: string, lineIds: string[]) {
 
   return shopifyFetch<{
     cartLinesRemove: {
-      cart: any;
+      cart: ShopifyCart;
       userErrors: Array<{ field?: string[]; message: string }>;
     };
   }>(CART_LINES_REMOVE_MUTATION, { cartId, lineIds });
@@ -552,7 +559,7 @@ export async function serverGetCart(cartId: string) {
     }
   `;
 
-  return shopifyFetch<{ cart: any }>(CART_QUERY, { cartId });
+  return shopifyFetch<{ cart: ShopifyCart }>(CART_QUERY, { cartId });
 }
 
 // Export configuration for debugging (server-side only)

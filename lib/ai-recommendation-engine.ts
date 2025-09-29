@@ -568,7 +568,10 @@ export class AIRecommendationEngine {
     return product.description.toLowerCase().includes(challenge.toLowerCase());
   }
 
-  private calculateTechnicalFit(product: ShopifyProduct, techRequirements: any): number {
+  private calculateTechnicalFit(
+    product: ShopifyProduct,
+    techRequirements: EnterpriseNeedsAssessment['technicalRequirements']
+  ): number {
     // Calculate how well product fits technical requirements
     return 0.8; // Simplified
   }

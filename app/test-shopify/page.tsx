@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { testConnection, getProducts, getCollections, debugProductQuery, getProductsSimple, type DebugProductResponse } from '@/lib/shopify';
+// No longer importing from shopify lib directly on client
 import type { ShopifyProduct, ShopifyCollection } from '@/types/shopify';
+import type { DebugProductResponse } from '@/lib/shopify'; // Type is still needed
 
 export default function TestShopifyPage() {
   const [connectionStatus, setConnectionStatus] = useState<{
@@ -21,40 +22,35 @@ export default function TestShopifyPage() {
     setError(null);
 
     try {
-      // Test connection
-      console.log('Testing Shopify connection...');
-      const connection = await testConnection();
+      // Test connection via API proxy
+      console.log('Testing Shopify connection via API proxy...');
+      const connRes = await fetch('/api/test-connection');
+      const connection = await connRes.json();
       setConnectionStatus(connection);
 
       if (!connection.success) {
         throw new Error(`Connection failed: ${connection.message}`);
       }
 
-      // Debug product query first
-      console.log('Testing minimal product query...');
-      const debug = await debugProductQuery();
+      // Debug product query via API proxy
+      console.log('Testing minimal product query via API proxy...');
+      const debugRes = await fetch('/api/debug-query');
+      const debug = await debugRes.json();
       setDebugInfo(debug);
       console.log('Debug result:', debug);
 
       if (debug.success) {
-        // If debug works, try the simple products query
-        console.log('Fetching products with getProductsSimple...');
-        const productsData = await getProductsSimple({ first: 10 });
+        // Fetch products via API proxy
+        console.log('Fetching products via API proxy...');
+        const productsRes = await fetch('/api/products?first=10');
+        const { products: productsData } = await productsRes.json();
         setProducts(productsData);
-        console.log(`Fetched ${productsData.length} products with getProductsSimple`);
+        console.log(`Fetched ${productsData.length} products`);
 
-        // Also try the complex products query for comparison
-        try {
-          console.log('Testing complex getProducts query...');
-          const complexProductsData = await getProducts({ first: 3 });
-          console.log(`Complex query returned ${complexProductsData.length} products`);
-        } catch (complexError) {
-          console.error('Complex getProducts failed:', complexError);
-        }
-
-        // Fetch collections
-        console.log('Fetching collections...');
-        const collectionsData = await getCollections({ first: 5 });
+        // Fetch collections via API proxy
+        console.log('Fetching collections via API proxy...');
+        const collectionsRes = await fetch('/api/collections?first=5');
+        const { collections: collectionsData } = await collectionsRes.json();
         setCollections(collectionsData);
         console.log(`Fetched ${collectionsData.length} collections`);
       } else {
@@ -64,15 +60,7 @@ export default function TestShopifyPage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       console.error('Test failed:', err);
-      
-      // If it's a ShopifyAPIError with GraphQL errors, show detailed information
-      if (err && typeof err === 'object' && 'graphqlErrors' in err) {
-        const shopifyError = err as { graphqlErrors: unknown[] };
-        console.error('GraphQL Errors:', shopifyError.graphqlErrors);
-        setError(`${errorMessage}\n\nGraphQL Errors: ${JSON.stringify(shopifyError.graphqlErrors, null, 2)}`);
-      } else {
-        setError(errorMessage);
-      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

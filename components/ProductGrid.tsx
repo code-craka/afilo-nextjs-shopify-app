@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { getProductsSimple } from '@/lib/shopify';
+// No longer importing from shopify lib directly on client
 import type { ShopifyProduct, ProductsQueryParams } from '@/types/shopify';
 
 // Types
@@ -636,56 +636,33 @@ export default function ProductGrid({
         console.log('⏳ Loading initial products...');
       }
 
-      // Use the working simple query instead of complex fragments
-      console.log('🔍 Calling getProductsSimple...');
-      const newProducts = await getProductsSimple(queryParams);
-      console.log('✅ getProductsSimple returned:', newProducts.length, 'products');
-
-      // Log raw products data before transformation
-      console.log('🔍 Raw products sample:', newProducts[0]);
-
-      // Transform the data to match our ShopifyProduct interface
-      const transformedProducts = newProducts.map((product, index) => {
-        console.log(`🔄 Transforming product ${index + 1}:`, {
-          title: product.title,
-          hasImages: !!product.images,
-          imageStructure: product.images,
-          hasVariants: !!product.variants,
-          variantStructure: product.variants,
-          availableForSale: product.availableForSale
-        });
-
-        return {
-          ...product,
-          // Ensure proper structure for any missing fields
-          images: product.images || { edges: [] },
-          variants: product.variants || { edges: [] },
-          options: product.options || [],
-          tags: product.tags || [],
-          seo: product.seo || { title: null, description: null },
-          priceRange: product.priceRange || {
-            minVariantPrice: { amount: '0', currencyCode: 'USD' },
-            maxVariantPrice: { amount: '0', currencyCode: 'USD' }
-          }
-        };
+      // Fetch products from the secure API proxy
+      const urlParams = new URLSearchParams({
+        first: String(queryParams.first),
+        ...(queryParams.after && { after: queryParams.after }),
+        ...(queryParams.query && { query: queryParams.query }),
+        ...(queryParams.sortKey && { sortBy: queryParams.sortKey }),
+        ...(queryParams.reverse && { sortReverse: String(queryParams.reverse) }),
       });
 
-      console.log('🔄 Transformed products:', transformedProducts.map(p => p.title));
+      console.log(`🔍 Fetching from /api/products?${urlParams.toString()}`);
+      const response = await fetch(`/api/products?${urlParams.toString()}`);
 
-      if (isLoadMore) {
-        setProducts(prev => {
-          const combined = [...prev, ...transformedProducts];
-          console.log('📦 Combined products count:', combined.length);
-          return combined;
-        });
-      } else {
-        setProducts(transformedProducts);
-        console.log('📦 Set initial products count:', transformedProducts.length);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch products from API');
       }
 
-      // Check if there are more products (simplified logic)
+      const { products: newProducts } = await response.json();
+      console.log('✅ API returned:', newProducts.length, 'products');
+
+      if (isLoadMore) {
+        setProducts(prev => [...prev, ...newProducts]);
+      } else {
+        setProducts(newProducts);
+      }
+
       setHasMore(newProducts.length === productsPerPage);
-      console.log('🔮 Has more products:', newProducts.length === productsPerPage);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load products';

@@ -133,7 +133,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<SecurityTe
           testName: 'Security Test Suite',
           status: 'FAIL',
           description: 'Failed to execute security tests',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: { error: error instanceof Error ? error.message : 'Unknown error' }
         }],
         recommendations: ['Fix security test suite execution issues']
       } as SecurityTestSuite,
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<SecurityTe
 async function testEnvironmentVariables(): Promise<SecurityTestResult> {
   const requiredVars = [
     'NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN',
-    'NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN',
+    'SHOPIFY_STOREFRONT_ACCESS_TOKEN',
     'LICENSE_SIGNING_SECRET'
   ];
 
@@ -234,7 +234,7 @@ async function testCartSecurity(): Promise<SecurityTestResult> {
       testName: 'Cart Security',
       status: 'FAIL',
       description: 'Failed to test cart security',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' },
       recommendation: 'Fix cart security test execution'
     };
   }
@@ -306,7 +306,7 @@ async function testLicenseValidation(): Promise<SecurityTestResult> {
       testName: 'License Validation',
       status: 'FAIL',
       description: 'Failed to test license validation',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
     };
   }
 }
@@ -444,7 +444,7 @@ async function testErrorHandlingSecurity(): Promise<SecurityTestResult> {
 async function testShopifyIntegrationSecurity(): Promise<SecurityTestResult> {
   const hasShopifyConfig = !!(
     process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN &&
-    process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN
+    process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN
   );
 
   if (!hasShopifyConfig) {

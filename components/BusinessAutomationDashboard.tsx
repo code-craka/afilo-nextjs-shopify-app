@@ -96,7 +96,7 @@ export default function BusinessAutomationDashboard({ userId, userRole }: Busine
           variants: { edges: [] },
           images: { edges: [] },
           options: [],
-          featuredImage: null,
+          featuredImage: undefined,
           seo: { title: 'Enterprise AI Platform', description: 'AI analytics platform' }
         },
         score: 0.92,

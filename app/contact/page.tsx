@@ -1,41 +1,97 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
+import TurnstileWidget from '@/components/TurnstileWidget';
+
+const initialFormState = {
+  name: '',
+  email: '',
+  company: '',
+  role: '',
+  inquiryType: 'general',
+  subject: '',
+  message: '',
+  budget: ''
+};
+
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
 export default function ContactPage() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    company: '',
-    role: '',
-    inquiryType: 'general',
-    subject: '',
-    message: '',
-    budget: ''
-  });
+  const [formData, setFormData] = useState(initialFormState);
+  const [error, setError] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileWidgetKey, setTurnstileWidgetKey] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!turnstileSiteKey) {
+      setError('Verification service is currently unavailable. Please try again later.');
+      return;
+    }
+
+    if (!turnstileToken) {
+      setError('Please complete the security verification before submitting.');
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          token: turnstileToken
+        })
+      });
 
-    console.log('Contact form submitted:', formData);
-    setSubmitted(true);
-    setIsSubmitting(false);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: 'Unable to submit your request. Please try again.' }));
+        throw new Error(payload.error ?? 'Unable to submit your request. Please try again.');
+      }
+
+      console.log('Contact form submitted:', formData);
+      setFormData(initialFormState);
+      setSubmitted(true);
+      setTurnstileToken(null);
+      setTurnstileWidgetKey((prev) => prev + 1);
+    } catch (submissionError) {
+      const message = submissionError instanceof Error ? submissionError.message : 'Unable to submit your request. Please try again.';
+      setError(message);
+      setTurnstileToken(null);
+      setTurnstileWidgetKey((prev) => prev + 1);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setError(null);
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
   };
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+    setError(null);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
+
+  const turnstileAvailable = Boolean(turnstileSiteKey);
 
   if (submitted) {
     return (
@@ -53,7 +109,13 @@ export default function ContactPage() {
           </p>
           <button
             type="button"
-            onClick={() => setSubmitted(false)}
+            onClick={() => {
+              setSubmitted(false);
+              setError(null);
+              setTurnstileToken(null);
+              setIsSubmitting(false);
+              setTurnstileWidgetKey((prev) => prev + 1);
+            }}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Send Another Message
@@ -289,6 +351,25 @@ export default function ContactPage() {
                 />
               </div>
 
+              {turnstileAvailable ? (
+                <div className="flex flex-col items-center gap-2">
+                  <TurnstileWidget
+                    key={turnstileWidgetKey}
+                    siteKey={turnstileSiteKey}
+                    onVerify={handleTurnstileVerify}
+                    onExpire={handleTurnstileExpire}
+                    className="cf-turnstile"
+                  />
+                  <p className="text-xs text-gray-500 text-center">
+                    Protected by Cloudflare Turnstile.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-700">
+                  Turnstile verification is not configured. Add <code>NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> and <code>TURNSTILE_SECRET_KEY</code> to enable secure submissions.
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -296,6 +377,12 @@ export default function ContactPage() {
               >
                 {isSubmitting ? 'Sending...' : 'Send Message'}
               </button>
+
+              {error && (
+                <p className="text-sm text-red-600 text-center">
+                  {error}
+                </p>
+              )}
 
               <p className="text-sm text-gray-500 text-center">
                 By submitting this form, you agree to our Terms of Service and Privacy Policy.

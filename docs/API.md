@@ -354,13 +354,13 @@ async function shopifyFetchWithRetry<T>(query: string, variables: any, retries =
 ### API Token Security
 
 ```typescript
-// Environment variables for security
+// Secure environment variable handling (server-side only)
 const SHOPIFY_DOMAIN = process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN;
-const STOREFRONT_TOKEN = process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+const STOREFRONT_TOKEN = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN; // SERVER-SIDE ONLY
 
-// Token validation
+// Token validation in the server environment
 if (!SHOPIFY_DOMAIN || !STOREFRONT_TOKEN) {
-  throw new Error('Missing required Shopify credentials');
+  throw new Error('Missing required Shopify credentials on the server.');
 }
 ```
 

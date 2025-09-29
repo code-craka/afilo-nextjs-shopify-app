@@ -227,12 +227,26 @@ Create a `.env.local` file in the root directory:
 ```env
 # Shopify Configuration (Required)
 NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=fzjdsw-ma.myshopify.com
-NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_storefront_token
+
+# Shopify Storefront API Access Token (SERVER-SIDE ONLY)
+# This is a secret and should NOT be prefixed with NEXT_PUBLIC_
+# Grant "unauthenticated_read_product_listings" and "unauthenticated_read_checkouts" scopes.
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_server_side_storefront_token
+
+# Site Metadata
+NEXT_PUBLIC_SITE_URL=https://app.afilo.io
+
+# Google Analytics (Optional)
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-FTSGZKX3LH
+
+# Cloudflare Turnstile (Recommended for Forms)
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAB3zV7C4xdvUgE0h
+TURNSTILE_SECRET_KEY=0x4AAAAAAB3zV3oGCjnruHYI65VXbUxWcEQ
 
 # Customer Accounts (Optional)
 NEXT_PUBLIC_CUSTOMER_ACCOUNT_CLIENT_ID=your_client_id
 
-# Enterprise Features (Optional)
+# Enterprise Integrations (Optional)
 NEXT_PUBLIC_ENTERPRISE_API_URL=your_enterprise_api
 NEXT_PUBLIC_ANALYTICS_KEY=your_analytics_key
 
@@ -262,7 +276,7 @@ ANALYZE=true  # Bundle analyzer
 
 ### Enterprise Development Workflow
 
-1. **Start MCP Context7 Server** (mandatory first step):
+1. **(Optional) Start MCP Context7 Server** for AI-assisted coding:
    ```bash
    /mcp context7
    ```
@@ -424,7 +438,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## 👤 Author
 
-**Rihan**
+### Rihan
 - GitHub: [@code-craka](https://github.com/code-craka)
 - Project: [Afilo Enterprise Marketplace](https://app.afilo.io)
 - Enterprise Portal: [app.afilo.io/enterprise](https://app.afilo.io/enterprise)
@@ -432,12 +446,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-<div align="center">
-
 **Built for Enterprise Success** 🚀 | **Commanding Fortune 500 Pricing** 💎 | **Powered by Next.js & Shopify** ⚡
 
 [🚀 Live Demo](https://app.afilo.io) • [🏢 Enterprise Portal](https://app.afilo.io/enterprise) • [📚 Documentation](./docs/) • [🐛 Report Bug](https://github.com/code-craka/afilo-nextjs-shopify-app/issues) • [💡 Request Feature](https://github.com/code-craka/afilo-nextjs-shopify-app/issues)
 
 **Enterprise Revenue:** $50M+ | **Fortune 500 Clients:** 500+ | **Uptime SLA:** 99.99% | **Global Reach:** 150+ Countries
-
-</div>
