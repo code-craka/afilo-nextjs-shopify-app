@@ -147,8 +147,14 @@ Comprehensive TypeScript interfaces for all Shopify data. Always use these types
 
 ### Environment Variables (Required)
 ```env
+# Publicly accessible Shopify domain
 NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=fzjdsw-ma.myshopify.com
-NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN=<token>
+
+# Server-side only Shopify Storefront Access Token
+# This is a secret and MUST NOT be exposed to the client
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=<your_server_side_token>
+
+# Publicly accessible Customer Account Client ID
 NEXT_PUBLIC_CUSTOMER_ACCOUNT_CLIENT_ID=<client-id>
 ```
 

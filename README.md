@@ -227,7 +227,11 @@ Create a `.env.local` file in the root directory:
 ```env
 # Shopify Configuration (Required)
 NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=fzjdsw-ma.myshopify.com
-NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_storefront_token
+
+# Shopify Storefront API Access Token (SERVER-SIDE ONLY)
+# This is a secret and should NOT be prefixed with NEXT_PUBLIC_
+# Grant "unauthenticated_read_product_listings" and "unauthenticated_read_checkouts" scopes.
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_server_side_storefront_token
 
 # Site Metadata
 NEXT_PUBLIC_SITE_URL=https://app.afilo.io

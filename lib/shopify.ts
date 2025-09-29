@@ -23,7 +23,7 @@ import {
 // Environment Configuration
 const SHOPIFY_CONFIG: ShopifyConfig = {
   domain: process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN!,
-  storefrontAccessToken: process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
+  storefrontAccessToken: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
   apiVersion: '2024-10',
   retries: 3,
   retryDelay: 1000,
@@ -32,7 +32,7 @@ const SHOPIFY_CONFIG: ShopifyConfig = {
 
 // Validate required environment variables
 if (!SHOPIFY_CONFIG.domain || !SHOPIFY_CONFIG.storefrontAccessToken) {
-  throw new Error('Missing required Shopify environment variables');
+  throw new Error('Missing required Shopify environment variables. Ensure NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN and SHOPIFY_STOREFRONT_ACCESS_TOKEN are set.');
 }
 
 // GraphQL Fragments

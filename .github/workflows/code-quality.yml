@@ -73,7 +73,7 @@ jobs:
       env:
         ANALYZE: true
         NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN: fzjdsw-ma.myshopify.com
-        NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN: dummy_token_for_build
+        SHOPIFY_STOREFRONT_ACCESS_TOKEN: dummy_token_for_build
         
     - name: Upload bundle analysis
       uses: actions/upload-artifact@v4

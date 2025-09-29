@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { getProductsSimple } from '@/lib/shopify';
+// No longer importing from shopify lib directly on client
 import { useDigitalCart } from '@/hooks/useDigitalCart';
 import type { ShopifyProduct } from '@/types/shopify';
 import type { LicenseType } from '@/store/digitalCart';
@@ -488,25 +488,35 @@ export default function DigitalProductGrid({
     setError(null);
 
     try {
-      console.log('🎯 Loading products with params:', queryParams);
+      const urlParams = new URLSearchParams({
+        first: String(queryParams.first),
+        ...(queryParams.after && { after: queryParams.after }),
+        ...(queryParams.query && { query: queryParams.query }),
+        ...(queryParams.sortKey && { sortBy: queryParams.sortKey }),
+        ...(queryParams.reverse && { sortReverse: String(queryParams.reverse) }),
+      });
 
-      const response = await getProductsSimple(queryParams);
-      console.log('📦 Products response:', response);
+      console.log(`🎯 Loading products from /api/products?${urlParams.toString()}`);
 
-      if (response && Array.isArray(response)) {
-        if (isLoadMore) {
-          setProducts(prev => [...prev, ...response]);
-        } else {
-          setProducts(response);
-          setCursor(null);
-        }
+      const response = await fetch(`/api/products?${urlParams.toString()}`);
 
-        setHasMore(response.length === productsPerPage);
-      } else {
-        console.warn('⚠️ Invalid products response:', response);
-        setProducts([]);
-        setHasMore(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch products from API');
       }
+
+      const { products: newProducts } = await response.json();
+      console.log('📦 API returned:', newProducts.length, 'products');
+
+      if (isLoadMore) {
+        setProducts(prev => [...prev, ...newProducts]);
+      } else {
+        setProducts(newProducts);
+        setCursor(null);
+      }
+
+      setHasMore(newProducts.length === productsPerPage);
+
     } catch (err) {
       console.error('❌ Failed to load products:', err);
       setError(err instanceof Error ? err.message : 'Failed to load products');

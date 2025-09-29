@@ -6,7 +6,7 @@ import { ShopifyGraphQLResponse, ShopifyError } from '@/types/shopify';
 // Server-side configuration (environment variables)
 const SHOPIFY_SERVER_CONFIG = {
   domain: process.env.NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN!,
-  storefrontAccessToken: process.env.NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
+  storefrontAccessToken: process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN!,
   adminAccessToken: process.env.SHOPIFY_ADMIN_ACCESS_TOKEN, // Optional for admin API
   apiVersion: '2024-10',
   retries: 3,
@@ -17,7 +17,7 @@ const SHOPIFY_SERVER_CONFIG = {
 // Validate required environment variables
 if (!SHOPIFY_SERVER_CONFIG.domain || !SHOPIFY_SERVER_CONFIG.storefrontAccessToken) {
   throw new Error(
-    'Missing required Shopify environment variables. Check NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN and NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN'
+    'Missing required Shopify environment variables. Check NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN and SHOPIFY_STOREFRONT_ACCESS_TOKEN'
   );
 }
 
