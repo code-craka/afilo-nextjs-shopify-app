@@ -15,7 +15,7 @@ const initialFormState = {
   budget: ''
 };
 
-const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState(initialFormState);

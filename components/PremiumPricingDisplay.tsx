@@ -384,15 +384,15 @@ function VolumeDiscountCalculator({ tiers, billingPeriod }: VolumeDiscountCalcul
           <input
             id="user-count-slider"
             type="range"
-            min="1"
-            max="1000"
+            min={1}
+            max={1000}
             value={userCount}
             onChange={(e) => setUserCount(Number(e.target.value))}
             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
             aria-label={`Select number of users: ${userCount}`}
-            aria-valuemin="1"
-            aria-valuemax="1000"
-            aria-valuenow={String(userCount)}
+            aria-valuemin={1}
+            aria-valuemax={1000}
+            aria-valuenow={userCount}
           />
           <div className="flex justify-between text-sm text-gray-600 mt-1">
             <span>1</span>
