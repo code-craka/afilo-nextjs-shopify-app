@@ -32,7 +32,10 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   cancel_at_period_end BOOLEAN DEFAULT FALSE,
   cancelled_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMP DEFAULT NOW(),
+  -- ADDED: Foreign key constraint
+  CONSTRAINT fk_subscriptions_user FOREIGN KEY (clerk_user_id)
+    REFERENCES user_profiles(clerk_user_id) ON DELETE CASCADE
 );
 
 -- Download links and licenses
@@ -47,8 +50,12 @@ CREATE TABLE IF NOT EXISTS downloads (
   download_count INTEGER DEFAULT 0,
   max_downloads INTEGER DEFAULT 10,
   expires_at TIMESTAMP,
+  shopify_order_id TEXT NOT NULL, -- FIXED: Add NOT NULL constraint
   created_at TIMESTAMP DEFAULT NOW(),
-  last_downloaded_at TIMESTAMP
+  last_downloaded_at TIMESTAMP,
+  -- ADDED: Foreign key constraint
+  CONSTRAINT fk_downloads_user FOREIGN KEY (clerk_user_id)
+    REFERENCES user_profiles(clerk_user_id) ON DELETE CASCADE
 );
 
 -- Payment events log
@@ -70,8 +77,10 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_shopify_order ON subscriptions(shop
 CREATE INDEX IF NOT EXISTS idx_downloads_user ON downloads(clerk_user_id);
 CREATE INDEX IF NOT EXISTS idx_downloads_license ON downloads(license_key);
 CREATE INDEX IF NOT EXISTS idx_downloads_subscription ON downloads(subscription_id);
+CREATE INDEX IF NOT EXISTS idx_downloads_shopify_order ON downloads(shopify_order_id); -- ADDED: New index
+CREATE INDEX IF NOT EXISTS idx_downloads_user_product ON downloads(clerk_user_id, product_id); -- ADDED: New compound index
 CREATE INDEX IF NOT EXISTS idx_payment_events_user ON payment_events(clerk_user_id);
-CREATE INDEX IF NOT EXISTS idx_payment_events_order ON payment_events(shopify_order_id);
+CREATE INDEX IF NOT EXISTS idx_payment_events_order ON payment_events(shopify_order_id); -- ADDED: New index
 CREATE INDEX IF NOT EXISTS idx_user_profiles_clerk_id ON user_profiles(clerk_user_id);
 
 -- Add updated_at trigger for subscriptions

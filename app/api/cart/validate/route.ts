@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProductById } from '@/lib/shopify';
+import { auth } from '@clerk/nextjs/server';
+import { getProductsByIds } from '@/lib/shopify-server';
 import { LICENSE_DEFINITIONS, EDUCATIONAL_DISCOUNTS, TAX_RATES } from '@/store/digitalCart';
+import { logSecurityEvent } from '@/lib/cart-security';
+import {
+  validationRateLimit,
+  checkRateLimit as checkDistributedRateLimit,
+  getRateLimitIdentifier,
+  getClientIp
+} from '@/lib/rate-limit';
 
 interface CartValidationRequest {
   items: Array<{
@@ -34,16 +42,16 @@ interface CartValidationResponse {
 // Rate limiting storage (in production, use Redis)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
-function getRateLimitKey(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0] : 'unknown';
-  return `cart-validate:${ip}`;
+function getRateLimitKey(userId: string | null, ip: string): string {
+  // Prioritize user-based rate limiting for authenticated users
+  return userId ? `cart-validate:user:${userId}` : `cart-validate:ip:${ip}`;
 }
 
-function checkRateLimit(key: string): boolean {
+function checkRateLimit(key: string, isAuthenticated: boolean): boolean {
   const now = Date.now();
   const windowMs = 15 * 60 * 1000; // 15 minutes
-  const maxRequests = 100;
+  // ��� SECURITY FIX: Reduced rate limit from 100 to 20 for authenticated users
+  const maxRequests = isAuthenticated ? 20 : 10; // Even stricter for unauthenticated
 
   const record = rateLimitMap.get(key);
 
@@ -72,16 +80,59 @@ setInterval(() => {
 
 export async function POST(request: NextRequest): Promise<NextResponse<CartValidationResponse>> {
   try {
-    // Rate limiting
-    const rateLimitKey = getRateLimitKey(request);
-    if (!checkRateLimit(rateLimitKey)) {
+    // 🔒 CRITICAL SECURITY FIX: Require authentication
+    const { userId } = await auth();
+
+    if (!userId) {
+      const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+
+      await logSecurityEvent({
+        type: 'UNAUTHORIZED_ACCESS',
+        userId: null,
+        ip,
+        details: {
+          endpoint: '/api/cart/validate',
+          message: 'Unauthenticated cart validation attempt'
+        }
+      });
+
+      return NextResponse.json(
+        {
+          valid: false,
+          error: 'Authentication required for cart validation',
+          serverTotals: { subtotal: 0, educationalDiscount: 0, tax: 0, total: 0 }
+        },
+        { status: 401 }
+      );
+    }
+
+    // 🚀 Distributed rate limiting with Upstash Redis (20 req/15min)
+    const ip = getClientIp(request);
+    const identifier = getRateLimitIdentifier(userId, ip);
+    const rateLimit = await checkDistributedRateLimit(identifier, validationRateLimit);
+
+    if (!rateLimit.success) {
+      await logSecurityEvent({
+        type: 'RATE_LIMIT',
+        userId,
+        ip,
+        details: {
+          endpoint: 'POST /api/cart/validate',
+          limit: rateLimit.limit,
+          reset: rateLimit.reset
+        }
+      });
+
       return NextResponse.json(
         {
           valid: false,
           error: 'Rate limit exceeded. Please try again later.',
           serverTotals: { subtotal: 0, educationalDiscount: 0, tax: 0, total: 0 }
         },
-        { status: 429 }
+        {
+          status: 429,
+          headers: rateLimit.headers
+        }
       );
     }
 
@@ -102,11 +153,32 @@ export async function POST(request: NextRequest): Promise<NextResponse<CartValid
     let serverSubtotal = 0;
     let totalEducationalDiscount = 0;
 
+    // 🚀 PERFORMANCE OPTIMIZATION: Batch fetch all products in single API call
+    const productIds = [...new Set(body.items.map(item => item.productId))];
+    let products;
+
+    try {
+      products = await getProductsByIds(productIds);
+    } catch (error) {
+      console.error('Failed to fetch products for validation:', error);
+      return NextResponse.json(
+        {
+          valid: false,
+          error: 'Failed to validate cart items. Please try again.',
+          serverTotals: { subtotal: 0, educationalDiscount: 0, tax: 0, total: 0 }
+        },
+        { status: 500 }
+      );
+    }
+
+    // Create a product lookup map for O(1) access
+    const productMap = new Map(products.map(p => [p.id, p]));
+
     // Validate each item
     for (const item of body.items) {
       try {
-        // Fetch product from Shopify to get authoritative pricing
-        const product = await getProductById(item.productId);
+        // Fetch product from map (already batched)
+        const product = productMap.get(item.productId);
         if (!product) {
           return NextResponse.json(
             {

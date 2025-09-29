@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { shopifyFetch } from '@/lib/shopify-server';
+import { shopifyFetch } from '@/lib/shopify';
 
 export async function POST(request: Request) {
   try {

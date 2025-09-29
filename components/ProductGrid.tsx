@@ -719,9 +719,6 @@ export default function ProductGrid({
     console.log('🔄 Showing loading state');
     return (
       <div className={className}>
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded">
-          <p className="text-blue-700">🔄 Loading products...</p>
-        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array.from({ length: productsPerPage }).map((_, index) => (
             <ProductCardSkeleton key={index} />
@@ -736,9 +733,6 @@ export default function ProductGrid({
     console.log('❌ Showing error state:', error);
     return (
       <div className={className}>
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
-          <p className="text-red-700">❌ Error: {error}</p>
-        </div>
         <div className="flex flex-col items-center justify-center py-12">
           <div className="text-center">
             <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -763,9 +757,6 @@ export default function ProductGrid({
     console.log('📭 Showing empty state');
     return (
       <div className={className}>
-        <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded">
-          <p className="text-gray-700">📭 No products to display</p>
-        </div>
         <div className="flex flex-col items-center justify-center py-12">
           <div className="text-center">
             <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -785,13 +776,6 @@ export default function ProductGrid({
 
   return (
     <div className={className}>
-      {/* Debug Info - Hidden in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded text-xs">
-          <span className="font-medium">Debug:</span> Loading: {loading.toString()} | Products: {products.length} | Error: {error || 'none'}
-        </div>
-      )}
-
       {/* Products Grid */}
       <motion.div
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"

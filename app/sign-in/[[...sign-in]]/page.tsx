@@ -15,6 +15,7 @@ export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams?.get('redirect_url') || '/dashboard';
+  const errorParam = searchParams?.get('error');
 
   // Handle Google OAuth sign-in
   const handleGoogleSignIn = async () => {
@@ -84,9 +85,11 @@ export default function SignInPage() {
             <p className="text-gray-600 mt-2">Sign in to your account</p>
           </div>
 
-          {error && (
-            <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm mb-6 border border-red-100">
-              {error}
+          {(error || errorParam === 'session_expired') && (
+            <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm mb-6 border border-yellow-200">
+              {errorParam === 'session_expired'
+                ? '⚠️ Your session has expired. Please sign in again.'
+                : error}
             </div>
           )}
 

@@ -378,16 +378,21 @@ function VolumeDiscountCalculator({ tiers, billingPeriod }: VolumeDiscountCalcul
 
       <div className="grid md:grid-cols-2 gap-8">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="user-count-slider" className="block text-sm font-medium text-gray-700 mb-2">
             Number of Users
           </label>
           <input
+            id="user-count-slider"
             type="range"
             min="1"
             max="1000"
             value={userCount}
             onChange={(e) => setUserCount(Number(e.target.value))}
             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            aria-label={`Select number of users: ${userCount}`}
+            aria-valuemin="1"
+            aria-valuemax="1000"
+            aria-valuenow={String(userCount)}
           />
           <div className="flex justify-between text-sm text-gray-600 mt-1">
             <span>1</span>
@@ -397,13 +402,15 @@ function VolumeDiscountCalculator({ tiers, billingPeriod }: VolumeDiscountCalcul
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="pricing-tier-select" className="block text-sm font-medium text-gray-700 mb-2">
             Select Tier
           </label>
           <select
+            id="pricing-tier-select"
             value={selectedTier}
             onChange={(e) => setSelectedTier(e.target.value as PricingTier)}
             className="w-full p-3 border border-gray-300 rounded-lg"
+            aria-label="Select pricing tier"
           >
             {Object.entries(tiers).map(([key, tier]) => (
               <option key={key} value={key}>
@@ -495,3 +502,7 @@ function FeatureComparisonMatrix({ tiers }: FeatureComparisonMatrixProps) {
     </div>
   );
 }
+
+// Export additional components for use in other parts of the application
+export { VolumeDiscountCalculator, FeatureComparisonMatrix };
+export type { VolumeDiscountCalculatorProps, FeatureComparisonMatrixProps };

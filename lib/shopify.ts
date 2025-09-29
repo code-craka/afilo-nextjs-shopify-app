@@ -248,7 +248,7 @@ const sleep = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 
 // HTTP Client with retry logic
-async function shopifyFetch<T>(
+export async function shopifyFetch<T>(
   query: string,
   variables?: Record<string, unknown>,
   retryCount = 0
@@ -370,10 +370,11 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Sho
     last,
     after,
     before,
-    query
+    query,
+    sortKey = 'UPDATED_AT',
+    reverse = false
   } = params;
 
-  // Simplified query without sortKey first to test
   const gqlQuery = `
     query GetProducts(
       $first: Int
@@ -381,6 +382,8 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Sho
       $after: String
       $before: String
       $query: String
+      $sortKey: ProductSortKeys
+      $reverse: Boolean
     ) {
       products(
         first: $first
@@ -388,6 +391,8 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Sho
         after: $after
         before: $before
         query: $query
+        sortKey: $sortKey
+        reverse: $reverse
       ) {
         edges {
           node {
@@ -414,7 +419,9 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Sho
     last,
     after,
     before,
-    query
+    query,
+    sortKey,
+    reverse
   });
 
   return result.products.edges.map(edge => edge.node);

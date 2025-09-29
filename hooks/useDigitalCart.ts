@@ -202,7 +202,39 @@ export const useDigitalCart = () => {
     setLoading(true);
 
     try {
-      // Validate cart on server before checkout
+      // CRITICAL: Check authentication FIRST
+      console.log('Checking authentication before checkout...');
+      const authResponse = await fetch('/api/auth/check');
+      const authData = await authResponse.json();
+
+      if (!authData.authenticated || !authData.userId) {
+        console.log('Authentication required for checkout. Storing cart and redirecting...');
+
+        // Store intended checkout in session for post-login restoration
+        sessionStorage.setItem('checkout_intent', JSON.stringify({
+          items: items.map(item => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: item.quantity,
+            licenseType: item.licenseType,
+            educationalTier: item.educationalDiscount.tier,
+            subscriptionInterval: item.subscriptionInterval,
+            title: item.title,
+            price: item.price
+          })),
+          userRegion,
+          timestamp: Date.now()
+        }));
+
+        // Redirect to sign-in with return URL
+        const returnUrl = '/checkout';
+        window.location.href = `/sign-in?redirect=${encodeURIComponent(returnUrl)}`;
+        return { success: false, error: 'Authentication required', requiresAuth: true };
+      }
+
+      console.log('User authenticated, proceeding with checkout for user:', authData.userId);
+
+      // Validate cart on server before checkout (now with user ID)
       const validationResponse = await fetch('/api/cart/validate', {
         method: 'POST',
         headers: {
@@ -217,7 +249,8 @@ export const useDigitalCart = () => {
             educationalTier: item.educationalDiscount.tier,
             clientPrice: item.educationalDiscount.appliedPrice
           })),
-          userRegion
+          userRegion,
+          userId: authData.userId // Include user ID for validation
         }),
       });
 
@@ -234,18 +267,23 @@ export const useDigitalCart = () => {
         throw new Error(validation.error || 'Cart validation failed');
       }
 
-      // Prepare Shopify checkout payload
-      const checkoutPayload = await prepareShopifyCheckout();
+      // Prepare Shopify checkout payload with user ID
+      const checkoutPayload = await prepareShopifyCheckout(authData.userId);
 
       // Create Shopify checkout session
       const checkoutUrl = await createShopifyCheckout(checkoutPayload);
 
+      // Clear any stored checkout intent since we're proceeding
+      sessionStorage.removeItem('checkout_intent');
+
       // Redirect to Shopify checkout
+      console.log('Redirecting to Shopify checkout:', checkoutUrl);
       window.location.href = checkoutUrl;
 
       return { success: true, checkoutUrl };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Checkout failed';
+      console.error('Checkout error:', err);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -254,7 +292,7 @@ export const useDigitalCart = () => {
   }, [items, userRegion, setLoading, setError]);
 
   // Prepare Shopify checkout data
-  const prepareShopifyCheckout = useCallback(async () => {
+  const prepareShopifyCheckout = useCallback(async (userId?: string) => {
     const lineItems = items.map(item => ({
       variantId: item.variantId,
       quantity: item.quantity,
@@ -264,7 +302,11 @@ export const useDigitalCart = () => {
         { key: 'educational_tier', value: item.educationalDiscount.tier },
         { key: 'team_size', value: item.quantity.toString() },
         { key: 'tech_stack', value: item.techStack.join(', ') },
-        { key: 'digital_delivery', value: 'true' }
+        { key: 'product_type', value: item.productType },
+        { key: 'version', value: item.version || 'latest' },
+        { key: 'digital_delivery', value: 'true' },
+        // CRITICAL: Include user ID for webhook processing
+        ...(userId ? [{ key: 'clerk_user_id', value: userId }] : [])
       ]
     }));
 
@@ -274,9 +316,17 @@ export const useDigitalCart = () => {
         { key: 'cart_type', value: 'digital_products' },
         { key: 'user_region', value: userRegion },
         { key: 'total_savings', value: totals.savings.toString() },
-        { key: 'applied_bundles', value: appliedBundles.join(', ') }
+        { key: 'applied_bundles', value: appliedBundles.join(', ') },
+        // CRITICAL: Include user ID at order level for webhook
+        ...(userId ? [{ key: 'clerk_user_id', value: userId }] : [])
       ],
-      note: `Digital commerce order - ${items.length} license(s) - Total savings: $${totals.savings.toFixed(2)}`
+      noteAttributes: [
+        // CRITICAL: This is the primary method for passing user ID to webhook
+        ...(userId ? [{ name: 'clerk_user_id', value: userId }] : []),
+        { name: 'cart_type', value: 'digital_products' },
+        { name: 'order_source', value: 'afilo_marketplace' }
+      ],
+      note: `Digital commerce order - ${items.length} license(s) - User: ${userId || 'guest'} - Total savings: $${totals.savings.toFixed(2)}`
     };
   }, [items, userRegion, totals.savings, appliedBundles]);
 
@@ -286,7 +336,7 @@ export const useDigitalCart = () => {
       console.log('Creating Shopify checkout with payload:', payload);
 
       // Call our secure server-side API to create the cart
-      const response = await fetch('/api/cart/create', {
+      const response = await fetch('/api/cart', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
