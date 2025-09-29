@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
 // ENTERPRISE GLOBAL SECURITY MIDDLEWARE
 // Comprehensive protection against DoS attacks, API abuse, and security threats
@@ -217,7 +218,7 @@ function cleanupExpiredRecords() {
 setInterval(cleanupExpiredRecords, 5 * 60 * 1000);
 
 // Log security events
-function logSecurityEvent(type: string, ip: string, details: any) {
+function logSecurityEvent(type: string, ip: string, details: Record<string, unknown>) {
   console.warn(`🛡️ Security Event [${type}]:`, {
     ip,
     timestamp: new Date().toISOString(),
@@ -225,8 +226,43 @@ function logSecurityEvent(type: string, ip: string, details: any) {
   });
 }
 
-// Main middleware function
-export function middleware(request: NextRequest) {
+// Define protected routes that require authentication
+const isProtectedRoute = createRouteMatcher([
+  '/dashboard(.*)',
+  '/profile(.*)',
+  '/subscriptions(.*)',
+  '/downloads(.*)',
+  '/enterprise(.*)',
+  '/api/protected(.*)',
+  '/api/subscriptions(.*)',
+  '/api/downloads(.*)',
+  '/api/users(.*)',
+]);
+
+// Define admin routes
+const isAdminRoute = createRouteMatcher([
+  '/admin(.*)',
+  '/api/admin(.*)',
+]);
+
+// Define public authentication routes (don't require auth)
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/sso-callback',
+  '/products(.*)',
+  '/api/webhooks(.*)',
+  '/api/shopify(.*)',
+  '/api/collections(.*)',
+  '/api/products(.*)',
+  '/api/cart(.*)',
+  '/api/test-connection',
+  '/api/debug-query',
+]);
+
+// Security middleware function
+function securityMiddleware(request: NextRequest) {
   const startTime = Date.now();
   const ip = getClientIP(request);
   const pathname = new URL(request.url).pathname;
@@ -316,6 +352,37 @@ export function middleware(request: NextRequest) {
 
   return response;
 }
+
+// Main middleware combining Clerk authentication and security
+export default clerkMiddleware(async (auth, req) => {
+  // Apply security middleware first
+  const securityResponse = securityMiddleware(req);
+
+  // If security middleware blocks the request, return early
+  if (securityResponse.status !== 200) {
+    return securityResponse;
+  }
+
+  // Check if route requires authentication
+  if (isProtectedRoute(req) && !isPublicRoute(req)) {
+    // Protect the route with Clerk authentication
+    auth.protect();
+  }
+
+  // Redirect authenticated users away from auth pages
+  if (isPublicRoute(req) && (req.nextUrl.pathname === '/sign-in' || req.nextUrl.pathname === '/sign-up')) {
+    const { userId } = auth();
+    if (userId) {
+      const dashboardUrl = new URL('/dashboard', req.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+  }
+
+  // Admin route protection is handled in individual route components
+
+  // Continue with the security response (which includes security headers)
+  return securityResponse;
+});
 
 // Configure middleware to run on all routes
 export const config = {
