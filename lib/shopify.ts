@@ -247,6 +247,27 @@ class ShopifyAPIError extends Error implements ShopifyError {
 const sleep = (ms: number): Promise<void> =>
   new Promise(resolve => setTimeout(resolve, ms));
 
+// Fragment assembly utilities to reduce duplication
+const PRODUCT_QUERY_FRAGMENTS = `
+  ${PRODUCT_FRAGMENT}
+  ${PRODUCT_VARIANT_FRAGMENT}
+  ${IMAGE_FRAGMENT}
+  ${MONEY_FRAGMENT}
+`;
+
+const COLLECTION_QUERY_FRAGMENTS = `
+  ${COLLECTION_FRAGMENT}
+  ${IMAGE_FRAGMENT}
+`;
+
+const CART_QUERY_FRAGMENTS = `
+  ${CART_FRAGMENT}
+  ${CART_LINE_FRAGMENT}
+  ${PRODUCT_VARIANT_FRAGMENT}
+  ${IMAGE_FRAGMENT}
+  ${MONEY_FRAGMENT}
+`;
+
 // HTTP Client with retry logic
 export async function shopifyFetch<T>(
   query: string,
@@ -408,10 +429,7 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Sho
         }
       }
     }
-    ${PRODUCT_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${MONEY_FRAGMENT}
+    ${PRODUCT_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<ShopifyProductsResponse>(gqlQuery, {
@@ -434,10 +452,7 @@ export async function getProduct(handle: ShopifyHandle): Promise<ShopifyProduct 
         ...ProductFragment
       }
     }
-    ${PRODUCT_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${MONEY_FRAGMENT}
+    ${PRODUCT_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<ShopifyProductResponse>(query, { handle });
@@ -451,10 +466,7 @@ export async function getProductById(id: ShopifyID): Promise<ShopifyProduct | nu
         ...ProductFragment
       }
     }
-    ${PRODUCT_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${MONEY_FRAGMENT}
+    ${PRODUCT_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<ShopifyProductResponse>(query, { id });
@@ -506,8 +518,7 @@ export async function getCollections(params: CollectionsQueryParams = {}): Promi
         }
       }
     }
-    ${COLLECTION_FRAGMENT}
-    ${IMAGE_FRAGMENT}
+    ${COLLECTION_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<ShopifyCollectionsResponse>(gqlQuery, {
@@ -530,8 +541,7 @@ export async function getCollection(handle: ShopifyHandle): Promise<ShopifyColle
         ...CollectionFragment
       }
     }
-    ${COLLECTION_FRAGMENT}
-    ${IMAGE_FRAGMENT}
+    ${COLLECTION_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<ShopifyCollectionResponse>(query, { handle });
@@ -586,10 +596,7 @@ export async function getCollectionProducts(params: CollectionProductsQueryParam
         }
       }
     }
-    ${PRODUCT_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${MONEY_FRAGMENT}
+    ${PRODUCT_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<{ collection: { products: ShopifyProductsResponse['products'] } }>(
@@ -623,11 +630,7 @@ export async function createCart(input: CartCreateInput = {}): Promise<ShopifyCa
         }
       }
     }
-    ${CART_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${MONEY_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<{ cartCreate: { cart: ShopifyCart; userErrors: Array<{ field?: string[]; message: string; code?: string }> } }>(
@@ -652,11 +655,7 @@ export async function getCart(cartId: ShopifyID): Promise<ShopifyCart | null> {
         ...CartFragment
       }
     }
-    ${CART_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${MONEY_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<ShopifyCartResponse>(query, { cartId });
@@ -676,11 +675,7 @@ export async function addCartLines(cartId: ShopifyID, lines: CartLineAddInput[])
         }
       }
     }
-    ${CART_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${MONEY_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<{ cartLinesAdd: { cart: ShopifyCart; userErrors: Array<{ field?: string[]; message: string; code?: string }> } }>(
@@ -711,11 +706,7 @@ export async function updateCartLines(cartId: ShopifyID, lines: CartLineUpdateIn
         }
       }
     }
-    ${CART_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${MONEY_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<{ cartLinesUpdate: { cart: ShopifyCart; userErrors: Array<{ field?: string[]; message: string; code?: string }> } }>(
@@ -746,11 +737,7 @@ export async function removeCartLines(cartId: ShopifyID, lineIds: ShopifyID[]): 
         }
       }
     }
-    ${CART_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${MONEY_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
   `;
 
   const result = await shopifyFetch<{ cartLinesRemove: { cart: ShopifyCart; userErrors: Array<{ field?: string[]; message: string; code?: string }> } }>(

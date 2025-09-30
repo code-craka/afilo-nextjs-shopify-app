@@ -243,6 +243,21 @@ const CART_FRAGMENT = `
   }
 `;
 
+// Fragment assembly utilities to reduce duplication
+const PRODUCT_QUERY_FRAGMENTS = `
+  ${MONEY_FRAGMENT}
+  ${IMAGE_FRAGMENT}
+  ${PRODUCT_VARIANT_FRAGMENT}
+  ${PRODUCT_FRAGMENT}
+`;
+
+const CART_QUERY_FRAGMENTS = `
+  ${MONEY_FRAGMENT}
+  ${IMAGE_FRAGMENT}
+  ${CART_LINE_FRAGMENT}
+  ${CART_FRAGMENT}
+`;
+
 /**
  * Execute a Shopify GraphQL query with retry logic and error handling
  */
@@ -334,10 +349,7 @@ async function shopifyFetch<T>(
 
 export async function getProducts(params?: ProductsQueryParams): Promise<ShopifyProduct[]> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${PRODUCT_FRAGMENT}
+    ${PRODUCT_QUERY_FRAGMENTS}
 
     query GetProducts($first: Int, $query: String, $sortKey: ProductSortKeys, $reverse: Boolean) {
       products(first: $first, query: $query, sortKey: $sortKey, reverse: $reverse) {
@@ -363,10 +375,7 @@ export async function getProducts(params?: ProductsQueryParams): Promise<Shopify
 
 export async function getProductByHandle(handle: ShopifyHandle): Promise<ShopifyProduct | null> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${PRODUCT_FRAGMENT}
+    ${PRODUCT_QUERY_FRAGMENTS}
 
     query GetProductByHandle($handle: String!) {
       product(handle: $handle) {
@@ -381,10 +390,7 @@ export async function getProductByHandle(handle: ShopifyHandle): Promise<Shopify
 
 export async function getProductById(id: ShopifyID): Promise<ShopifyProduct | null> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${PRODUCT_FRAGMENT}
+    ${PRODUCT_QUERY_FRAGMENTS}
 
     query GetProductById($id: ID!) {
       product(id: $id) {
@@ -453,10 +459,7 @@ export async function getCollectionProducts(
   params?: CollectionProductsQueryParams
 ): Promise<ShopifyProduct[]> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${PRODUCT_FRAGMENT}
+    ${PRODUCT_QUERY_FRAGMENTS}
 
     query GetCollectionProducts($handle: String!, $first: Int, $sortKey: ProductCollectionSortKeys, $reverse: Boolean) {
       collection(handle: $handle) {
@@ -489,10 +492,7 @@ export async function getCollectionProducts(
 // Cart operations
 export async function createCart(input: CartCreateInput): Promise<ShopifyCart> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${CART_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
 
     mutation CreateCart($input: CartInput!) {
       cartCreate(input: $input) {
@@ -522,10 +522,7 @@ export async function createCart(input: CartCreateInput): Promise<ShopifyCart> {
 
 export async function getCart(cartId: ShopifyID): Promise<ShopifyCart | null> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${CART_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
 
     query GetCart($id: ID!) {
       cart(id: $id) {
@@ -540,10 +537,7 @@ export async function getCart(cartId: ShopifyID): Promise<ShopifyCart | null> {
 
 export async function addCartLines(cartId: ShopifyID, lines: CartLineAddInput[]): Promise<ShopifyCart> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${CART_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
 
     mutation AddCartLines($cartId: ID!, $lines: [CartLineInput!]!) {
       cartLinesAdd(cartId: $cartId, lines: $lines) {
@@ -576,10 +570,7 @@ export async function addCartLines(cartId: ShopifyID, lines: CartLineAddInput[])
 
 export async function updateCartLines(cartId: ShopifyID, lines: CartLineUpdateInput[]): Promise<ShopifyCart> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${CART_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
 
     mutation UpdateCartLines($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
       cartLinesUpdate(cartId: $cartId, lines: $lines) {
@@ -612,10 +603,7 @@ export async function updateCartLines(cartId: ShopifyID, lines: CartLineUpdateIn
 
 export async function removeCartLines(cartId: ShopifyID, lineIds: ShopifyID[]): Promise<ShopifyCart> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${CART_LINE_FRAGMENT}
-    ${CART_FRAGMENT}
+    ${CART_QUERY_FRAGMENTS}
 
     mutation RemoveCartLines($cartId: ID!, $lineIds: [ID!]!) {
       cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
@@ -649,10 +637,7 @@ export async function removeCartLines(cartId: ShopifyID, lineIds: ShopifyID[]): 
 // Batch product fetching for performance optimization
 export async function getProductsByIds(ids: ShopifyID[]): Promise<ShopifyProduct[]> {
   const query = `
-    ${MONEY_FRAGMENT}
-    ${IMAGE_FRAGMENT}
-    ${PRODUCT_VARIANT_FRAGMENT}
-    ${PRODUCT_FRAGMENT}
+    ${PRODUCT_QUERY_FRAGMENTS}
 
     query GetProductsByIds($ids: [ID!]!) {
       nodes(ids: $ids) {

@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Image from 'next/image';
 import { getProduct } from '@/lib/shopify';
 
 interface ProductPageProps {
@@ -44,7 +45,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     return (
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold">Product Not Found</h1>
-        <p>The product you're looking for doesn't exist.</p>
+        <p>The product you&apos;re looking for doesn&apos;t exist.</p>
       </div>
     );
   }
@@ -55,10 +56,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
         {/* Product Image */}
         {product.featuredImage && (
           <div className="aspect-square relative">
-            <img
+            <Image
               src={product.featuredImage.url}
               alt={product.featuredImage.altText || product.title}
-              className="w-full h-full object-cover rounded-lg"
+              fill
+              className="object-cover rounded-lg"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority
             />
           </div>
         )}
@@ -82,7 +86,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           )}
 
           {/* Add to Cart Button */}
-          <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+          <button type="button" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
             Add to Cart
           </button>
         </div>

@@ -42,6 +42,7 @@ interface PerformanceBenchmark {
 
 export default function LiveMetricsDashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isClient, setIsClient] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'metrics' | 'clients' | 'performance'>('metrics');
   const [animatingMetrics, setAnimatingMetrics] = useState<string[]>([]);
 
@@ -250,6 +251,11 @@ export default function LiveMetricsDashboard() {
     }
   ];
 
+  // Hydration fix - only run on client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Simulate real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
@@ -302,7 +308,7 @@ export default function LiveMetricsDashboard() {
             Enterprise Command Center
           </h2>
           <p className="text-gray-600">
-            Real-time business intelligence • Last updated: {currentTime.toLocaleTimeString()}
+            Real-time business intelligence • Last updated: {isClient ? currentTime.toLocaleTimeString() : '--:--:--'}
           </p>
         </div>
 
