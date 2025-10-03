@@ -20,10 +20,10 @@ import { stripe } from '@/lib/stripe-server';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const { sessionId } = params;
+    const { sessionId } = await params;
 
     // Validate session ID format
     if (!sessionId || !sessionId.startsWith('cs_')) {

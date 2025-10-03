@@ -513,7 +513,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   try {
     // Retrieve full subscription details
-    const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+    const subscriptionResponse = await stripe.subscriptions.retrieve(session.subscription as string);
+    const subscription = subscriptionResponse as Stripe.Subscription;
     const product = await stripe.products.retrieve(subscription.items.data[0].price.product as string);
 
     const customerEmail = session.customer_details?.email;
@@ -559,10 +560,11 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     // });
 
     // Send welcome email with credentials
+    const interval = subscription.items.data[0].price.recurring?.interval;
     await sendCredentialsEmail({
       credentials,
       planName,
-      billingInterval: subscription.items.data[0].price.recurring?.interval === 'month' ? 'monthly' : 'annual',
+      billingInterval: (interval === 'year' ? 'year' : 'month') as 'month' | 'year',
       amount: formatDisplayAmount(session.amount_total || 0),
       nextBillingDate: new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', {
         year: 'numeric',

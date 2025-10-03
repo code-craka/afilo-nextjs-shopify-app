@@ -5,9 +5,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export interface SubscriptionEmailData {
   credentials: UserCredentials;
-  subscriptionId: string;
+  subscriptionId?: string;
   planName: string;
-  amount: number;
+  amount: string;
   billingInterval: 'month' | 'year';
   nextBillingDate: string;
 }
