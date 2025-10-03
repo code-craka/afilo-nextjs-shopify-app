@@ -56,7 +56,6 @@ export default function RootLayout({
               </Script>
             </>
           )}
-          </Providers>
         </body>
       </html>
     </ClerkProvider>
