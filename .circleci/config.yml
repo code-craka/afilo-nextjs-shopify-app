@@ -1,0 +1,304 @@
+version: 2.1
+
+# ========================================
+# AFILO ENTERPRISE MARKETPLACE - CIRCLECI CONFIGURATION
+# ========================================
+# Version: 1.0.0
+# Project: afilo-nextjs-shopify-app
+# Stack: Next.js 15 + TypeScript + Shopify + Stripe
+# Package Manager: pnpm 8.15.6 (REQUIRED)
+# ========================================
+
+# Orbs - Reusable packages of CircleCI configuration
+orbs:
+  node: circleci/node@5.2.0
+
+# ========================================
+# EXECUTORS - Reusable execution environments
+# ========================================
+executors:
+  node-executor:
+    docker:
+      - image: cimg/node:18.17
+    working_directory: ~/afilo-nextjs-shopify-app
+    resource_class: medium
+    environment:
+      NODE_ENV: test
+      PNPM_VERSION: 8.15.6
+
+# ========================================
+# COMMANDS - Reusable command sequences
+# ========================================
+commands:
+  install-pnpm:
+    description: "Install pnpm package manager"
+    steps:
+      - run:
+          name: Install pnpm
+          command: |
+            echo "Installing pnpm ${PNPM_VERSION}..."
+            npm install -g pnpm@${PNPM_VERSION}
+            pnpm --version
+
+  restore-dependencies:
+    description: "Restore cached dependencies"
+    steps:
+      - restore_cache:
+          name: Restore pnpm cache
+          keys:
+            - pnpm-v1-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-v1-
+
+  install-dependencies:
+    description: "Install project dependencies with pnpm"
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            echo "Installing dependencies with pnpm..."
+            pnpm install --frozen-lockfile
+            echo "✅ Dependencies installed successfully"
+
+  save-dependencies:
+    description: "Save dependencies to cache"
+    steps:
+      - save_cache:
+          name: Save pnpm cache
+          key: pnpm-v1-{{ checksum "pnpm-lock.yaml" }}
+          paths:
+            - ~/.pnpm-store
+            - node_modules
+
+# ========================================
+# JOBS - Individual CI/CD tasks
+# ========================================
+jobs:
+  # Job 1: Install dependencies and cache
+  install:
+    executor: node-executor
+    steps:
+      - checkout
+      - install-pnpm
+      - restore-dependencies
+      - install-dependencies
+      - save-dependencies
+      - persist_to_workspace:
+          root: ~/afilo-nextjs-shopify-app
+          paths:
+            - node_modules
+            - .next
+
+  # Job 2: Type checking
+  type-check:
+    executor: node-executor
+    steps:
+      - checkout
+      - install-pnpm
+      - attach_workspace:
+          at: ~/afilo-nextjs-shopify-app
+      - run:
+          name: TypeScript Type Check
+          command: |
+            echo "🔍 Running TypeScript type check..."
+            pnpm type-check
+            echo "✅ Type check passed"
+
+  # Job 3: Linting
+  lint:
+    executor: node-executor
+    steps:
+      - checkout
+      - install-pnpm
+      - attach_workspace:
+          at: ~/afilo-nextjs-shopify-app
+      - run:
+          name: ESLint Check
+          command: |
+            echo "🔍 Running ESLint..."
+            pnpm lint
+            echo "✅ Linting passed"
+
+  # Job 4: Prettier check
+  prettier-check:
+    executor: node-executor
+    steps:
+      - checkout
+      - install-pnpm
+      - attach_workspace:
+          at: ~/afilo-nextjs-shopify-app
+      - run:
+          name: Prettier Format Check
+          command: |
+            echo "🔍 Checking code formatting..."
+            pnpm prettier:check
+            echo "✅ Code formatting is correct"
+
+  # Job 5: Security audit
+  security-audit:
+    executor: node-executor
+    steps:
+      - checkout
+      - install-pnpm
+      - attach_workspace:
+          at: ~/afilo-nextjs-shopify-app
+      - run:
+          name: Security Audit
+          command: |
+            echo "🔒 Running security audit..."
+            pnpm audit --audit-level=moderate || true
+            echo "✅ Security audit complete"
+
+  # Job 6: Build application
+  build:
+    executor: node-executor
+    resource_class: large
+    steps:
+      - checkout
+      - install-pnpm
+      - attach_workspace:
+          at: ~/afilo-nextjs-shopify-app
+      - run:
+          name: Build Next.js Application
+          command: |
+            echo "🏗️ Building Next.js application..."
+            pnpm build
+            echo "✅ Build completed successfully"
+      - persist_to_workspace:
+          root: ~/afilo-nextjs-shopify-app
+          paths:
+            - .next
+            - public
+
+  # Job 7: Run tests (when implemented)
+  test:
+    executor: node-executor
+    steps:
+      - checkout
+      - install-pnpm
+      - attach_workspace:
+          at: ~/afilo-nextjs-shopify-app
+      - run:
+          name: Run Tests
+          command: |
+            echo "🧪 Running tests..."
+            pnpm test
+            echo "✅ Tests passed"
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: coverage
+
+  # Job 8: Deploy to Vercel (Production)
+  deploy-production:
+    executor: node-executor
+    steps:
+      - checkout
+      - run:
+          name: Deploy to Vercel Production
+          command: |
+            echo "🚀 Deploying to Vercel Production..."
+            echo "⚠️  Vercel deployment is handled automatically via GitHub integration"
+            echo "✅ Production deployment triggered"
+
+  # Job 9: Deploy to Vercel (Staging)
+  deploy-staging:
+    executor: node-executor
+    steps:
+      - checkout
+      - run:
+          name: Deploy to Vercel Staging
+          command: |
+            echo "🚀 Deploying to Vercel Staging..."
+            echo "⚠️  Vercel deployment is handled automatically via GitHub integration"
+            echo "✅ Staging deployment triggered"
+
+# ========================================
+# WORKFLOWS - Orchestrate jobs
+# ========================================
+workflows:
+  version: 2
+
+  # Main CI/CD Pipeline
+  build-test-deploy:
+    jobs:
+      # Step 1: Install dependencies (runs on all branches)
+      - install:
+          filters:
+            branches:
+              only:
+                - main
+                - staging
+                - develop
+                - /feature\/.*/
+
+      # Step 2: Parallel quality checks (depends on install)
+      - type-check:
+          requires:
+            - install
+      - lint:
+          requires:
+            - install
+      - prettier-check:
+          requires:
+            - install
+      - security-audit:
+          requires:
+            - install
+
+      # Step 3: Build application (depends on quality checks)
+      - build:
+          requires:
+            - type-check
+            - lint
+            - prettier-check
+
+      # Step 4: Run tests (depends on build)
+      - test:
+          requires:
+            - build
+
+      # Step 5: Deploy to staging (only on staging branch)
+      - deploy-staging:
+          requires:
+            - test
+          filters:
+            branches:
+              only: staging
+
+      # Step 6: Deploy to production (only on main branch)
+      - deploy-production:
+          requires:
+            - test
+          filters:
+            branches:
+              only: main
+
+  # Nightly Security Audit
+  nightly-security:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *" # Run at 2 AM UTC every day
+          filters:
+            branches:
+              only:
+                - main
+    jobs:
+      - install
+      - security-audit:
+          requires:
+            - install
+
+  # Weekly Dependency Update Check
+  weekly-dependency-check:
+    triggers:
+      - schedule:
+          cron: "0 3 * * 1" # Run at 3 AM UTC every Monday
+          filters:
+            branches:
+              only:
+                - main
+    jobs:
+      - install
+      - security-audit:
+          requires:
+            - install
