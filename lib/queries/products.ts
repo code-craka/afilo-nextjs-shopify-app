@@ -93,15 +93,17 @@ export function useCreateStripeCheckout() {
   return useMutation({
     mutationFn: async ({
       priceId,
-      billingInterval
+      billingInterval,
+      customerEmail
     }: {
       priceId: string;
       billingInterval: 'month' | 'year';
+      customerEmail: string;
     }) => {
       const response = await fetch('/api/stripe/create-subscription-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, billingInterval })
+        body: JSON.stringify({ priceId, billingInterval, customerEmail })
       });
 
       if (!response.ok) {

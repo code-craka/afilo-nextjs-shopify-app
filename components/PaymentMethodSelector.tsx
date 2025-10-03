@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useUser } from '@clerk/nextjs';
 import { useCreateStripeCheckout, useCreateShopifyCart, type UnifiedProduct } from '@/lib/queries/products';
 import { Check, CreditCard, Repeat, Loader2 } from 'lucide-react';
 
@@ -26,6 +27,10 @@ export function PaymentMethodSelector({
 }: PaymentMethodSelectorProps) {
   const [method, setMethod] = useState<'shopify' | 'stripe'>(defaultMethod);
   const [billingInterval, setBillingInterval] = useState<'month' | 'year'>('year');
+  const [error, setError] = useState<string | null>(null);
+
+  const { user } = useUser();
+  const customerEmail = user?.primaryEmailAddress?.emailAddress;
 
   const stripeCheckout = useCreateStripeCheckout();
   const shopifyCart = useCreateShopifyCart();
@@ -37,22 +42,30 @@ export function PaymentMethodSelector({
   const annualPrice = (product.basePrice * 12 * 0.83) / 100; // 17% discount
 
   const handleCheckout = () => {
+    // Clear any previous errors
+    setError(null);
+
     if (method === 'stripe') {
       // Stripe subscription checkout
+      if (!customerEmail) {
+        setError('Please sign in to continue with Stripe checkout');
+        return;
+      }
+
       const priceId = billingInterval === 'month'
         ? product.stripe.priceMonthly
         : product.stripe.priceAnnual;
 
       if (!priceId) {
-        alert('Stripe price not available. Please contact support.');
+        setError('Stripe price not available. Please contact support.');
         return;
       }
 
-      stripeCheckout.mutate({ priceId, billingInterval });
+      stripeCheckout.mutate({ priceId, billingInterval, customerEmail });
     } else {
       // Shopify one-time checkout
       if (!product.shopify.variantId) {
-        alert('Product variant not available. Please contact support.');
+        setError('Product variant not available. Please contact support.');
         return;
       }
 
@@ -234,6 +247,12 @@ export function PaymentMethodSelector({
         </div>
 
         {/* Error messages */}
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
         {stripeCheckout.isError && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {stripeCheckout.error?.message || 'Checkout failed. Please try again.'}
