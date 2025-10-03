@@ -255,7 +255,9 @@ export const useDigitalCart = () => {
       });
 
       if (!validationResponse.ok) {
-        throw new Error('Cart validation failed');
+        const errorData = await validationResponse.json();
+        console.error('Cart validation failed:', errorData);
+        throw new Error(errorData.error || `Cart validation failed (${validationResponse.status})`);
       }
 
       const validation = await validationResponse.json();
