@@ -23,8 +23,13 @@ executors:
     working_directory: ~/afilo-nextjs-shopify-app
     resource_class: medium
     environment:
-      NODE_ENV: test
+      NODE_ENV: production
       PNPM_VERSION: 8.15.6
+      # Fallback values for build (real values from CircleCI env vars)
+      NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN: ${NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN:-placeholder.myshopify.com}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-pk_test_placeholder}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-pk_test_placeholder}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://app.afilo.io}
 
 # ========================================
 # COMMANDS - Reusable command sequences
@@ -161,6 +166,9 @@ jobs:
           name: Build Next.js Application
           command: |
             echo "🏗️ Building Next.js application..."
+            echo "Environment check:"
+            echo "NODE_ENV=$NODE_ENV"
+            echo "NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=$NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN"
             pnpm build
             echo "✅ Build completed successfully"
       - persist_to_workspace:
