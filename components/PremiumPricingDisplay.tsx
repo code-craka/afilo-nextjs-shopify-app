@@ -304,12 +304,12 @@ export default function PremiumPricingDisplay({
                   : 'bg-gray-900 text-white hover:bg-gray-800'
               }`}
             >
-              {tier.enterprise ? 'Contact Sales' : 'Start Free Trial'}
+              {tier.enterprise ? 'Contact Sales' : 'Subscribe Now'}
             </button>
 
-            {/* Trial Info */}
+            {/* Instant Access Info */}
             <p className="text-center text-sm text-gray-600 mt-4">
-              {tier.enterprise ? 'Custom implementation & training included' : '14-day free trial • No credit card required'}
+              {tier.enterprise ? 'Custom implementation & training included' : 'Instant access • Credentials via email'}
             </p>
           </motion.div>
         ))}
