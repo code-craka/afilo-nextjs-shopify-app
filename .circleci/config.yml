@@ -42,8 +42,12 @@ commands:
           name: Install pnpm
           command: |
             echo "Installing pnpm ${PNPM_VERSION}..."
-            npm install -g pnpm@${PNPM_VERSION}
+            curl -fsSL https://get.pnpm.io/install.sh | env PNPM_VERSION=${PNPM_VERSION} sh -
+            echo 'export PNPM_HOME="$HOME/.local/share/pnpm"' >> $BASH_ENV
+            echo 'export PATH="$PNPM_HOME:$PATH"' >> $BASH_ENV
+            source $BASH_ENV
             pnpm --version
+            echo "✅ pnpm installed successfully"
 
   restore-dependencies:
     description: "Restore cached dependencies"
@@ -71,6 +75,7 @@ commands:
           name: Save pnpm cache
           key: pnpm-v1-{{ checksum "pnpm-lock.yaml" }}
           paths:
+            - ~/.local/share/pnpm/store
             - ~/.pnpm-store
             - node_modules
 
