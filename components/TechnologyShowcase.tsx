@@ -618,7 +618,7 @@ export default function TechnologyShowcase() {
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <motion.div
-                            className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
+                            className="h-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600"
                             initial={{ width: 0 }}
                             animate={{ width: `${tech.adoption}%` }}
                             transition={{ duration: 1, delay: categoryIndex * 0.2 + techIndex * 0.1 + 0.5 }}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ProtectedTestPage from '@/components/ProtectedTestPage';
 import ProductGrid from '@/components/ProductGrid';
 import PremiumPricingDisplay from '@/components/PremiumPricingDisplay';
 import SubscriptionManager from '@/components/SubscriptionManager';
@@ -233,7 +234,7 @@ const mockSubscriptions = [
   }
 ];
 
-export default function TestPremiumPricingPage() {
+function TestPremiumPricingContent() {
   const [activeTab, setActiveTab] = useState<'products' | 'pricing' | 'subscriptions' | 'quotes'>('products');
 
   const handleAddToCart = async (product: ShopifyProduct, variantId: string) => {
@@ -394,5 +395,13 @@ export default function TestPremiumPricingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TestPremiumPricingPage() {
+  return (
+    <ProtectedTestPage>
+      <TestPremiumPricingContent />
+    </ProtectedTestPage>
   );
 }

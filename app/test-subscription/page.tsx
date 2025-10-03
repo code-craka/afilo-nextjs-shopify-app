@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ProtectedTestPage from '@/components/ProtectedTestPage';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +73,7 @@ interface TestResult {
   details?: any;
 }
 
-export default function TestSubscriptionPage() {
+function TestSubscriptionContent() {
   const [selectedPlan, setSelectedPlan] = useState<TestPlan | null>(null);
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const [testEmail, setTestEmail] = useState('test@example.com');
@@ -433,5 +434,13 @@ export default function TestSubscriptionPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function TestSubscriptionPage() {
+  return (
+    <ProtectedTestPage>
+      <TestSubscriptionContent />
+    </ProtectedTestPage>
   );
 }

@@ -5,11 +5,20 @@ import { usePathname } from 'next/navigation';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { SignInButton, SignUpButton, UserButton, useAuth } from '@clerk/nextjs';
 import { useState, useEffect } from 'react';
+import { Menu, X } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 
 export default function Navigation() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { scrollY } = useScroll();
   const backgroundColor = useTransform(
     scrollY,
@@ -100,10 +109,11 @@ export default function Navigation() {
 
           {/* Auth Buttons */}
           <div className="flex items-center space-x-4">
+            {/* Desktop Auth Buttons */}
             {isLoaded && (
               <>
                 {isSignedIn ? (
-                  <div className="flex items-center space-x-3">
+                  <div className="hidden md:flex items-center space-x-3">
                     <UserButton
                       afterSignOutUrl="/"
                       appearance={{
@@ -114,7 +124,7 @@ export default function Navigation() {
                     />
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-3">
+                  <div className="hidden md:flex items-center space-x-3">
                     <SignInButton mode="modal">
                       <motion.button
                         whileHover={{ scale: 1.05 }}
@@ -148,6 +158,109 @@ export default function Navigation() {
                 )}
               </>
             )}
+
+            {/* Mobile Menu Button */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`md:hidden p-2 rounded-lg transition-colors ${
+                    isScrolled
+                      ? 'text-gray-700 hover:bg-gray-100'
+                      : 'text-white hover:bg-white/10'
+                  }`}
+                  aria-label="Open navigation menu"
+                >
+                  <Menu className="w-6 h-6" />
+                </motion.button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <SheetHeader>
+                  <SheetTitle className="text-white text-left">Navigation</SheetTitle>
+                </SheetHeader>
+
+                {/* Mobile Navigation Links */}
+                <div className="flex flex-col space-y-4 mt-8">
+                  {navLinks.map((link) => {
+                    const isActive = pathname === link.href;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <motion.div
+                          className={`relative px-4 py-3 rounded-lg font-medium transition-colors ${
+                            isActive
+                              ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 text-white border border-blue-500/30'
+                              : 'text-white/80 hover:text-white hover:bg-white/10'
+                          }`}
+                          whileHover={{ scale: 1.02, x: 4 }}
+                          whileTap={{ scale: 0.98 }}
+                          transition={{ type: "spring", stiffness: 300 }}
+                        >
+                          {link.label}
+                          {isActive && (
+                            <motion.div
+                              className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-600 to-purple-600 rounded-r-full"
+                              layoutId="activeMobileNav"
+                              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            />
+                          )}
+                        </motion.div>
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                {/* Mobile Auth Buttons */}
+                {isLoaded && (
+                  <div className="mt-8 pt-8 border-t border-white/10">
+                    {isSignedIn ? (
+                      <div className="flex items-center justify-center">
+                        <UserButton
+                          afterSignOutUrl="/"
+                          appearance={{
+                            elements: {
+                              avatarBox: "w-12 h-12 ring-2 ring-blue-500/30 hover:ring-blue-500/50 transition-all",
+                            },
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col space-y-3">
+                        <SignInButton mode="modal">
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="w-full px-5 py-3 rounded-xl font-semibold text-white hover:bg-white/10 transition-all border border-white/20"
+                          >
+                            Sign In
+                          </motion.button>
+                        </SignInButton>
+                        <SignUpButton mode="modal">
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="relative w-full px-6 py-3 rounded-xl font-bold text-white overflow-hidden group"
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <span className="relative z-10 flex items-center justify-center gap-2">
+                              Get Started
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
+                            </span>
+                          </motion.button>
+                        </SignUpButton>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>

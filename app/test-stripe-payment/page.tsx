@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import ProtectedTestPage from '@/components/ProtectedTestPage';
 import StripePaymentForm from '@/components/stripe/StripePaymentForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,7 +68,7 @@ const TEST_PRODUCTS: TestProduct[] = [
   },
 ];
 
-export default function TestStripePaymentPage() {
+function TestStripePaymentContent() {
   const [selectedProduct, setSelectedProduct] = useState<TestProduct>(TEST_PRODUCTS[0]);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentResult, setPaymentResult] = useState<{
@@ -333,5 +334,13 @@ export default function TestStripePaymentPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function TestStripePaymentPage() {
+  return (
+    <ProtectedTestPage>
+      <TestStripePaymentContent />
+    </ProtectedTestPage>
   );
 }

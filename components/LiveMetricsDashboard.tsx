@@ -468,7 +468,7 @@ export default function LiveMetricsDashboard() {
                   <div className="flex items-start gap-4 mb-4">
                     <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
                       {/* Placeholder for company logo */}
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
                         {client.name.charAt(0)}
                       </div>
                     </div>

@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import ProtectedTestPage from '@/components/ProtectedTestPage';
 import BusinessAutomationDashboard from '@/components/BusinessAutomationDashboard';
 import { initAnalytics, trackEvent } from '@/lib/analytics';
 
-export default function AutomationPage() {
+function AutomationContent() {
   const [userRole, setUserRole] = useState<'admin' | 'sales' | 'customer_success' | 'marketing'>('admin');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -298,5 +299,13 @@ export default function AutomationPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function AutomationPage() {
+  return (
+    <ProtectedTestPage>
+      <AutomationContent />
+    </ProtectedTestPage>
   );
 }

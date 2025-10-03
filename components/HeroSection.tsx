@@ -121,7 +121,7 @@ export default function HeroSection() {
             <span className="text-white/90 text-sm font-semibold tracking-wide">
               Enterprise Software Solutions
             </span>
-            <div className="px-2 py-1 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30">
+            <div className="px-2 py-1 rounded-full bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-400/30">
               <span className="text-xs font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 FORTUNE 500
               </span>

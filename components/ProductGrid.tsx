@@ -407,7 +407,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
             initial={{ opacity: 0, scale: 0.8, y: 10 }}
             whileHover={{ scale: 1.05, y: 0 }}
             whileTap={{ scale: 0.95 }}
-            className="absolute bottom-3 right-3 backdrop-blur-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold px-4 py-2.5 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex items-center gap-1.5 z-20"
+            className="absolute bottom-3 right-3 backdrop-blur-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-4 py-2.5 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex items-center gap-1.5 z-20"
             onClick={(e) => {
               e.stopPropagation();
               console.log('Demo clicked for:', product.title);

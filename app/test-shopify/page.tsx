@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ProtectedTestPage from '@/components/ProtectedTestPage';
 // No longer importing from shopify lib directly on client
 import type { ShopifyProduct, ShopifyCollection } from '@/types/shopify';
 import type { DebugProductResponse } from '@/lib/shopify'; // Type is still needed
 
-export default function TestShopifyPage() {
+function TestShopifyContent() {
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean;
     message: string;
@@ -227,5 +228,13 @@ export default function TestShopifyPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TestShopifyPage() {
+  return (
+    <ProtectedTestPage>
+      <TestShopifyContent />
+    </ProtectedTestPage>
   );
 }
