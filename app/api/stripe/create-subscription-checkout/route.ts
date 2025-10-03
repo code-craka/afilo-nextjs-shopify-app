@@ -98,9 +98,6 @@ export async function POST(request: NextRequest) {
       // Billing address collection
       billing_address_collection: 'required',
 
-      // Customer creation
-      customer_creation: 'always',
-
       // Success/Cancel URLs
       success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.afilo.io'}/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.afilo.io'}/pricing?canceled=true`,
