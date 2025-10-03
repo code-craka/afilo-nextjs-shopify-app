@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Navigation from '@/components/Navigation';
 import HeroSection from '@/components/HeroSection';
 import HomePageProductGrid from '@/components/HomePageProductGrid';
 import LiveMetricsDashboard from '@/components/LiveMetricsDashboard';
@@ -8,6 +9,9 @@ import CustomerSuccessStories from '@/components/CustomerSuccessStories';
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Premium Navigation */}
+      <Navigation />
+
       {/* Animated Hero Section (Client Component) */}
       <HeroSection />
 
