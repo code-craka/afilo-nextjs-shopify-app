@@ -513,8 +513,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   try {
     // Retrieve full subscription details
-    const subscriptionResponse = await stripe.subscriptions.retrieve(session.subscription as string);
-    const subscription = subscriptionResponse as Stripe.Subscription;
+    const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
     const product = await stripe.products.retrieve(subscription.items.data[0].price.product as string);
 
     const customerEmail = session.customer_details?.email;
@@ -561,12 +560,14 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
     // Send welcome email with credentials
     const interval = subscription.items.data[0].price.recurring?.interval;
+    const currentPeriodEnd = (subscription as any).current_period_end || Math.floor(Date.now() / 1000) + 2592000; // Default to 30 days from now
+
     await sendCredentialsEmail({
       credentials,
       planName,
       billingInterval: (interval === 'year' ? 'year' : 'month') as 'month' | 'year',
-      amount: formatDisplayAmount(session.amount_total || 0),
-      nextBillingDate: new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', {
+      amount: session.amount_total || 0,
+      nextBillingDate: new Date(currentPeriodEnd * 1000).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -589,12 +590,13 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
  * Use this for logging and analytics.
  */
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  const sub = subscription as any;
   console.log('📝 Subscription Created:', {
     id: subscription.id,
     customer: subscription.customer,
     status: subscription.status,
-    current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-    cancel_at_period_end: subscription.cancel_at_period_end,
+    current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+    cancel_at_period_end: sub.cancel_at_period_end,
   });
 
   // TODO: LOG SUBSCRIPTION CREATION
@@ -611,11 +613,12 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
  * Fires when customer upgrades/downgrades plan or updates payment method.
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const sub = subscription as any;
   console.log('🔄 Subscription Updated:', {
     id: subscription.id,
     customer: subscription.customer,
     status: subscription.status,
-    cancel_at_period_end: subscription.cancel_at_period_end,
+    cancel_at_period_end: sub.cancel_at_period_end,
   });
 
   // TODO: UPDATE DATABASE
@@ -623,8 +626,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   //   where: { stripeSubscriptionId: subscription.id },
   //   data: {
   //     status: subscription.status,
-  //     cancelAtPeriodEnd: subscription.cancel_at_period_end,
-  //     currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+  //     cancelAtPeriodEnd: sub.cancel_at_period_end,
+  //     currentPeriodEnd: new Date(sub.current_period_end * 1000),
   //   },
   // });
 
@@ -657,6 +660,26 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       return;
     }
 
+    // Get plan name from subscription
+    const priceId = subscription.items.data[0].price.id;
+    const price = await stripe.prices.retrieve(priceId, { expand: ['product'] });
+    const product = price.product as Stripe.Product;
+    const planName = product.name || 'Your Subscription';
+
+    // Calculate access until date (current period end)
+    const sub = subscription as any;
+    const accessUntilDate = sub.current_period_end
+      ? new Date(sub.current_period_end * 1000).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      : new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+
     // TODO: REVOKE ACCESS IN DATABASE
     // await db.subscription.update({
     //   where: { stripeSubscriptionId: subscription.id },
@@ -667,15 +690,11 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     // });
 
     // Send cancellation confirmation email
-    await sendCancellationEmail({
-      email: customerEmail,
-      subscriptionId: subscription.id,
-      canceledAt: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    });
+    await sendCancellationEmail(
+      customerEmail,
+      planName,
+      accessUntilDate
+    );
 
     console.log('✅ Cancellation email sent to:', customerEmail);
 
@@ -691,9 +710,10 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
  * Send renewal confirmation email.
  */
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
+  const inv = invoice as any;
   console.log('✅ Invoice Payment Succeeded:', {
     id: invoice.id,
-    subscription: invoice.subscription,
+    subscription: inv.subscription,
     customer: invoice.customer,
     amount_paid: formatDisplayAmount(invoice.amount_paid),
     billing_reason: invoice.billing_reason,
@@ -706,30 +726,32 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   }
 
   try {
-    const customerEmail = invoice.customer_email;
+    const customerEmail = inv.customer_email;
     if (!customerEmail) {
       console.error('❌ No customer email found in invoice');
       return;
     }
 
+    // Get plan name from invoice line items
+    const lineItems = invoice.lines.data;
+    const planName = lineItems[0]?.description || 'Your Subscription';
+
+    // Calculate next billing date
+    const nextBillingDate = inv.period_end
+      ? new Date(inv.period_end * 1000).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      : 'N/A';
+
     // Send renewal confirmation email
-    await sendRenewalConfirmationEmail({
-      email: customerEmail,
-      invoiceId: invoice.id,
-      amountPaid: formatDisplayAmount(invoice.amount_paid),
-      paidAt: new Date(invoice.status_transitions.paid_at! * 1000).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-      nextPaymentDate: invoice.period_end
-        ? new Date(invoice.period_end * 1000).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
-        : 'N/A',
-    });
+    await sendRenewalConfirmationEmail(
+      customerEmail,
+      planName,
+      invoice.amount_paid,
+      nextBillingDate
+    );
 
     console.log('✅ Renewal confirmation sent to:', customerEmail);
 
@@ -745,41 +767,48 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  * Send payment failure notification with retry instructions.
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const inv = invoice as any;
   console.log('❌ Invoice Payment Failed:', {
     id: invoice.id,
-    subscription: invoice.subscription,
+    subscription: inv.subscription,
     customer: invoice.customer,
     amount_due: formatDisplayAmount(invoice.amount_due),
     attempt_count: invoice.attempt_count,
   });
 
   try {
-    const customerEmail = invoice.customer_email;
+    const customerEmail = inv.customer_email;
     if (!customerEmail) {
       console.error('❌ No customer email found in invoice');
       return;
     }
 
+    // Get plan name from invoice line items
+    const lineItems = invoice.lines.data;
+    const planName = lineItems[0]?.description || 'Your Subscription';
+
+    // Calculate retry date
+    const retryDate = inv.next_payment_attempt
+      ? new Date(inv.next_payment_attempt * 1000).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      : 'N/A';
+
     // TODO: MARK SUBSCRIPTION AS PAST DUE
     // await db.subscription.update({
-    //   where: { stripeSubscriptionId: invoice.subscription as string },
+    //   where: { stripeSubscriptionId: inv.subscription as string },
     //   data: { status: 'past_due' },
     // });
 
     // Send payment failure email with retry link
-    await sendPaymentFailedEmail({
-      email: customerEmail,
-      invoiceId: invoice.id,
-      amountDue: formatDisplayAmount(invoice.amount_due),
-      attemptCount: invoice.attempt_count || 1,
-      nextRetryDate: invoice.next_payment_attempt
-        ? new Date(invoice.next_payment_attempt * 1000).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
-        : 'N/A',
-    });
+    await sendPaymentFailedEmail(
+      customerEmail,
+      planName,
+      invoice.amount_due,
+      retryDate
+    );
 
     console.log('✅ Payment failure notification sent to:', customerEmail);
 

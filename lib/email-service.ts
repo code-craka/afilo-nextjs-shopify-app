@@ -7,7 +7,7 @@ export interface SubscriptionEmailData {
   credentials: UserCredentials;
   subscriptionId?: string;
   planName: string;
-  amount: string;
+  amount: number;
   billingInterval: 'month' | 'year';
   nextBillingDate: string;
 }
