@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth, useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
@@ -81,12 +83,33 @@ export function SubscriptionCheckout({
   onCheckoutStart,
   onCheckoutError,
 }: SubscriptionCheckoutProps) {
+  const { isSignedIn, userId } = useAuth();
+  const { user } = useUser();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState(customerEmail || '');
-  const [showEmailInput, setShowEmailInput] = useState(!customerEmail);
+
+  // Use Clerk user email if available, otherwise fall back to provided email
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const [email, setEmail] = useState(userEmail || customerEmail || '');
+  const [showEmailInput, setShowEmailInput] = useState(!(userEmail || customerEmail));
+
+  // Update email when user data loads
+  useEffect(() => {
+    if (userEmail && userEmail !== email) {
+      setEmail(userEmail);
+      setShowEmailInput(false);
+    }
+  }, [userEmail, email]);
 
   const handleSubscribe = async () => {
+    // Check if user is signed in
+    if (!isSignedIn) {
+      // Save current page URL to return after sign-in
+      const currentUrl = window.location.pathname + window.location.search;
+      router.push(`/sign-in?redirect_url=${encodeURIComponent(currentUrl)}`);
+      return;
+    }
     try {
       // Validate email if shown
       if (showEmailInput && !email) {
