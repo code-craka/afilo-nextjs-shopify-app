@@ -11,7 +11,7 @@ version: 2.1
 
 # Orbs - Reusable packages of CircleCI configuration
 orbs:
-  node: circleci/node@5.2.0
+  node: circleci/node@7.2.0
 
 # ========================================
 # EXECUTORS - Reusable execution environments
@@ -229,7 +229,7 @@ jobs:
 # WORKFLOWS - Orchestrate jobs
 # ========================================
 workflows:
-  version: 2
+  version: 2.1
 
   # Main CI/CD Pipeline
   build-test-deploy:
