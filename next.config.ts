@@ -106,7 +106,7 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Redirects for SEO
+  // Redirects for SEO & Cross-Domain Legal Pages
   async redirects() {
     return [
       {
@@ -118,7 +118,10 @@ const nextConfig: NextConfig = {
         source: '/legal',
         destination: '/legal/terms-of-service',
         permanent: true,
-      }
+      },
+      // Cross-domain legal redirects (from afilo.io)
+      // Note: These only work if user directly hits app.afilo.io
+      // For afilo.io -> app.afilo.io, configure in marketing site
     ];
   },
 };
