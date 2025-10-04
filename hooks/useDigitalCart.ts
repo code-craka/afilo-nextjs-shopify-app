@@ -192,7 +192,7 @@ export const useDigitalCart = () => {
     });
   }, [items, setEducationalStatus, applyEducationalDiscount]);
 
-  // Proceed to Shopify checkout
+  // Proceed to Stripe checkout (bypassing Shopify cart)
   const proceedToCheckout = useCallback(async () => {
     if (items.length === 0) {
       setError('Cart is empty');
@@ -220,7 +220,7 @@ export const useDigitalCart = () => {
             educationalTier: item.educationalDiscount.tier,
             subscriptionInterval: item.subscriptionInterval,
             title: item.title,
-            price: item.price
+            price: item.educationalDiscount.appliedPrice // Use final price with discounts
           })),
           userRegion,
           timestamp: Date.now()
@@ -232,10 +232,10 @@ export const useDigitalCart = () => {
         return { success: false, error: 'Authentication required', requiresAuth: true };
       }
 
-      console.log('User authenticated, proceeding with checkout for user:', authData.userId);
+      console.log('User authenticated, proceeding with Stripe checkout for user:', authData.userId);
 
-      // Validate cart on server before checkout (now with user ID)
-      const validationResponse = await fetch('/api/cart/validate', {
+      // Create Stripe Checkout Session directly (NO Shopify cart validation)
+      const checkoutResponse = await fetch('/api/stripe/create-cart-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -244,42 +244,33 @@ export const useDigitalCart = () => {
           items: items.map(item => ({
             productId: item.productId,
             variantId: item.variantId,
+            title: item.title,
+            price: item.educationalDiscount.appliedPrice, // Final price with discounts
             quantity: item.quantity,
             licenseType: item.licenseType,
-            educationalTier: item.educationalDiscount.tier,
-            clientPrice: item.educationalDiscount.appliedPrice
+            image: item.image,
           })),
-          userRegion,
-          userId: authData.userId // Include user ID for validation
+          userEmail: authData.email, // Pass user email for Stripe
         }),
       });
 
-      if (!validationResponse.ok) {
-        const errorData = await validationResponse.json();
-        console.error('Cart validation failed:', errorData);
-        throw new Error(errorData.error || `Cart validation failed (${validationResponse.status})`);
+      if (!checkoutResponse.ok) {
+        const errorData = await checkoutResponse.json();
+        console.error('Stripe checkout creation failed:', errorData);
+        throw new Error(errorData.error || `Checkout failed (${checkoutResponse.status})`);
       }
 
-      const validation = await validationResponse.json();
+      const { url: checkoutUrl } = await checkoutResponse.json();
 
-      if (!validation.valid) {
-        if (validation.discrepancies) {
-          throw new Error('Price validation failed. Please refresh your cart.');
-        }
-        throw new Error(validation.error || 'Cart validation failed');
+      if (!checkoutUrl) {
+        throw new Error('No checkout URL returned from Stripe');
       }
-
-      // Prepare Shopify checkout payload with user ID
-      const checkoutPayload = await prepareShopifyCheckout(authData.userId);
-
-      // Create Shopify checkout session
-      const checkoutUrl = await createShopifyCheckout(checkoutPayload);
 
       // Clear any stored checkout intent since we're proceeding
       sessionStorage.removeItem('checkout_intent');
 
-      // Redirect to Shopify checkout
-      console.log('Redirecting to Shopify checkout:', checkoutUrl);
+      // Redirect to Stripe checkout
+      console.log('Redirecting to Stripe checkout:', checkoutUrl);
       window.location.href = checkoutUrl;
 
       return { success: true, checkoutUrl };
@@ -296,9 +287,9 @@ export const useDigitalCart = () => {
   // Prepare Shopify checkout data
   const prepareShopifyCheckout = useCallback(async (userId?: string) => {
     const lineItems = items.map(item => ({
-      variantId: item.variantId,
+      merchandiseId: item.variantId,  // Shopify API expects "merchandiseId"
       quantity: item.quantity,
-      customAttributes: [
+      attributes: [  // Shopify API expects "attributes" not "customAttributes"
         { key: 'license_type', value: item.licenseType },
         { key: 'subscription_interval', value: item.subscriptionInterval },
         { key: 'educational_tier', value: item.educationalDiscount.tier },

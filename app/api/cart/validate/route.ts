@@ -208,16 +208,32 @@ export async function POST(request: NextRequest): Promise<NextResponse<CartValid
 
         // Calculate server-side price
         const basePrice = parseFloat(variant.price.amount);
-        const licenseDefinition = LICENSE_DEFINITIONS[item.licenseType as keyof typeof LICENSE_DEFINITIONS];
 
-        if (!licenseDefinition) {
+        // Validate license type exists
+        const validLicenseTypes: string[] = ['Personal', 'Commercial', 'Extended', 'Enterprise', 'Developer', 'Free'];
+        if (!validLicenseTypes.includes(item.licenseType)) {
           return NextResponse.json(
             {
               valid: false,
-              error: `Invalid license type: ${item.licenseType}`,
+              error: `Invalid license type: ${item.licenseType}. Valid types: ${validLicenseTypes.join(', ')}`,
               serverTotals: { subtotal: 0, educationalDiscount: 0, tax: 0, total: 0 }
             },
             { status: 400 }
+          );
+        }
+
+        const licenseDefinition = LICENSE_DEFINITIONS[item.licenseType as keyof typeof LICENSE_DEFINITIONS];
+
+        // This should never happen now, but keep as safety check
+        if (!licenseDefinition) {
+          console.error('CRITICAL: License definition not found for validated type:', item.licenseType);
+          return NextResponse.json(
+            {
+              valid: false,
+              error: `License configuration error for type: ${item.licenseType}`,
+              serverTotals: { subtotal: 0, educationalDiscount: 0, tax: 0, total: 0 }
+            },
+            { status: 500 }
           );
         }
 

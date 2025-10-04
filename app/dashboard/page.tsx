@@ -1,287 +1,275 @@
 'use client';
 
-import { useUser, useClerk } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
-import { LoaderCircle, User, CreditCard, Settings, LogOut, Shield, Mail, Calendar } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import {
+  LayoutDashboard,
+  Users,
+  Key,
+  DollarSign,
+  Shield,
+  BarChart3,
+  Settings
+} from 'lucide-react';
+import EnterpriseHeader from '@/components/enterprise/EnterpriseHeader';
+import PremiumMetricsCard from '@/components/enterprise/PremiumMetricsCard';
+import TeamManagement from '@/components/enterprise/TeamManagement';
+import ApiKeyManager from '@/components/enterprise/ApiKeyManager';
+import BillingOverview from '@/components/enterprise/BillingOverview';
+import SecurityPanel from '@/components/enterprise/SecurityPanel';
+import AdvancedAnalytics from '@/components/enterprise/AdvancedAnalytics';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-interface UserProfile {
-  id: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  subscriptionTier: string;
-  oauthSignup: boolean;
-  createdAt: string;
-}
+// Mock data for charts
+const revenueData = [
+  { month: 'Jan', revenue: 45000, users: 120 },
+  { month: 'Feb', revenue: 52000, users: 145 },
+  { month: 'Mar', revenue: 61000, users: 178 },
+  { month: 'Apr', revenue: 73000, users: 215 },
+  { month: 'May', revenue: 89000, users: 267 },
+  { month: 'Jun', revenue: 107000, users: 324 },
+  { month: 'Jul', revenue: 127000, users: 389 },
+];
 
-export default function DashboardPage() {
+const apiUsageData = [
+  { hour: '00:00', calls: 1240 },
+  { hour: '04:00', calls: 890 },
+  { hour: '08:00', calls: 3420 },
+  { hour: '12:00', calls: 5890 },
+  { hour: '16:00', calls: 7210 },
+  { hour: '20:00', calls: 4560 },
+  { hour: '23:00', calls: 2130 },
+];
+
+const productDistribution = [
+  { name: 'AI Tools', value: 35, color: '#8b5cf6' },
+  { name: 'Templates', value: 28, color: '#3b82f6' },
+  { name: 'Scripts', value: 22, color: '#10b981' },
+  { name: 'Starter Kits', value: 15, color: '#f59e0b' },
+];
+
+type Tab = 'overview' | 'team' | 'api' | 'billing' | 'security' | 'analytics';
+
+export default function PremiumDashboardPage() {
   const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
   const router = useRouter();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   useEffect(() => {
-    if (isLoaded && user) {
-      // Simulate fetching user profile (you can implement actual API call)
-      setTimeout(() => {
-        setUserProfile({
-          id: 1,
-          email: user.emailAddresses[0]?.emailAddress || '',
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          subscriptionTier: 'free',
-          oauthSignup: user.externalAccounts.length > 0,
-          createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
-        });
+    if (isLoaded) {
+      if (!user) {
+        router.push('/sign-in');
+      } else {
         setLoading(false);
-      }, 1000);
+      }
     }
-  }, [isLoaded, user]);
+  }, [isLoaded, user, router]);
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push('/');
-  };
-
-  if (!isLoaded || loading) {
+  if (loading || !isLoaded) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <LoaderCircle className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-16 w-16 animate-spin rounded-full border-4 border-solid border-purple-500 border-r-transparent mb-4" />
+          <div className="text-white text-xl">Loading Premium Dashboard...</div>
+        </div>
       </div>
     );
   }
 
-  if (!user) {
-    router.push('/sign-in');
-    return null;
-  }
+  const tabs = [
+    { id: 'overview' as Tab, label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'team' as Tab, label: 'Team', icon: <Users className="w-4 h-4" /> },
+    { id: 'api' as Tab, label: 'API Keys', icon: <Key className="w-4 h-4" /> },
+    { id: 'billing' as Tab, label: 'Billing', icon: <DollarSign className="w-4 h-4" /> },
+    { id: 'security' as Tab, label: 'Security', icon: <Shield className="w-4 h-4" /> },
+    { id: 'analytics' as Tab, label: 'Analytics', icon: <BarChart3 className="w-4 h-4" /> },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Afilo Enterprise Dashboard</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    {user.firstName?.[0] || user.emailAddresses[0]?.emailAddress[0] || 'U'}
-                  </span>
-                </div>
-                <span className="text-gray-700 font-medium">
-                  {user.firstName || 'User'}
-                </span>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Mesh Gradient Overlay */}
+      <div className="fixed inset-0 opacity-30 pointer-events-none">
+        <div className="absolute inset-0" style={{
+          background: `
+            radial-gradient(at 0% 0%, #1e1b4b 0%, transparent 50%),
+            radial-gradient(at 100% 0%, #1e3a8a 0%, transparent 50%),
+            radial-gradient(at 100% 100%, #4c1d95 0%, transparent 50%),
+            radial-gradient(at 0% 100%, #0f172a 0%, transparent 50%)
+          `
+        }} />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Information */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <div className="flex items-center mb-6">
-                <User className="w-5 h-5 text-blue-600 mr-2" />
-                <h2 className="text-xl font-semibold text-gray-900">Profile Information</h2>
-              </div>
+      {/* Content */}
+      <div className="relative z-10">
+        <EnterpriseHeader />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
-                  </label>
-                  <div className="p-3 bg-gray-50 rounded-lg border">
-                    {userProfile?.firstName || 'Not provided'}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
-                  </label>
-                  <div className="p-3 bg-gray-50 rounded-lg border">
-                    {userProfile?.lastName || 'Not provided'}
-                  </div>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address
-                  </label>
-                  <div className="p-3 bg-gray-50 rounded-lg border flex items-center">
-                    <Mail className="w-4 h-4 text-gray-400 mr-2" />
-                    {userProfile?.email}
-                    {user.emailAddresses[0]?.verification?.status === 'verified' && (
-                      <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <Shield className="w-3 h-3 mr-1" />
-                        Verified
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Type
-                  </label>
-                  <div className="p-3 bg-gray-50 rounded-lg border">
-                    {userProfile?.oauthSignup ? 'Google OAuth' : 'Email/Password'}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Member Since
-                  </label>
-                  <div className="p-3 bg-gray-50 rounded-lg border flex items-center">
-                    <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                    {new Date(userProfile?.createdAt || '').toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="bg-white rounded-xl shadow-sm border p-6 mt-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent Activity</h2>
-              <div className="space-y-4">
-                <div className="flex items-center p-4 bg-blue-50 rounded-lg">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Account created successfully</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(userProfile?.createdAt || '').toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {userProfile?.oauthSignup && (
-                  <div className="flex items-center p-4 bg-green-50 rounded-lg">
-                    <div className="w-2 h-2 bg-green-600 rounded-full mr-3"></div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Connected Google account</p>
-                      <p className="text-xs text-gray-500">OAuth authentication completed</p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full mr-3"></div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Signed in to dashboard</p>
-                    <p className="text-xs text-gray-500">Just now</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <main className="max-w-[1800px] mx-auto px-6 lg:px-8 py-8">
+          {/* Tabs */}
+          <div className="mb-8 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-2 flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <motion.button
+                key={tab.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </motion.button>
+            ))}
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Subscription Status */}
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <div className="flex items-center mb-4">
-                <CreditCard className="w-5 h-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Subscription</h3>
-              </div>
-
-              <div className="text-center">
-                <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 mb-3">
-                  Free Plan
-                </div>
-                <p className="text-sm text-gray-600 mb-4">
-                  Upgrade to unlock premium features and enterprise tools.
-                </p>
-                <button
-                  onClick={() => router.push('/enterprise')}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition"
-                >
-                  View Plans
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <button
-                  onClick={() => router.push('/products')}
-                  className="w-full flex items-center text-left p-3 rounded-lg hover:bg-gray-50 transition"
-                >
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                    <Settings className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">Browse Products</span>
-                </button>
-
-                <button
-                  onClick={() => router.push('/enterprise')}
-                  className="w-full flex items-center text-left p-3 rounded-lg hover:bg-gray-50 transition"
-                >
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                    <CreditCard className="w-4 h-4 text-green-600" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">Enterprise Portal</span>
-                </button>
-
-                <button
-                  onClick={() => window.open('mailto:support@afilo.io')}
-                  className="w-full flex items-center text-left p-3 rounded-lg hover:bg-gray-50 transition"
-                >
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                    <Mail className="w-4 h-4 text-purple-600" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">Contact Support</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Account Security */}
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <div className="flex items-center mb-4">
-                <Shield className="w-5 h-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Security</h3>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Email Verified</span>
-                  <span className="text-sm font-medium text-green-600">
-                    {user.emailAddresses[0]?.verification?.status === 'verified' ? '✓' : '✗'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Two-Factor Auth</span>
-                  <span className="text-sm font-medium text-yellow-600">Setup Recommended</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">OAuth Connected</span>
-                  <span className="text-sm font-medium text-green-600">
-                    {userProfile?.oauthSignup ? '✓' : '✗'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* Tab Content */}
+          {activeTab === 'overview' && <OverviewTab />}
+          {activeTab === 'team' && <TeamManagement />}
+          {activeTab === 'api' && <ApiKeyManager />}
+          {activeTab === 'billing' && <BillingOverview />}
+          {activeTab === 'security' && <SecurityPanel />}
+          {activeTab === 'analytics' && <AdvancedAnalytics />}
+        </main>
       </div>
     </div>
   );
 }
+
+// Overview Tab
+function OverviewTab() {
+  return (
+    <div className="space-y-8">
+      {/* Page Title */}
+      <div>
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent mb-2">
+          Enterprise Command Center
+        </h1>
+        <p className="text-gray-400">Real-time insights into your business performance</p>
+      </div>
+
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <PremiumMetricsCard
+          title="Monthly Recurring Revenue"
+          value={127000}
+          change="+23%"
+          trend="up"
+          prefix="$"
+          icon={<DollarSign className="w-6 h-6" />}
+        />
+        <PremiumMetricsCard
+          title="API Requests (24h)"
+          value={2.4}
+          change="+14%"
+          trend="up"
+          suffix="M"
+          icon={<BarChart3 className="w-6 h-6" />}
+        />
+        <PremiumMetricsCard
+          title="Active Enterprise Users"
+          value={847}
+          change="+31%"
+          trend="up"
+          icon={<Users className="w-6 h-6" />}
+        />
+        <PremiumMetricsCard
+          title="System Uptime"
+          value="99.97%"
+          change="✓"
+          trend="up"
+          icon={<Shield className="w-6 h-6" />}
+          animate={false}
+        />
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-white">Revenue Growth</h2>
+            <div className="flex items-center gap-2 text-sm text-green-400">
+              <span>+182% YoY</span>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={revenueData}>
+              <defs>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+              <XAxis dataKey="month" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  backdropFilter: 'blur(10px)'
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="#8b5cf6"
+                strokeWidth={3}
+                fill="url(#revenueGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </motion.div>
+
+        {/* API Usage Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-white">API Usage (24h)</h2>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs text-gray-400">Live</span>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={apiUsageData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+              <XAxis dataKey="hour" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px'
+                }}
+              />
+              <Bar dataKey="calls" fill="url(#barGradient)" radius={[8, 8, 0, 0]} />
+              <defs>
+                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" />
+                  <stop offset="100%" stopColor="#8b5cf6" />
+                </linearGradient>
+              </defs>
+            </BarChart>
+          </ResponsiveContainer>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+

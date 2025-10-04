@@ -10,21 +10,39 @@ const CACHE_DURATION = 60000; // 60 seconds
 
 export async function GET(request: Request) {
   try {
-    // Rate limiting: 100 requests per minute
-    const ip = getClientIp(request);
-    const rateLimit = await checkRateLimit(ip, shopifyApiRateLimit);
+    // Rate limiting: Skip in development, enforce in production
+    const isDevelopment = process.env.NODE_ENV === 'development';
 
-    if (!rateLimit.success) {
-      return NextResponse.json(
-        {
-          message: 'Too many requests. Please try again later.',
-          error: 'Rate limit exceeded'
-        },
-        {
-          status: 429,
-          headers: rateLimit.headers
+    let rateLimit;
+    if (!isDevelopment) {
+      const ip = getClientIp(request);
+      rateLimit = await checkRateLimit(ip, shopifyApiRateLimit);
+
+      if (!rateLimit.success) {
+        return NextResponse.json(
+          {
+            message: 'Too many requests. Please try again later.',
+            error: 'Rate limit exceeded'
+          },
+          {
+            status: 429,
+            headers: rateLimit.headers
+          }
+        );
+      }
+    } else {
+      // Mock rate limit response for development
+      rateLimit = {
+        success: true,
+        limit: 1000,
+        remaining: 1000,
+        reset: Date.now() + 60000,
+        headers: {
+          'X-RateLimit-Limit': '1000',
+          'X-RateLimit-Remaining': '1000',
+          'X-RateLimit-Reset': new Date(Date.now() + 60000).toISOString()
         }
-      );
+      };
     }
 
     const { searchParams } = new URL(request.url);

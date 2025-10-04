@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 
 /**
  * Check user authentication status
@@ -14,13 +14,19 @@ export async function GET() {
     if (!userId) {
       return NextResponse.json({
         authenticated: false,
-        userId: null
+        userId: null,
+        email: null
       });
     }
 
+    // Get full user details including email
+    const user = await currentUser();
+    const email = user?.emailAddresses?.[0]?.emailAddress || null;
+
     return NextResponse.json({
       authenticated: true,
-      userId
+      userId,
+      email
     });
   } catch (error) {
     console.error('Auth check error:', error);
@@ -28,6 +34,7 @@ export async function GET() {
       {
         authenticated: false,
         userId: null,
+        email: null,
         error: 'Authentication check failed'
       },
       { status: 500 }
