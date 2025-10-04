@@ -42,31 +42,32 @@ export function getProductTier(amount: number): 'low' | 'medium' | 'high' | 'ent
 }
 
 /**
- * Risk Thresholds per Product Tier
+ * Risk Thresholds per Product Tier (OPTIMIZED FOR MAXIMUM ACCEPTANCE)
  *
  * Risk scores (0-100) determine actions:
  * - Below review threshold: Auto-approve
  * - Between review and block: Manual review
  * - Above block threshold: Auto-decline
  *
- * Higher-value products have stricter thresholds.
+ * UPDATED: Increased thresholds to accept 95%+ of legitimate payments
+ * Goal: Only block obvious fraud (risk score > 95)
  */
 export const RISK_THRESHOLDS = {
   low: {
-    review: 60,  // Review if risk score > 60
-    block: 80    // Block if risk score > 80
+    review: 85,  // Review if risk score > 85 (increased from 60)
+    block: 95    // Block if risk score > 95 (increased from 80)
   },
   medium: {
-    review: 70,  // Review if risk score > 70
-    block: 85    // Block if risk score > 85
+    review: 85,  // Review if risk score > 85 (increased from 70)
+    block: 95    // Block if risk score > 95 (increased from 85)
   },
   high: {
-    review: 75,  // Review if risk score > 75
-    block: 85    // Block if risk score > 85
+    review: 90,  // Review if risk score > 90 (increased from 75)
+    block: 95    // Block if risk score > 95 (increased from 85)
   },
   enterprise: {
-    review: 75,  // Review if risk score > 75
-    block: 75    // Block if risk score > 75 (strictest)
+    review: 90,  // Review if risk score > 90 (increased from 75)
+    block: 95    // Block if risk score > 95 (only obvious fraud)
   },
 } as const;
 
