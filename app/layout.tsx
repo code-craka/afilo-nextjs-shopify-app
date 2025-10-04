@@ -106,7 +106,8 @@ export const metadata: Metadata = {
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
     yandex: process.env.NEXT_PUBLIC_YANDEX_VERIFICATION,
-    bing: process.env.NEXT_PUBLIC_BING_VERIFICATION,
+    // Note: Bing verification uses meta tag instead of Next.js metadata API
+    // Add manually in head if needed: <meta name="msvalidate.01" content="..." />
   },
   category: 'Enterprise Software',
 };

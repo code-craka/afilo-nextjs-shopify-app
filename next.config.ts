@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
   // Production Optimizations
   productionBrowserSourceMaps: false, // Disable source maps in production (security)
   reactStrictMode: true, // Enable React strict mode
-  swcMinify: true, // Use SWC for minification (faster than Terser)
+  // swcMinify is now default in Next.js 15+ (removed deprecated option)
 
   // Turbopack Configuration
   turbopack: {
