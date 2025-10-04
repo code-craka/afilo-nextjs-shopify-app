@@ -67,13 +67,27 @@ export async function POST(request: NextRequest) {
       quantity: item.quantity,
     }));
 
+    // Get base URL with fallback
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://app.afilo.io';
+
+    // Validate URL has scheme
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      console.error('❌ Invalid base URL:', baseUrl);
+      return NextResponse.json(
+        { error: 'Server configuration error: Invalid base URL' },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ Using base URL:', baseUrl);
+
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card', 'us_bank_account'], // Card + ACH
       line_items: lineItems,
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/products`,
+      success_url: `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/products`,
       customer_email: userEmail,
       client_reference_id: userId, // Track which user made the purchase
       metadata: {
