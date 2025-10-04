@@ -32,13 +32,15 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
  * - Low: Under $2,499 (Professional tier)
  * - Medium: $2,499-$4,999 (Mid-tier enterprise)
  * - High: $5,000-$9,999 (Premium enterprise)
- * - Enterprise: $10,000+ (Enterprise Plus)
+ * - Enterprise: $10,000-$50,000 (Enterprise Plus)
+ * - Ultra: $50,000+ (Ultra Enterprise - Custom implementations)
  */
-export function getProductTier(amount: number): 'low' | 'medium' | 'high' | 'enterprise' {
+export function getProductTier(amount: number): 'low' | 'medium' | 'high' | 'enterprise' | 'ultra' {
   if (amount < 249900) return 'low'; // <$2,499
   if (amount < 499900) return 'medium'; // $2,499-$4,999
   if (amount < 999900) return 'high'; // $5,000-$9,999
-  return 'enterprise'; // $10,000+
+  if (amount < 5000000) return 'enterprise'; // $10,000-$50,000
+  return 'ultra'; // $50,000+ (handles $20K invoice easily)
 }
 
 /**
@@ -51,6 +53,7 @@ export function getProductTier(amount: number): 'low' | 'medium' | 'high' | 'ent
  *
  * UPDATED: Increased thresholds to accept 95%+ of legitimate payments
  * Goal: Only block obvious fraud (risk score > 95)
+ * ENTERPRISE & ULTRA: Accept ALL legitimate high-value payments ($10K-$50K+)
  */
 export const RISK_THRESHOLDS = {
   low: {
@@ -66,8 +69,12 @@ export const RISK_THRESHOLDS = {
     block: 95    // Block if risk score > 95 (increased from 85)
   },
   enterprise: {
-    review: 90,  // Review if risk score > 90 (increased from 75)
-    block: 95    // Block if risk score > 95 (only obvious fraud)
+    review: 92,  // Review if risk score > 92 (minimal reviews)
+    block: 98    // Block if risk score > 98 (only extreme fraud) - ACCEPTS $20K
+  },
+  ultra: {
+    review: 95,  // Review if risk score > 95 (almost never)
+    block: 99    // Block if risk score > 99 (virtually never) - ACCEPTS ALL
   },
 } as const;
 

@@ -1,6 +1,6 @@
-# 🎯 STRIPE RADAR OPTIMIZATION GUIDE - Accept ALL $9,999 Subscription Payments
+# 🎯 STRIPE RADAR OPTIMIZATION GUIDE - Accept ALL Enterprise Payments (Up to $50,000+)
 
-**Objective:** Configure Stripe to accept ALL high-value subscription payments ($499-$9,999+/month) with minimal fraud blocks
+**Objective:** Configure Stripe to accept ALL high-value subscription payments ($499-$50,000+/month) including $20,000 invoices with minimal fraud blocks
 
 **Status:** ⚠️ **REQUIRES MANUAL STRIPE DASHBOARD CONFIGURATION**
 
@@ -212,11 +212,11 @@ PRIORITY 1 (HIGHEST - ALLOW ALL SUBSCRIPTIONS):
 ├─ Description: "Allow ALL subscription payments regardless of risk score"
 └─ Expected Impact: All subscription payments bypass Radar
 
-PRIORITY 2 (ALLOW HIGH-VALUE PAYMENTS):
+PRIORITY 2 (ALLOW ALL ENTERPRISE PAYMENTS - INCLUDING $20K):
 ├─ Rule Type: ALLOW
 ├─ Condition: :amount: >= 49900
-├─ Description: "Allow all payments $499+ (subscription tiers)"
-└─ Expected Impact: All your subscription amounts auto-allowed
+├─ Description: "Allow all payments $499+ (includes $20K+ invoices)"
+└─ Expected Impact: All enterprise amounts auto-allowed (up to $50K+)
 
 PRIORITY 3 (ALLOW SUBSCRIPTION PRODUCTS):
 ├─ Rule Type: ALLOW
@@ -242,13 +242,19 @@ PRIORITY 6 (ALLOW RISK OVERRIDE):
 ├─ Description: "Allow payments with manual risk override metadata"
 └─ Expected Impact: Metadata-based bypass
 
-PRIORITY 7 (ONLY BLOCK EXTREME FRAUD):
+PRIORITY 7 (ALLOW ULTRA ENTERPRISE INVOICES):
+├─ Rule Type: ALLOW
+├─ Condition: ::ultra_tier:: = 'true'
+├─ Description: "Allow all $20K+ enterprise invoices automatically"
+└─ Expected Impact: Your $20K invoice will be accepted
+
+PRIORITY 8 (ONLY BLOCK EXTREME FRAUD):
 ├─ Rule Type: BLOCK
-├─ Condition: :risk_score: > 95 AND ::subscription:: != 'true'
+├─ Condition: :risk_score: > 98 AND ::subscription:: != 'true'
 ├─ Description: "Only block non-subscription payments with extreme fraud risk"
 └─ Expected Impact: Minimal blocks (only obvious fraud)
 
-PRIORITY 8 (REVIEW INTERNATIONAL HIGH-VALUE):
+PRIORITY 9 (REVIEW INTERNATIONAL HIGH-VALUE):
 ├─ Rule Type: REVIEW
 ├─ Condition: :country: NOT IN ['US', 'CA'] AND :amount: > 499900
 ├─ Description: "Manual review for international $5K+ payments (but still allow)"
