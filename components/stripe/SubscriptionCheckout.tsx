@@ -103,25 +103,29 @@ export function SubscriptionCheckout({
   }, [userEmail, email]);
 
   const handleSubscribe = async () => {
-    // Check if user is signed in
-    if (!isSignedIn) {
+    // CRITICAL: Must be authenticated to subscribe
+    if (!isSignedIn || !userId) {
       // Save current page URL to return after sign-in
       const currentUrl = window.location.pathname + window.location.search;
       router.push(`/sign-in?redirect_url=${encodeURIComponent(currentUrl)}`);
       return;
     }
+
+    // Get email from Clerk user or input field
+    const emailToUse = userEmail || email || customerEmail;
+
+    // Strict validation before making API call
+    if (!emailToUse || !emailToUse.trim()) {
+      setError('Email address is required');
+      return;
+    }
+
+    if (!emailToUse.includes('@') || !emailToUse.includes('.')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     try {
-      // Validate email if shown
-      if (showEmailInput && !email) {
-        setError('Please enter your email address');
-        return;
-      }
-
-      if (showEmailInput && !email.includes('@')) {
-        setError('Please enter a valid email address');
-        return;
-      }
-
       setError(null);
       setIsLoading(true);
 
@@ -132,7 +136,8 @@ export function SubscriptionCheckout({
         console.log('📝 Creating checkout session:', {
           priceId,
           planName,
-          email: email || customerEmail,
+          email: emailToUse,
+          userId,
         });
       }
 
@@ -144,7 +149,7 @@ export function SubscriptionCheckout({
         },
         body: JSON.stringify({
           priceId,
-          customerEmail: email || customerEmail,
+          customerEmail: emailToUse,
         }),
       });
 
@@ -205,12 +210,14 @@ export function SubscriptionCheckout({
       {/* Subscribe button */}
       <Button
         onClick={handleSubscribe}
-        disabled={isLoading || (showEmailInput && !email)}
+        disabled={isLoading || !isSignedIn || (showEmailInput && !email)}
         variant={variant}
         className={fullWidth ? 'w-full' : ''}
         size="lg"
       >
-        {isLoading ? (
+        {!isSignedIn ? (
+          'Sign In to Subscribe'
+        ) : isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Creating Checkout...
