@@ -69,7 +69,7 @@ export async function GET() {
         });
       }
 
-      const subscription = allSubscriptions.data[0];
+      const subscription = allSubscriptions.data[0] as any;
       return NextResponse.json({
         hasSubscription: false,
         status: subscription.status,
@@ -78,7 +78,7 @@ export async function GET() {
       });
     }
 
-    const subscription = subscriptions.data[0];
+    const subscription = subscriptions.data[0] as any;
     const priceId = subscription.items.data[0].price.id;
 
     return NextResponse.json({
