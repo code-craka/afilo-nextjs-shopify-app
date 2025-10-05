@@ -81,7 +81,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.shopify.com https://api.stripe.com https://challenges.cloudflare.com https://cloudflareinsights.com https://www.google-analytics.com https://clerk.*.com https://*.clerk.accounts.dev https://clerk.app.afilo.io",
+              "connect-src 'self' https://*.shopify.com https://api.stripe.com https://challenges.cloudflare.com https://cloudflareinsights.com https://www.google-analytics.com https://*.clerk.accounts.dev https://clerk.app.afilo.io",
               "frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://*.clerk.accounts.dev",
               "worker-src 'self' blob:",
               "base-uri 'self'",

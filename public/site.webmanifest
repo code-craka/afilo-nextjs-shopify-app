@@ -1,0 +1,16 @@
+{
+  "name": "Afilo Enterprise",
+  "short_name": "Afilo",
+  "description": "Fortune 500-grade digital commerce platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#8B5CF6",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
