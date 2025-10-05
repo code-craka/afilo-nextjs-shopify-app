@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { stripe } from '@/lib/stripe-server';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-09-30.clover',
+  typescript: true,
+});
 
 /**
  * GET /api/subscriptions/status
@@ -69,7 +74,7 @@ export async function GET() {
         hasSubscription: false,
         status: subscription.status,
         plan: mapPriceToPlan(subscription.items.data[0].price.id),
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+        currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
       });
     }
 
@@ -80,8 +85,8 @@ export async function GET() {
       hasSubscription: true,
       status: subscription.status,
       plan: mapPriceToPlan(priceId),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
     });
   } catch (error) {
     console.error('Subscription status check failed:', error);
