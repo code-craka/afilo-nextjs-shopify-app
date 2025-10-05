@@ -14,7 +14,7 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams?.get('redirect_url') || '/dashboard';
+  const redirectUrl = searchParams?.get('redirect_url') || searchParams?.get('redirect') || '/';
   const errorParam = searchParams?.get('error');
 
   // Handle Google OAuth sign-in

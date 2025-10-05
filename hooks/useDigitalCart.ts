@@ -228,7 +228,7 @@ export const useDigitalCart = () => {
 
         // Redirect to sign-in with return URL
         const returnUrl = '/checkout';
-        window.location.href = `/sign-in?redirect=${encodeURIComponent(returnUrl)}`;
+        window.location.href = `/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`;
         return { success: false, error: 'Authentication required', requiresAuth: true };
       }
 
