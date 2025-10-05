@@ -23,13 +23,12 @@ export default function PerformanceMonitor() {
         metric_rating: getRating(name, value),
       });
 
-      // Log in development
+      // Minimal logging in development (warn for poor metrics only)
       if (process.env.NODE_ENV === 'development') {
-        console.log(`[Performance] ${name}:`, {
-          value: Math.round(value),
-          rating: getRating(name, value),
-          id,
-        });
+        const rating = getRating(name, value);
+        if (rating === 'poor') {
+          console.warn(`[Performance] ${name}: ${Math.round(value)}ms (${rating})`);
+        }
       }
     };
 
@@ -134,7 +133,9 @@ export default function PerformanceMonitor() {
       observeFCP();
       observeTTFB();
     } catch (error) {
-      console.error('[Performance Monitor] Error:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[Performance Monitor] Error:', error);
+      }
     }
 
     // Track custom performance metrics

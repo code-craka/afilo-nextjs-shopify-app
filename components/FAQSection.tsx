@@ -50,13 +50,13 @@ const faqs: FAQ[] = [
   {
     id: 'free-trial',
     question: 'Is there a free trial for enterprise plans?',
-    answer: 'We offer a 30-day pilot program (up to 10 users) for enterprise prospects. This includes full platform access, dedicated onboarding, training sessions, and implementation support. There\'s no credit card required for the pilot. After validation, we provide flexible contract terms and volume pricing.',
+    answer: 'We do not offer free trials. All plans require immediate payment with a 30-day money-back guarantee. For Enterprise Plus prospects, we offer personalized live demos and sandbox environments for API testing. This ensures you receive dedicated onboarding, priority support, and full feature access from day one.',
     category: 'business'
   },
   {
     id: 'implementation-time',
     question: 'How does the implementation process work?',
-    answer: 'Our 5-step enterprise journey starts with a discovery call (30 min), followed by a custom demo (1-2 hours), then a 30-day pilot program. Full deployment takes 2-6 months depending on complexity, with phased rollout, data migration, system integration, and comprehensive employee training. We provide a dedicated implementation team throughout.',
+    answer: 'Our 5-step enterprise journey: (1) Discovery call (30 min), (2) Custom demo (1-2 hours), (3) Subscribe and start onboarding, (4) Implementation and integration (2-6 months), (5) Ongoing optimization. Full deployment includes phased rollout, data migration, system integration, and comprehensive training with a dedicated implementation team. 30-day money-back guarantee protects your investment.',
     category: 'business',
     link: { text: 'See Implementation Timeline', href: '#how-it-works' }
   },

@@ -221,7 +221,9 @@ const DigitalProductCard = ({ product, onProductClick, index }: DigitalProductCa
     });
 
     if (!result.success && result.error) {
-      console.error('Failed to add to cart:', result.error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to add to cart:', result.error);
+      }
     }
   };
 
@@ -233,7 +235,9 @@ const DigitalProductCard = ({ product, onProductClick, index }: DigitalProductCa
     const result = await quickPurchase(product, licenseType);
 
     if (!result.success && result.error) {
-      console.error('Quick purchase failed:', result.error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Quick purchase failed:', result.error);
+      }
     }
   };
 
@@ -340,7 +344,9 @@ const DigitalProductCard = ({ product, onProductClick, index }: DigitalProductCa
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                console.log('View demo for:', product.title);
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('View demo for:', product.title);
+                }
               }}
               className="bg-blue-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-blue-600 transition-colors flex items-center gap-1"
             >
@@ -496,7 +502,9 @@ export default function DigitalProductGrid({
         ...(queryParams.reverse && { sortReverse: String(queryParams.reverse) }),
       });
 
-      console.log(`🎯 Loading products from /api/products?${urlParams.toString()}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🎯 Loading products from /api/products?${urlParams.toString()}`);
+      }
 
       const response = await fetch(`/api/products?${urlParams.toString()}`);
 
@@ -506,7 +514,9 @@ export default function DigitalProductGrid({
       }
 
       const { products: newProducts } = await response.json();
-      console.log('📦 API returned:', newProducts.length, 'products');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📦 API returned:', newProducts.length, 'products');
+      }
 
       if (isLoadMore) {
         setProducts(prev => [...prev, ...newProducts]);
@@ -518,7 +528,9 @@ export default function DigitalProductGrid({
       setHasMore(newProducts.length === productsPerPage);
 
     } catch (err) {
-      console.error('❌ Failed to load products:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ Failed to load products:', err);
+      }
       setError(err instanceof Error ? err.message : 'Failed to load products');
       if (!isLoadMore) {
         setProducts([]);

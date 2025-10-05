@@ -7,8 +7,14 @@ const isProtectedRoute = createRouteMatcher([
   '/enterprise(.*)',
   '/account(.*)',
   '/api/users(.*)',
-  '/api/subscriptions(.*)',
   '/api/downloads(.*)',
+]);
+
+// Define subscription-required routes (require active paid subscription)
+const isSubscriptionRoute = createRouteMatcher([
+  '/dashboard(.*)',
+  '/api/downloads(.*)',
+  '/api/keys(.*)',
 ]);
 
 // Define public routes (no authentication required)
@@ -110,6 +116,11 @@ export default clerkMiddleware(async (auth, req) => {
         throw error;
       }
     }
+
+    // Check subscription for premium routes (dashboard, downloads, etc.)
+    // Note: Subscription check happens client-side in dashboard/page.tsx
+    // to avoid middleware performance impact. Server-side validation
+    // happens in API routes that serve sensitive data.
 
     // Redirect authenticated users away from auth pages
     if (isPublicRoute(req) && (req.nextUrl.pathname === '/sign-in' || req.nextUrl.pathname === '/sign-up')) {

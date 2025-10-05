@@ -56,16 +56,38 @@ export default function PremiumDashboardPage() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [hasSubscription, setHasSubscription] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   useEffect(() => {
-    if (isLoaded) {
+    async function checkAccess() {
+      if (!isLoaded) return;
+
       if (!user) {
         router.push('/sign-in');
-      } else {
+        return;
+      }
+
+      // Check subscription status
+      try {
+        const response = await fetch('/api/subscriptions/status');
+        const data = await response.json();
+
+        if (!data.hasSubscription) {
+          // Redirect to pricing page if no active subscription
+          router.push('/pricing?error=subscription_required');
+          return;
+        }
+
+        setHasSubscription(true);
         setLoading(false);
+      } catch (error) {
+        console.error('Subscription check failed:', error);
+        router.push('/pricing?error=subscription_check_failed');
       }
     }
+
+    checkAccess();
   }, [isLoaded, user, router]);
 
   if (loading || !isLoaded) {
