@@ -132,9 +132,9 @@ export default function RootLayout({
             <>
               <Script
                 src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-                strategy="afterInteractive"
+                strategy="lazyOnload"
               />
-              <Script id="ga-init" strategy="afterInteractive">
+              <Script id="ga-init" strategy="lazyOnload">
                 {`
                   window.dataLayer = window.dataLayer || [];
                   function gtag(){dataLayer.push(arguments);}
@@ -147,13 +147,15 @@ export default function RootLayout({
             </>
           )}
 
-          {/* Cloudflare Web Analytics */}
-          <Script
-            defer
-            src='https://static.cloudflareinsights.com/beacon.min.js'
-            data-cf-beacon='{"token": "5871c7284ba4474ca46670b50b73502c"}'
-            strategy="afterInteractive"
-          />
+          {/* Cloudflare Web Analytics - Production Only */}
+          {process.env.NODE_ENV === 'production' && (
+            <Script
+              defer
+              src='https://static.cloudflareinsights.com/beacon.min.js'
+              data-cf-beacon='{"token": "5871c7284ba4474ca46670b50b73502c"}'
+              strategy="lazyOnload"
+            />
+          )}
         </body>
       </html>
     </ClerkProvider>
