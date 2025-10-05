@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { Loader2 } from 'lucide-react';
 
 /**
@@ -17,7 +17,8 @@ import { Loader2 } from 'lucide-react';
  * 6. Redirects to Stripe checkout
  */
 export default function CheckoutPage() {
-  const { isLoaded, userId, user } = useAuth();
+  const { isLoaded, userId } = useAuth();
+  const { user } = useUser();
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'processing' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
