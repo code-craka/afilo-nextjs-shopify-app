@@ -73,27 +73,26 @@ export default function RefundPolicyPage() {
 
       {/* Free Trial Policy */}
       <section>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Free Trial Policy</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Enterprise Evaluation Programs</h2>
         <div className="space-y-4 text-gray-700">
           <p>
-            <strong>14-Day Free Trial:</strong> We offer a 14-day free trial for new customers on Professional
-            and Business plans.
+            <strong>No Free Trials:</strong> Afilo does not offer free trials. All plans require immediate payment
+            to ensure enterprise-grade commitment and access to premium features.
           </p>
 
-          <h3 className="text-xl font-semibold text-gray-900">Trial Terms:</h3>
+          <h3 className="text-xl font-semibold text-gray-900">Evaluation Options:</h3>
           <ul className="list-disc pl-6 space-y-2">
-            <li><strong>No Payment Information Required:</strong> Start your trial without entering a credit card</li>
-            <li><strong>Full Feature Access:</strong> Access all plan features during trial period</li>
-            <li><strong>Trial to Paid Transition:</strong> After 14 days, you must subscribe to continue using the service</li>
-            <li><strong>Cancellation:</strong> Cancel anytime during trial with no charges</li>
-            <li><strong>One Trial Per Organization:</strong> Limit one trial per company/organization</li>
+            <li><strong>30-Day Money-Back Guarantee:</strong> Full refund if not satisfied within first 30 days</li>
+            <li><strong>Live Demo Sessions:</strong> Free personalized demos with our solutions team (no commitment)</li>
+            <li><strong>Enterprise Pilots:</strong> Custom evaluation programs for Enterprise Plus customers (contact sales)</li>
+            <li><strong>Sandbox Access:</strong> Test environment available for API integration testing (paid plans only)</li>
           </ul>
 
-          <div className="bg-gray-50 rounded-lg p-4 mt-4">
-            <p className="text-sm">
-              <strong>Note:</strong> Enterprise and Enterprise Plus plans do not have standard free trials. Instead, we
-              offer <strong>30-day pilot programs</strong> (up to 10 users) with dedicated onboarding support.
-              Contact <a href="mailto:enterprise@techsci.io" className="text-blue-600 hover:underline">enterprise@techsci.io</a> to arrange.
+          <div className="bg-blue-50 rounded-lg p-4 mt-4 border border-blue-200">
+            <p className="text-sm text-blue-900">
+              <strong>Why No Free Trials?</strong> Enterprise software requires serious commitment. Our pay-first model
+              ensures you get dedicated onboarding, priority support, and immediate access to all features. Protected by
+              our 30-day money-back guarantee, you can evaluate risk-free with full enterprise resources.
             </p>
           </div>
         </div>

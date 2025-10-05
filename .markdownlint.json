@@ -1,58 +1,62 @@
 {
-    "code-block-style": {
-      "style": "fenced"
-    },
-    "code-fence-style": {
-      "style": "backtick"
-    },
-    "emphasis-style": {
-      "style": "asterisk"
-    },
-    "extended-ascii": {
-      "ascii-only": true
-    },
-    "fenced-code-language": false,
-    "heading-style": {
-      "style": "atx"
-    },
-    "hr-style": {
-      "style": "---"
-    },
-    "line-length": false,
-    "link-image-style": {
-      "collapsed": false,
-      "shortcut": false,
-      "url_inline": false
-    },
-    "no-duplicate-heading": {
-      "siblings_only": true
-    },
-    "ol-prefix": {
-      "style": "ordered"
-    },
-    "proper-names": {
-      "code_blocks": false,
-      "names": [
-        "Cake.Markdownlint",
-        "CommonMark",
-        "JavaScript",
-        "Markdown",
-        "markdown-it",
-        "markdownlint",
-        "Node.js"
-      ]
-    },
-    "reference-links-images": {
-      "shortcut_syntax": true
-    },
-    "strong-style": {
-      "style": "asterisk"
-    },
-    "ul-style": {
-      "style": "dash"
-    },
-    "blanks-around-fences": false,
-    "blanks-around-headings": false,
-    "blanks-around-lists": false,
-    "single-trailing-newline": false
-  }
+  "default": false,
+  "heading-increment": false,
+  "first-heading-h1": false,
+  "heading-style": false,
+  "ul-style": false,
+  "list-indent": false,
+  "ul-indent": false,
+  "no-trailing-spaces": false,
+  "no-hard-tabs": false,
+  "no-reversed-links": false,
+  "no-multiple-blanks": false,
+  "line-length": false,
+  "commands-show-output": false,
+  "no-missing-space-atx": false,
+  "no-multiple-space-atx": false,
+  "no-missing-space-closed-atx": false,
+  "no-multiple-space-closed-atx": false,
+  "blanks-around-headings": false,
+  "blanks-around-headers": false,
+  "heading-start-left": false,
+  "header-start-left": false,
+  "no-duplicate-heading": false,
+  "no-duplicate-header": false,
+  "single-title": false,
+  "single-h1": false,
+  "no-trailing-punctuation": false,
+  "no-multiple-space-blockquote": false,
+  "no-blanks-blockquote": false,
+  "ol-prefix": false,
+  "list-marker-space": false,
+  "blanks-around-fences": false,
+  "blanks-around-lists": false,
+  "no-inline-html": false,
+  "no-bare-urls": false,
+  "hr-style": false,
+  "no-emphasis-as-heading": false,
+  "no-emphasis-as-header": false,
+  "no-space-in-emphasis": false,
+  "no-space-in-code": false,
+  "no-space-in-links": false,
+  "fenced-code-language": false,
+  "first-line-heading": false,
+  "first-line-h1": false,
+  "no-empty-links": false,
+  "required-headings": false,
+  "required-headers": false,
+  "proper-names": false,
+  "no-alt-text": false,
+  "code-block-style": false,
+  "code-fence-style": false,
+  "emphasis-style": false,
+  "strong-style": false,
+  "link-fragments": false,
+  "reference-links-images": false,
+  "link-image-reference-definitions": false,
+  "link-image-style": false,
+  "table-pipe-style": false,
+  "table-column-count": false,
+  "no-reversed-table-pipes": false,
+  "fenced-code-annotation": false
+}

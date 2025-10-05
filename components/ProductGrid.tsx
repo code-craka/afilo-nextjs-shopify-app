@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { useQuery } from '@tanstack/react-query';
 // No longer importing from shopify lib directly on client
 import type { ShopifyProduct, ProductsQueryParams } from '@/types/shopify';
+import { log } from '@/lib/logger';
 
 // Types
 interface ProductGridProps {
@@ -252,7 +254,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
     try {
       await onAddToCart(product, defaultVariant.id); // Pass full product instead of just ID
     } catch (error) {
-      console.error('Add to cart failed:', error);
+      log.error('Add to cart failed', error, { component: 'ProductGrid', action: 'addToCart' });
     } finally {
       setIsLoading(false);
     }
@@ -410,7 +412,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
             className="absolute bottom-3 right-3 backdrop-blur-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold px-4 py-2.5 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 flex items-center gap-1.5 z-20"
             onClick={(e) => {
               e.stopPropagation();
-              console.log('Demo clicked for:', product.title);
+              log.debug('Demo clicked', { productTitle: product.title, productId: product.id });
             }}
             aria-label={`View demo of ${product.title}`}
           >
@@ -677,101 +679,96 @@ export default function ProductGrid({
     after: cursor || undefined
   }), [searchQuery, sortBy, sortReverse, productsPerPage, cursor]);
 
-  // Load products function with enhanced debugging
-  const loadProducts = useCallback(async (isLoadMore = false) => {
-    try {
-      console.log('🚀 ProductGrid loadProducts called:', { isLoadMore, queryParams });
+  // Fetch products using TanStack Query for automatic caching
+  const fetchProducts = async (): Promise<ShopifyProduct[]> => {
+    const urlParams = new URLSearchParams({
+      first: String(queryParams.first),
+      ...(queryParams.after && { after: queryParams.after }),
+      ...(queryParams.query && { query: queryParams.query }),
+      ...(queryParams.sortKey && { sortBy: queryParams.sortKey }),
+      ...(queryParams.reverse && { sortReverse: String(queryParams.reverse) }),
+    });
 
-      if (isLoadMore) {
-        setLoadingMore(true);
-        console.log('⏳ Loading more products...');
-      } else {
-        setLoading(true);
-        setError(null);
-        console.log('⏳ Loading initial products...');
-      }
+    const response = await fetch(`/api/products?${urlParams.toString()}`);
 
-      // Fetch products from the secure API proxy
-      const urlParams = new URLSearchParams({
-        first: String(queryParams.first),
-        ...(queryParams.after && { after: queryParams.after }),
-        ...(queryParams.query && { query: queryParams.query }),
-        ...(queryParams.sortKey && { sortBy: queryParams.sortKey }),
-        ...(queryParams.reverse && { sortReverse: String(queryParams.reverse) }),
-      });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to fetch products' }));
+      throw new Error(errorData.message || 'Failed to fetch products from API');
+    }
 
-      console.log(`🔍 Fetching from /api/products?${urlParams.toString()}`);
-      const response = await fetch(`/api/products?${urlParams.toString()}`);
+    const { products: newProducts } = await response.json();
+    return newProducts;
+  };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch products from API');
-      }
+  // Use TanStack Query for data fetching with automatic caching
+  const {
+    data: fetchedProducts,
+    isLoading: queryLoading,
+    isError,
+    error: queryError,
+    refetch
+  } = useQuery({
+    queryKey: ['products', queryParams],
+    queryFn: fetchProducts,
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    enabled: true, // Always fetch
+  });
 
-      const { products: newProducts } = await response.json();
-      console.log('✅ API returned:', newProducts.length, 'products');
+  // Sync query results to local state
+  useEffect(() => {
+    if (fetchedProducts) {
+      setProducts(fetchedProducts);
+      setHasMore(fetchedProducts.length === productsPerPage);
+      setError(null);
+    }
+  }, [fetchedProducts, productsPerPage]);
 
-      if (isLoadMore) {
-        setProducts(prev => [...prev, ...newProducts]);
-      } else {
-        setProducts(newProducts);
-      }
-
-      setHasMore(newProducts.length === productsPerPage);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load products';
-      console.error('❌ ProductGrid loadProducts failed:', err);
-      console.error('❌ Error details:', {
+  // Handle query errors
+  useEffect(() => {
+    if (isError && queryError) {
+      const errorMessage = queryError instanceof Error ? queryError.message : 'Failed to load products';
+      setError(errorMessage);
+      log.error('ProductGrid query failed', {
         message: errorMessage,
-        stack: err instanceof Error ? err.stack : 'No stack trace',
         queryParams
       });
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-      console.log('🏁 ProductGrid loadProducts finished');
     }
-  }, [queryParams, productsPerPage]);
+  }, [isError, queryError, queryParams]);
+
+  // Update loading state
+  useEffect(() => {
+    setLoading(queryLoading);
+  }, [queryLoading]);
 
   // Load more products
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
 
-    // Set cursor to the last product's cursor (simplified)
+    // Set cursor to the last product's cursor
     if (products.length > 0) {
       setCursor(products[products.length - 1].id);
     }
+  }, [loadingMore, hasMore, products]);
 
-    await loadProducts(true);
-  }, [loadProducts, loadingMore, hasMore, products]);
-
-  // Initial load and reload on query changes
+  // Handle initial products
   useEffect(() => {
-    console.log('🔄 ProductGrid useEffect triggered:', {
-      initialProductsLength: initialProducts.length,
-      queryParams
-    });
-
-    if (initialProducts.length === 0) {
-      setCursor(null);
-      loadProducts(false);
-    } else {
-      console.log('📦 Using initial products:', initialProducts.length);
+    if (initialProducts.length > 0) {
+      log.debug('Using initial products', { count: initialProducts.length });
       setProducts(initialProducts);
     }
-  }, [loadProducts, initialProducts, queryParams]);
+  }, [initialProducts]);
 
   // Retry function
   const retry = () => {
     setCursor(null);
-    loadProducts(false);
+    refetch();
   };
 
   // Loading state
   if (loading && products.length === 0) {
-    console.log('🔄 Showing loading state');
+    log.debug('Showing loading state');
     return (
       <div className={className}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -785,7 +782,7 @@ export default function ProductGrid({
 
   // Error state
   if (error && products.length === 0) {
-    console.log('❌ Showing error state:', error);
+    log.debug('Showing error state', { error });
     return (
       <div className={className}>
         <div className="flex flex-col items-center justify-center py-12">
@@ -809,7 +806,7 @@ export default function ProductGrid({
 
   // Empty state - only show if not loading and no error
   if (!loading && !error && products.length === 0) {
-    console.log('📭 Showing empty state');
+    log.debug('Showing empty state');
     return (
       <div className={className}>
         <div className="flex flex-col items-center justify-center py-12">
@@ -827,7 +824,7 @@ export default function ProductGrid({
     );
   }
 
-  console.log('🎯 Rendering products grid with', products.length, 'products');
+  log.debug('Rendering products grid', { productsCount: products.length });
 
   return (
     <div className={className}>

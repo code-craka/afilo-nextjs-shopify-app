@@ -42,7 +42,9 @@ export default function HomePageProductGrid() {
           router.push(`/products/${product.handle}`);
         }}
         onAddToCart={async (product, variantId) => {
-          console.log('Adding to digital cart:', { product: product.title, variantId });
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Adding to digital cart:', { product: product.title, variantId });
+          }
 
           const result = await addProductToCart(product, {
             variantId,
@@ -51,9 +53,13 @@ export default function HomePageProductGrid() {
           });
 
           if (result.success) {
-            console.log('✅ Product added to digital cart successfully!');
+            if (process.env.NODE_ENV === 'development') {
+              console.log('✅ Product added to digital cart successfully!');
+            }
           } else {
-            console.error('❌ Failed to add to cart:', result.error);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('❌ Failed to add to cart:', result.error);
+            }
           }
         }}
       />

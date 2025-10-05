@@ -55,15 +55,16 @@ const processSteps: ProcessStep[] = [
   {
     id: 'pilot',
     step: 3,
-    title: 'Pilot Program',
-    description: 'Start with a 30-day pilot for your team (up to 10 users) to validate fit',
-    duration: '30 days',
+    title: 'Subscribe & Onboard',
+    description: 'Subscribe and begin immediate onboarding with dedicated support (30-day money-back guarantee)',
+    duration: 'Day 1',
     icon: Rocket,
     details: [
+      'Immediate access to all platform features',
       'Dedicated onboarding and training sessions',
       'Hands-on implementation assistance',
       'Real-time support and guidance',
-      'Success metrics tracking and reporting'
+      '30-day money-back guarantee for risk-free evaluation'
     ],
     color: 'from-green-500 to-emerald-500'
   },

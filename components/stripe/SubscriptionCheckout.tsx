@@ -128,11 +128,13 @@ export function SubscriptionCheckout({
       // Callback: checkout started
       onCheckoutStart?.();
 
-      console.log('📝 Creating checkout session:', {
-        priceId,
-        planName,
-        email: email || customerEmail,
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📝 Creating checkout session:', {
+          priceId,
+          planName,
+          email: email || customerEmail,
+        });
+      }
 
       // Call API to create Stripe Checkout Session
       const response = await fetch('/api/stripe/create-subscription-checkout', {
@@ -152,10 +154,12 @@ export function SubscriptionCheckout({
         throw new Error(data.error || 'Failed to create checkout session');
       }
 
-      console.log('✅ Checkout session created:', {
-        sessionId: data.sessionId,
-        url: data.url,
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Checkout session created:', {
+          sessionId: data.sessionId,
+          url: data.url,
+        });
+      }
 
       // Redirect to Stripe Checkout
       window.location.href = data.url;
@@ -163,7 +167,9 @@ export function SubscriptionCheckout({
       // Note: Component will be unmounted after redirect, so we don't reset loading state
 
     } catch (err) {
-      console.error('❌ Checkout error:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ Checkout error:', err);
+      }
       const error = err instanceof Error ? err : new Error('Unknown error');
       setError(error.message);
       setIsLoading(false);

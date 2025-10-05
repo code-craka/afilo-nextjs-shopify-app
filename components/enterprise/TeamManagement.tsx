@@ -310,7 +310,9 @@ function InviteMemberModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
 
   const handleInvite = () => {
     // Handle invite logic
-    console.log('Inviting:', email, role);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Inviting:', email, role);
+    }
     onClose();
     setEmail('');
     setRole('member');

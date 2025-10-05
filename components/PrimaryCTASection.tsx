@@ -123,11 +123,11 @@ export default function PrimaryCTASection() {
           >
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-400" />
-              <span className="text-sm font-medium">No credit card required</span>
+              <span className="text-sm font-medium">Free personalized demo</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-400" />
-              <span className="text-sm font-medium">30-day pilot available</span>
+              <span className="text-sm font-medium">30-day money-back guarantee</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-400" />

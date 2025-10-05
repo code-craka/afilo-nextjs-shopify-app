@@ -25,9 +25,13 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     });
 
     if (result.success) {
-      console.log('✅ Product added to cart');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Product added to cart');
+      }
     } else {
-      console.error('❌ Failed to add to cart:', result.error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('❌ Failed to add to cart:', result.error);
+      }
     }
     setIsLoading(false);
   };

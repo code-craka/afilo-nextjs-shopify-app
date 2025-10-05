@@ -59,9 +59,9 @@ export const trackEvent = (event: AnalyticsEvent) => {
     });
   }
 
-  // Console log for development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Analytics Event:', event);
+  // Minimal console log for development (only critical events)
+  if (process.env.NODE_ENV === 'development' && event.category !== 'performance') {
+    console.debug('Analytics:', event.name);
   }
 };
 
