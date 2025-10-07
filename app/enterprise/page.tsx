@@ -2,101 +2,127 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import PremiumPricingDisplay from '@/components/PremiumPricingDisplay';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { SubscriptionCheckout } from '@/components/stripe/SubscriptionCheckout';
+import { Check, X } from 'lucide-react';
 import SubscriptionManager from '@/components/SubscriptionManager';
 import EnterpriseQuoteBuilder, { type EnterpriseQuote } from '@/components/EnterpriseQuoteBuilder';
 import EnterprisePortal from '@/components/EnterprisePortal';
-import type { ShopifyProduct } from '@/types/shopify';
 import type { Subscription } from '@/components/SubscriptionManager';
 
-// Mock enterprise product data
-const ENTERPRISE_PRODUCT: ShopifyProduct = {
-  id: 'gid://shopify/Product/1',
-  handle: 'afilo-enterprise-platform',
-  title: 'Afilo Enterprise AI Platform',
-  description: 'Complete AI-powered business intelligence and automation platform designed for Fortune 500 companies. Transform your organization with cutting-edge artificial intelligence, advanced analytics, and seamless enterprise integration.',
-  descriptionHtml: '<p>Complete AI-powered business intelligence and automation platform designed for Fortune 500 companies.</p>',
-  availableForSale: true,
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
-  publishedAt: '2024-01-01T00:00:00Z',
-  vendor: 'Afilo Technologies',
-  productType: 'Enterprise Software',
-  tags: ['ai', 'enterprise', 'automation', 'analytics', 'business-intelligence'],
-  images: {
-    edges: [
-      {
-        node: {
-          id: 'gid://shopify/ProductImage/1',
-          url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=600&fit=crop',
-          altText: 'Afilo Enterprise AI Platform Dashboard',
-          width: 800,
-          height: 600
-        }
-      }
-    ]
+// Pricing plans - matches /pricing page
+interface PricingPlan {
+  id: string;
+  name: string;
+  description: string;
+  monthlyPrice: number;
+  annualPrice: number;
+  monthlyPriceId: string;
+  annualPriceId: string;
+  users: string;
+  popular?: boolean;
+  features: string[];
+  notIncluded?: string[];
+}
+
+const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: 'professional',
+    name: 'Professional Plan',
+    description: 'Perfect for growing teams and small businesses',
+    monthlyPrice: 499,
+    annualPrice: 4983,
+    monthlyPriceId: 'price_1SE5j3FcrRhjqzak0S0YtNNF',
+    annualPriceId: 'price_1SE5j4FcrRhjqzakFVaLCQOo',
+    users: 'Up to 25 users',
+    features: [
+      'Up to 25 users',
+      'Advanced analytics',
+      'Priority support',
+      'API access',
+      'Custom integrations',
+      'Instant access via email',
+      'SOC 2 Type II certified',
+      '99.9% uptime SLA',
+    ],
+    notIncluded: [
+      'Dedicated support team',
+      'White-label options',
+      'Custom development',
+    ],
   },
-  variants: {
-    edges: [
-      {
-        node: {
-          id: 'gid://shopify/ProductVariant/1',
-          title: 'Professional',
-          availableForSale: true,
-          selectedOptions: [{ name: 'Plan', value: 'Professional' }],
-          price: { amount: '499.00', currencyCode: 'USD' },
-          sku: 'AFILO-ENT-PRO',
-          image: {
-            id: 'gid://shopify/ProductImage/1',
-            url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=600&fit=crop',
-            altText: 'Professional Plan',
-            width: 800,
-            height: 600
-          }
-        }
-      },
-      {
-        node: {
-          id: 'gid://shopify/ProductVariant/2',
-          title: 'Enterprise',
-          availableForSale: true,
-          selectedOptions: [{ name: 'Plan', value: 'Enterprise' }],
-          price: { amount: '1999.00', currencyCode: 'USD' },
-          sku: 'AFILO-ENT-ENTERPRISE',
-          image: {
-            id: 'gid://shopify/ProductImage/1',
-            url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=600&fit=crop',
-            altText: 'Enterprise Plan',
-            width: 800,
-            height: 600
-          }
-        }
-      }
-    ]
+  {
+    id: 'business',
+    name: 'Business Plan',
+    description: 'Advanced features for scaling businesses',
+    monthlyPrice: 1499,
+    annualPrice: 14943,
+    monthlyPriceId: 'price_1SE5j5FcrRhjqzakCZvxb66W',
+    annualPriceId: 'price_1SE5j6FcrRhjqzakcykXemDQ',
+    users: 'Up to 100 users',
+    popular: true,
+    features: [
+      'Up to 100 users',
+      'Advanced security',
+      'Dedicated support',
+      'Custom SLA',
+      'SSO integration',
+      'Instant access via email',
+      'SOC 2 + ISO 27001 certified',
+      '99.95% uptime SLA',
+      'Priority onboarding',
+      'Advanced reporting',
+    ],
   },
-  options: [
-    {
-      id: 'gid://shopify/ProductOption/1',
-      name: 'Plan',
-      values: ['Professional', 'Enterprise', 'Enterprise Plus']
-    }
-  ],
-  priceRange: {
-    minVariantPrice: { amount: '499.00', currencyCode: 'USD' },
-    maxVariantPrice: { amount: '9999.00', currencyCode: 'USD' }
+  {
+    id: 'enterprise',
+    name: 'Enterprise Plan',
+    description: 'Full-scale solution for large organizations',
+    monthlyPrice: 4999,
+    annualPrice: 49743,
+    monthlyPriceId: 'price_1SE5j7FcrRhjqzakIgQYqQ7W',
+    annualPriceId: 'price_1SE5j8FcrRhjqzak41GYphlk',
+    users: 'Up to 500 users',
+    features: [
+      'Up to 500 users',
+      'Enterprise security',
+      'Account manager',
+      'Custom onboarding',
+      'White-label options',
+      'Instant access via email',
+      'All compliance certifications',
+      '99.97% uptime SLA',
+      'Priority feature requests',
+      'Custom training programs',
+      '24/7 phone support',
+    ],
   },
-  featuredImage: {
-    id: 'gid://shopify/ProductImage/1',
-    url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=600&fit=crop',
-    altText: 'Afilo Enterprise Platform',
-    width: 800,
-    height: 600
+  {
+    id: 'enterprise_plus',
+    name: 'Enterprise Plus',
+    description: 'Unlimited scale for Fortune 500 companies',
+    monthlyPrice: 9999,
+    annualPrice: 99543,
+    monthlyPriceId: 'price_1SE5jAFcrRhjqzak9J5AC3hc',
+    annualPriceId: 'price_1SE5jAFcrRhjqzaknOHV8m6f',
+    users: 'Unlimited users',
+    features: [
+      'Unlimited users',
+      'Premium security',
+      'Dedicated team',
+      'Custom development',
+      'Full white-label',
+      'Instant access via email',
+      'All compliance + custom audits',
+      '99.99% uptime SLA',
+      'Dedicated infrastructure',
+      'Custom feature development',
+      'Executive business reviews',
+      'Global 24/7 support',
+    ],
   },
-  seo: {
-    title: 'Afilo Enterprise AI Platform - Fortune 500 Business Intelligence',
-    description: 'Transform your enterprise with AI-powered business intelligence, advanced analytics, and seamless integration. Trusted by Fortune 500 companies worldwide.'
-  }
-};
+];
 
 // Mock subscription data
 const MOCK_SUBSCRIPTIONS: Subscription[] = [
@@ -169,11 +195,7 @@ const MOCK_SUBSCRIPTIONS: Subscription[] = [
 
 export default function EnterprisePage() {
   const [activeSection, setActiveSection] = useState<'pricing' | 'subscriptions' | 'quote' | 'portal'>('pricing');
-
-  const handleTierSelect = (tier: string, billing: string) => {
-    console.log('Selected tier:', tier, 'billing:', billing);
-    // Handle tier selection - integrate with Shopify checkout
-  };
+  const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('annual');
 
   const handleSubscriptionAction = (action: string, subscriptionId: string, ...args: unknown[]) => {
     console.log('Subscription action:', action, 'for:', subscriptionId, 'args:', args);
@@ -293,11 +315,166 @@ export default function EnterprisePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <PremiumPricingDisplay
-              product={ENTERPRISE_PRODUCT}
-              onSelectTier={handleTierSelect}
-              showComparison={true}
-            />
+            {/* Pricing Header */}
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                Enterprise Subscription Pricing
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+                Choose the perfect plan for your organization. All plans include immediate access with NO free trials.
+                Get instant credentials via email after payment.
+              </p>
+
+              {/* Billing toggle */}
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setBillingInterval('monthly')}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                    billingInterval === 'monthly'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingInterval('annual')}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors relative ${
+                    billingInterval === 'annual'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Annual
+                  <Badge variant="success" className="absolute -top-2 -right-2 text-xs">
+                    Save 17%
+                  </Badge>
+                </button>
+              </div>
+            </div>
+
+            {/* Pricing cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+              {PRICING_PLANS.map((plan) => {
+                const price = billingInterval === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
+                const priceId = billingInterval === 'monthly' ? plan.monthlyPriceId : plan.annualPriceId;
+                const monthlyEquivalent = billingInterval === 'annual' ? (price / 12).toFixed(2) : null;
+
+                return (
+                  <Card
+                    key={plan.id}
+                    className={`relative p-8 ${
+                      plan.popular
+                        ? 'border-2 border-blue-600 shadow-2xl scale-105'
+                        : 'border border-gray-200 shadow-lg'
+                    }`}
+                  >
+                    {/* Popular badge */}
+                    {plan.popular && (
+                      <Badge
+                        variant="popular"
+                        className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1"
+                      >
+                        ⭐ MOST POPULAR
+                      </Badge>
+                    )}
+
+                    {/* Plan header */}
+                    <div className="text-center mb-6">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                      <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
+
+                      {/* Price */}
+                      <div className="mb-2">
+                        <span className="text-4xl font-bold text-gray-900">
+                          ${price.toLocaleString()}
+                        </span>
+                        <span className="text-gray-600">
+                          /{billingInterval === 'monthly' ? 'mo' : 'yr'}
+                        </span>
+                      </div>
+
+                      {/* Monthly equivalent for annual */}
+                      {monthlyEquivalent && (
+                        <p className="text-sm text-gray-500">
+                          ${monthlyEquivalent}/mo billed annually
+                        </p>
+                      )}
+
+                      {/* User limit */}
+                      <p className="text-sm font-medium text-blue-600 mt-2">{plan.users}</p>
+                    </div>
+
+                    {/* Subscribe button */}
+                    <div className="mb-6">
+                      <SubscriptionCheckout
+                        priceId={priceId}
+                        planName={plan.name}
+                        buttonText="Subscribe Now"
+                        variant={plan.popular ? 'default' : 'outline'}
+                        fullWidth
+                      />
+                    </div>
+
+                    {/* Features list */}
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-gray-900 mb-3">What's included:</p>
+                      {plan.features.map((feature, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                          <span className="text-sm text-gray-600">{feature}</span>
+                        </div>
+                      ))}
+
+                      {/* Not included (optional) */}
+                      {plan.notIncluded && plan.notIncluded.length > 0 && (
+                        <>
+                          <div className="pt-4 border-t border-gray-200 mt-4">
+                            <p className="text-sm font-semibold text-gray-900 mb-3">Not included:</p>
+                            {plan.notIncluded.map((feature, index) => (
+                              <div key={index} className="flex items-start gap-2">
+                                <X className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                                <span className="text-sm text-gray-400">{feature}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Trust indicators */}
+            <div className="text-center space-y-6 border-t border-gray-200 pt-12">
+              <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-500" />
+                  <span>No credit card for trial</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-500" />
+                  <span>Instant access via email</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-500" />
+                  <span>Cancel anytime</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-500" />
+                  <span>SOC 2 + ISO 27001 certified</span>
+                </div>
+              </div>
+
+              {/* Payment methods */}
+              <div className="text-center">
+                <p className="text-sm text-gray-500 mb-2">Accepted payment methods:</p>
+                <p className="text-xs text-gray-600">
+                  💳 Credit Card (Visa, Mastercard, Amex, Discover) • 🏦 ACH Direct Debit (US only)
+                </p>
+              </div>
+            </div>
           </motion.div>
         )}
 

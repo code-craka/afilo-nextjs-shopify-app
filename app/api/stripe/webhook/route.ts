@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe, STRIPE_EVENTS, formatDisplayAmount } from '@/lib/stripe-server';
 import { generateUserCredentials } from '@/lib/credentials-generator';
 import { sendCredentialsEmail, sendRenewalConfirmationEmail, sendCancellationEmail, sendPaymentFailedEmail } from '@/lib/email-service';
+import { neon } from '@neondatabase/serverless';
 import Stripe from 'stripe';
 
 /**
@@ -208,32 +209,28 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     metadata: paymentIntent.metadata,
   });
 
-  // TODO: IMPLEMENT ORDER FULFILLMENT HERE
+  // Grant standard role for one-time product purchases
+  try {
+    const customerEmail = paymentIntent.receipt_email || (paymentIntent as any).customer_email;
+
+    if (customerEmail) {
+      const sql = neon(process.env.DATABASE_URL!);
+      await sql`
+        UPDATE user_profiles
+        SET role = 'standard', purchase_type = 'product'
+        WHERE email = ${customerEmail}
+      `;
+      console.log('✅ User role updated to standard for:', customerEmail);
+    }
+  } catch (error) {
+    console.error('Error updating user role:', error);
+  }
+
+  // TODO: Additional order fulfillment
   // 1. Update order status to "paid" in database
-  // 2. Grant access to digital product
+  // 2. Grant access to specific digital product
   // 3. Send confirmation email to customer
   // 4. Log transaction for analytics
-  // 5. Trigger any post-purchase workflows
-
-  // Example implementation:
-  /*
-  const orderId = paymentIntent.metadata.order_id;
-  const userId = paymentIntent.metadata.user_id;
-  const productId = paymentIntent.metadata.product_id;
-
-  await db.order.update({
-    where: { id: orderId },
-    data: {
-      status: 'paid',
-      paidAt: new Date(),
-      paymentIntentId: paymentIntent.id,
-      paymentMethod: paymentMethod?.type,
-    },
-  });
-
-  await grantProductAccess(userId, productId);
-  await sendConfirmationEmail(paymentIntent.receipt_email, orderId);
-  */
 
   console.log('🎉 Order fulfillment completed for:', paymentIntent.id);
 }
@@ -575,6 +572,15 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     });
 
     console.log('✅ Credentials email sent to:', customerEmail);
+
+    // Update user role to premium for subscription buyers
+    const sql = neon(process.env.DATABASE_URL!);
+    await sql`
+      UPDATE user_profiles
+      SET role = 'premium', purchase_type = 'subscription'
+      WHERE email = ${customerEmail}
+    `;
+    console.log('✅ User role updated to premium');
 
   } catch (error) {
     console.error('❌ Error processing checkout session:', error);
