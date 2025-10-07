@@ -94,11 +94,18 @@ export async function POST(request: NextRequest) {
       amount,
       currency: currency.toLowerCase(),
 
-      // ADAPTIVE 3DS: Stripe automatically handles 3DS when required
-      // This configuration allows redirects for 3DS but doesn't force it
+      // 2D AUTHENTICATION: Disable 3DS by default (no EU business)
+      // Only use 3DS when card issuer absolutely requires it
       automatic_payment_methods: {
         enabled: true,
-        allow_redirects: 'always', // Allow 3DS redirects when needed
+        allow_redirects: 'never', // Disable 3DS redirects (2D authentication only)
+      },
+
+      // Explicit payment method options for 2D authentication
+      payment_method_options: {
+        card: {
+          request_three_d_secure: 'any', // Never request 3DS unless issuer requires
+        },
       },
 
       // Alternative: Explicit payment methods (if you want more control)

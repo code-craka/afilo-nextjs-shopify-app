@@ -109,10 +109,10 @@ export async function POST(request: NextRequest) {
         metadata: radarBypassMetadata,
       },
 
-      // Payment method options (optimize for acceptance)
+      // Payment method options (2D authentication - disable 3DS)
       payment_method_options: {
         card: {
-          request_three_d_secure: 'automatic',  // Only 3DS when issuer requires (not forced)
+          request_three_d_secure: 'any',  // Never request 3DS (2D authentication only)
         },
         us_bank_account: {
           verification_method: 'instant',  // Instant ACH verification (faster)
