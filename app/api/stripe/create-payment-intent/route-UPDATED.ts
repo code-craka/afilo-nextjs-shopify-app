@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
       isSubscription: false,
     });
 
-    // Generate Radar bypass metadata
-    const radarMetadata = generateRadarBypassMetadata(userId, amount, {
+    // Generate Radar bypass metadata (convert null to undefined for TypeScript)
+    const radarMetadata = generateRadarBypassMetadata(userId || undefined, amount, {
       isAuthenticated,
       authMethod: 'clerk',
       customerTier: tier,
