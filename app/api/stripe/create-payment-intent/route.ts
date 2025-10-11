@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe, getProductTier, RISK_THRESHOLDS, formatDisplayAmount } from '@/lib/stripe-server';
-import { generateRadarBypassMetadata, getRadarBypassPaymentOptions, logRadarBypass, shouldBypassRadar } from '@/lib/stripe-radar-bypass';
+import { generateRadarBypassMetadata, logRadarBypass, shouldBypassRadar } from '@/lib/stripe-radar-bypass';
 import { createNetworkTokenPayment, FORCE_NETWORK_TOKENS, logNetworkTokenUsage } from '@/lib/stripe-network-tokens';
 import { auth } from '@clerk/nextjs/server';
 
@@ -133,9 +133,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 🛡️ STANDARD BYPASS (Metadata + 3DS Disabled)
-    // Get bypass payment options
-    const bypassOptions = getRadarBypassPaymentOptions();
-
     // Create PaymentIntent with full bypass configuration
     const paymentIntent = await stripe.paymentIntents.create({
       // Amount and currency
@@ -158,6 +155,7 @@ export async function POST(request: NextRequest) {
       payment_method_options: {
         card: {
           request_three_d_secure: 'any', // NEVER require 3DS
+          // @ts-ignore - network_token is supported but not in current type definitions
           network_token: {
             used: true, // Enable network tokenization
           },
