@@ -86,8 +86,8 @@ export async function listPaymentMethods(
       id: pm.id,
       type: 'us_bank_account' as const,
       last4: pm.us_bank_account?.last4 || '',
-      bankName: pm.us_bank_account?.bank_name,
-      accountHolderType: pm.us_bank_account?.account_holder_type,
+      bankName: pm.us_bank_account?.bank_name || undefined,
+      accountHolderType: pm.us_bank_account?.account_holder_type || undefined,
       isDefault: pm.id === defaultPaymentMethodId,
       created: pm.created,
     }));
@@ -132,8 +132,8 @@ export async function attachPaymentMethod(
       last4: paymentMethod.card?.last4 || paymentMethod.us_bank_account?.last4 || '',
       expMonth: paymentMethod.card?.exp_month,
       expYear: paymentMethod.card?.exp_year,
-      bankName: paymentMethod.us_bank_account?.bank_name,
-      accountHolderType: paymentMethod.us_bank_account?.account_holder_type,
+      bankName: paymentMethod.us_bank_account?.bank_name || undefined,
+      accountHolderType: paymentMethod.us_bank_account?.account_holder_type || undefined,
       isDefault: false, // Newly attached methods are not default
       created: paymentMethod.created,
     };
@@ -242,8 +242,8 @@ export async function getPaymentMethod(
       last4: paymentMethod.card?.last4 || paymentMethod.us_bank_account?.last4 || '',
       expMonth: paymentMethod.card?.exp_month,
       expYear: paymentMethod.card?.exp_year,
-      bankName: paymentMethod.us_bank_account?.bank_name,
-      accountHolderType: paymentMethod.us_bank_account?.account_holder_type,
+      bankName: paymentMethod.us_bank_account?.bank_name || undefined,
+      accountHolderType: paymentMethod.us_bank_account?.account_holder_type || undefined,
       isDefault,
       created: paymentMethod.created,
     };
