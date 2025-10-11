@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Package, Download, CreditCard, ArrowUpRight, Sparkles } from 'lucide-react';
+import BillingPortalButton from '@/components/BillingPortalButton';
 
 export default function StandardDashboard() {
   const { user, isLoaded } = useUser();
@@ -60,6 +61,7 @@ export default function StandardDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              <BillingPortalButton variant="outline" size="md" />
               <img
                 src={user?.imageUrl}
                 alt={user?.firstName || 'User'}

@@ -26,8 +26,8 @@ export default function RefundPolicyPage() {
         <div className="space-y-3 text-gray-700">
           <p><strong>Afilo provides digital software-as-a-service (SaaS) subscriptions. No physical goods are sold or shipped.</strong></p>
           <p>
-            Due to the nature of digital services, <strong>all sales are final once access is granted</strong>, subject
-            to the exceptions outlined in this policy.
+            Our services are delivered entirely digitally, with instant access upon payment. All subscriptions include
+            our <strong>30-day money-back guarantee</strong> as outlined below.
           </p>
         </div>
       </section>
@@ -36,57 +36,76 @@ export default function RefundPolicyPage() {
       <section className="bg-green-50 border-2 border-green-600 rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
           <span className="text-3xl">✅</span>
-          2. 30-Day Satisfaction Guarantee
+          2. 30-Day Money-Back Guarantee
         </h2>
         <div className="space-y-4 text-gray-700">
           <p className="text-lg font-semibold">
-            If you are not satisfied with Afilo within the first 30 days of your initial paid subscription,
-            you may request a full refund.
+            If you are not satisfied with Afilo for any reason within the first 30 days of your initial paid subscription,
+            you may request a full refund—no questions asked.
           </p>
 
-          <h3 className="text-xl font-semibold text-gray-900 mt-4">Eligibility Requirements:</h3>
-          <ul className="list-disc pl-6 space-y-2">
-            <li><strong>First-time customers only</strong> (one refund per organization)</li>
-            <li><strong>Must be within 30 days</strong> of initial payment date</li>
-            <li><strong>Account must not have violated</strong> our{' '}
-              <Link href="/legal/terms-of-service" className="text-blue-600 hover:underline">Terms of Service</Link> or{' '}
-              <Link href="/legal/acceptable-use" className="text-blue-600 hover:underline">Acceptable Use Policy</Link>
-            </li>
-            <li><strong>Good faith usage</strong> (no abuse or fraudulent intent)</li>
-          </ul>
-
-          <h3 className="text-xl font-semibold text-gray-900 mt-4">Refund Process:</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mt-4">How to Request a Refund:</h3>
           <ol className="list-decimal pl-6 space-y-2">
-            <li>Contact <a href="mailto:support@techsci.io" className="text-blue-600 hover:underline">support@techsci.io</a> with:
+            <li>Contact <a href="mailto:support@techsci.io" className="text-blue-600 hover:underline">support@techsci.io</a> or{' '}
+                <a href="mailto:billing@techsci.io" className="text-blue-600 hover:underline">billing@techsci.io</a> with:
               <ul className="list-disc pl-6 mt-1 space-y-1">
                 <li>Your account email address</li>
-                <li>Reason for requesting refund</li>
-                <li>Invoice or transaction ID</li>
+                <li>Invoice or transaction ID (optional but helpful)</li>
               </ul>
             </li>
-            <li>Our team will review your request within <strong>2 business days</strong></li>
-            <li>If approved, refund processed within <strong>7-10 business days</strong> to original payment method</li>
-            <li>Account access will be terminated upon refund issuance</li>
+            <li>Our team will process your refund request within <strong>2 business days</strong></li>
+            <li>Refund issued within <strong>7-10 business days</strong> to your original payment method</li>
+            <li>Account access will be terminated once the refund is processed</li>
           </ol>
+
+          <div className="bg-white rounded-lg p-4 mt-4 border border-green-300">
+            <p className="text-sm text-gray-800">
+              <strong>Important:</strong> The 30-day guarantee applies to your <strong>initial subscription purchase only</strong>.
+              Subscription renewals after 30 days are not eligible for refunds, but you can cancel at any time to prevent future charges.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Service Type Clarification */}
+      <section className="bg-purple-50 border-l-4 border-purple-600 p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Service Type: Digital SaaS Only</h2>
+        <div className="space-y-4 text-gray-700">
+          <p className="font-semibold">
+            Afilo is a <strong>pure digital software-as-a-service (SaaS)</strong> platform. We do NOT provide:
+          </p>
+
+          <ul className="list-disc pl-6 space-y-2">
+            <li>Custom software development services</li>
+            <li>Professional consulting or implementation services</li>
+            <li>Human-driven project management or customization</li>
+            <li>On-premise software installation or configuration</li>
+          </ul>
+
+          <p className="mt-4">
+            <strong>What we provide:</strong> Self-service digital software accessed through your web browser.
+            All features are automated and available immediately upon subscription. Our support team provides
+            technical assistance, but does not perform custom development or hands-on implementation work.
+          </p>
+
+          <div className="bg-white rounded-lg p-4 mt-4 border border-purple-300">
+            <p className="text-sm">
+              <strong>Demo Sessions:</strong> We offer free product demos to help you evaluate Afilo before purchase.
+              These are informational sessions only and do not constitute professional services. All demos are provided
+              at no cost and require no commitment.
+            </p>
+          </div>
         </div>
       </section>
 
       {/* Free Trial Policy */}
       <section>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Enterprise Evaluation Programs</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">4. No Free Trials—30-Day Money-Back Instead</h2>
         <div className="space-y-4 text-gray-700">
           <p>
-            <strong>No Free Trials:</strong> Afilo does not offer free trials. All plans require immediate payment
-            to ensure enterprise-grade commitment and access to premium features.
+            <strong>Afilo does not offer free trials.</strong> Instead, we provide a <strong>30-day money-back guarantee</strong>
+            on all new subscriptions, giving you risk-free access to the full platform with all premium features.
           </p>
-
-          <h3 className="text-xl font-semibold text-gray-900">Evaluation Options:</h3>
-          <ul className="list-disc pl-6 space-y-2">
-            <li><strong>30-Day Money-Back Guarantee:</strong> Full refund if not satisfied within first 30 days</li>
-            <li><strong>Live Demo Sessions:</strong> Free personalized demos with our solutions team (no commitment)</li>
-            <li><strong>Enterprise Pilots:</strong> Custom evaluation programs for Enterprise Plus customers (contact sales)</li>
-            <li><strong>Sandbox Access:</strong> Test environment available for API integration testing (paid plans only)</li>
-          </ul>
 
           <div className="bg-blue-50 rounded-lg p-4 mt-4 border border-blue-200">
             <p className="text-sm text-blue-900">
@@ -100,7 +119,7 @@ export default function RefundPolicyPage() {
 
       {/* Subscription Cancellation */}
       <section>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Subscription Cancellation</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Subscription Cancellation</h2>
         <div className="space-y-4 text-gray-700">
           <h3 className="text-xl font-semibold text-gray-900">How to Cancel:</h3>
           <ol className="list-decimal pl-6 space-y-2">
@@ -123,24 +142,6 @@ export default function RefundPolicyPage() {
             Annual subscriptions can be cancelled, but <strong>no refund is provided for unused months</strong> (except
             within the first 30 days under our satisfaction guarantee). You retain access until the end of the annual term.
           </p>
-        </div>
-      </section>
-
-      {/* Non-Refundable Scenarios */}
-      <section className="bg-red-50 border-l-4 border-red-600 p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Non-Refundable Scenarios</h2>
-        <div className="space-y-3 text-gray-700">
-          <p>The following are <strong>NOT eligible for refunds:</strong></p>
-          <ul className="list-disc pl-6 space-y-2">
-            <li><strong>Subscription renewals</strong> after the initial 30-day satisfaction guarantee period</li>
-            <li><strong>Mid-cycle cancellations</strong> (no pro-rata refunds for partial months)</li>
-            <li><strong>Add-on services</strong> or custom implementations (unless otherwise specified in contract)</li>
-            <li><strong>Enterprise contracts</strong> with signed multi-year agreements (unless contract specifies otherwise)</li>
-            <li><strong>Accounts terminated</strong> for violations of Terms of Service or Acceptable Use Policy</li>
-            <li><strong>Chargeback disputes</strong> (results in permanent account suspension)</li>
-            <li><strong>Downgrade requests</strong> (price difference not refunded mid-cycle)</li>
-            <li><strong>Free trial abuse</strong> (multiple trials using different identities)</li>
-          </ul>
         </div>
       </section>
 
