@@ -146,12 +146,14 @@ export default function CancelSubscriptionModal({
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Cancel Subscription</h2>
                   <p className="text-sm text-gray-500 mt-1">
-                    We're sorry to see you go
+                    We&apos;re sorry to see you go
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={onClose}
                   disabled={loading}
+                  aria-label="Close modal"
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5 text-gray-600" />
@@ -166,10 +168,10 @@ export default function CancelSubscriptionModal({
                     <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-orange-900 mb-1">
-                        You're about to cancel your {planName} subscription
+                        You&apos;re about to cancel your {planName} subscription
                       </p>
                       <p className="text-sm text-orange-700">
-                        If you cancel now, you'll retain access until{' '}
+                        If you cancel now, you&apos;ll retain access until{' '}
                         <span className="font-medium">{formatDate(currentPeriodEnd)}</span>.
                         No further charges will be made.
                       </p>
@@ -187,6 +189,7 @@ export default function CancelSubscriptionModal({
                     of canceling completely.
                   </p>
                   <button
+                    type="button"
                     onClick={() => {
                       onClose();
                       // This would trigger the change plan modal
@@ -256,6 +259,7 @@ export default function CancelSubscriptionModal({
                     Keep Subscription
                   </button>
                   <button
+                    type="button"
                     onClick={handleCancel}
                     disabled={loading}
                     className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
