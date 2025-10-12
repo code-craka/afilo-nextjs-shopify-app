@@ -166,8 +166,10 @@ export default function ChangePlanModal({
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={onClose}
                   disabled={loading}
+                  aria-label="Close modal"
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5 text-gray-600" />
@@ -189,8 +191,10 @@ export default function ChangePlanModal({
                     return (
                       <button
                         key={plan.key}
+                        type="button"
                         onClick={() => setSelectedPlanId(priceId)}
                         disabled={loading || isCurrent}
+                        aria-label={`Select ${plan.name} plan`}
                         className={`
                           w-full p-4 rounded-lg border-2 transition-all text-left
                           ${
@@ -284,6 +288,7 @@ export default function ChangePlanModal({
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleChangePlan}
                   disabled={loading || selectedPlanId === currentPlanId}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"

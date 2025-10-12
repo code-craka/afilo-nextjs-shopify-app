@@ -232,7 +232,9 @@ export default function AddPaymentMethodForm({
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={onClose}
+                  aria-label="Close modal"
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5 text-gray-600" />
