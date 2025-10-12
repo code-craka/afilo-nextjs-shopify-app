@@ -16,6 +16,10 @@ import {
 } from 'lucide-react';
 import PaymentMethodsList from '@/components/billing/PaymentMethodsList';
 import AddPaymentMethodForm from '@/components/billing/AddPaymentMethodForm';
+import ActiveSubscriptionCard from '@/components/billing/ActiveSubscriptionCard';
+import ChangePlanModal from '@/components/billing/ChangePlanModal';
+import CancelSubscriptionModal from '@/components/billing/CancelSubscriptionModal';
+import { SubscriptionData } from '@/lib/billing/stripe-subscriptions';
 
 /**
  * Afilo Enterprise - Custom Billing Portal
@@ -75,6 +79,9 @@ export default function BillingPortal() {
 
   const [error, setError] = useState<string | null>(null);
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
+  const [activeSubscription, setActiveSubscription] = useState<SubscriptionData | null>(null);
+  const [showChangePlanModal, setShowChangePlanModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -100,19 +107,35 @@ export default function BillingPortal() {
       });
       setError(null);
 
-      // TODO: Replace with actual API calls
-      // For now, using mock data
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Fetch active subscription
+      const subResponse = await fetch('/api/billing/subscriptions/active');
+      const subData = await subResponse.json();
 
-      setStats({
-        activePlan: 'Professional',
-        billingCycle: 'Monthly',
-        nextBillingDate: '2025-02-12',
-        nextBillingAmount: 49900, // $499 in cents
-        paymentMethodsCount: 2,
-        invoicesCount: 3,
-        totalSpent: 149700, // $1,497 in cents
-      });
+      if (subResponse.ok && subData.subscription) {
+        setActiveSubscription(subData.subscription);
+
+        // Update stats with real subscription data
+        setStats({
+          activePlan: subData.subscription.planName,
+          billingCycle: subData.subscription.interval === 'year' ? 'Annual' : 'Monthly',
+          nextBillingDate: new Date(subData.subscription.currentPeriodEnd * 1000).toISOString().split('T')[0],
+          nextBillingAmount: subData.subscription.amount,
+          paymentMethodsCount: 0, // Will be updated by PaymentMethodsList
+          invoicesCount: 0, // TODO: Fetch from invoices API
+          totalSpent: 0, // TODO: Calculate from invoice history
+        });
+      } else {
+        setActiveSubscription(null);
+        setStats({
+          activePlan: null,
+          billingCycle: null,
+          nextBillingDate: null,
+          nextBillingAmount: null,
+          paymentMethodsCount: 0,
+          invoicesCount: 0,
+          totalSpent: 0,
+        });
+      }
 
       setLoading({
         stats: false,
@@ -129,6 +152,29 @@ export default function BillingPortal() {
         paymentMethods: false,
         invoices: false,
       });
+    }
+  };
+
+  const handleSubscriptionUpdate = () => {
+    // Refresh billing data after subscription changes
+    fetchBillingData();
+  };
+
+  const handleReactivateSubscription = async () => {
+    if (!activeSubscription) return;
+
+    try {
+      const response = await fetch('/api/billing/subscriptions/reactivate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscriptionId: activeSubscription.id }),
+      });
+
+      if (response.ok) {
+        handleSubscriptionUpdate();
+      }
+    } catch (error) {
+      console.error('Failed to reactivate subscription:', error);
     }
   };
 
@@ -357,19 +403,15 @@ export default function BillingPortal() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+            className="lg:col-span-2"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Subscription</h2>
-              <button className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
-                Manage <ArrowUpRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="text-center py-12 text-gray-500">
-              <TrendingUp className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-              <p>Subscription details will be displayed here</p>
-              <p className="text-sm mt-1">(Coming in Phase 3)</p>
-            </div>
+            <ActiveSubscriptionCard
+              subscription={activeSubscription}
+              loading={loading.subscription}
+              onChangePlan={() => setShowChangePlanModal(true)}
+              onCancel={() => setShowCancelModal(true)}
+              onReactivate={handleReactivateSubscription}
+            />
           </motion.div>
 
           {/* Invoices Section */}
@@ -404,6 +446,29 @@ export default function BillingPortal() {
           setShowAddPaymentModal(false);
         }}
       />
+
+      {/* Change Plan Modal */}
+      {activeSubscription && (
+        <ChangePlanModal
+          isOpen={showChangePlanModal}
+          onClose={() => setShowChangePlanModal(false)}
+          currentPlanId={activeSubscription.planId}
+          currentInterval={activeSubscription.interval}
+          onSuccess={handleSubscriptionUpdate}
+        />
+      )}
+
+      {/* Cancel Subscription Modal */}
+      {activeSubscription && (
+        <CancelSubscriptionModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          subscriptionId={activeSubscription.id}
+          planName={activeSubscription.planName}
+          currentPeriodEnd={activeSubscription.currentPeriodEnd}
+          onSuccess={handleSubscriptionUpdate}
+        />
+      )}
     </div>
   );
 }
