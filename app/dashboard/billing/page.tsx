@@ -14,6 +14,8 @@ import {
   Loader2,
   AlertCircle,
 } from 'lucide-react';
+import PaymentMethodsList from '@/components/billing/PaymentMethodsList';
+import AddPaymentMethodForm from '@/components/billing/AddPaymentMethodForm';
 
 /**
  * Afilo Enterprise - Custom Billing Portal
@@ -72,6 +74,7 @@ export default function BillingPortal() {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -320,20 +323,14 @@ export default function BillingPortal() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => {
-                  // TODO: Implement add payment method
-                  console.log('Add payment method');
-                }}
+                onClick={() => setShowAddPaymentModal(true)}
                 className="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
                 Add Payment Method
               </button>
               <button
-                onClick={() => {
-                  // TODO: Implement upgrade plan
-                  console.log('Upgrade plan');
-                }}
+                onClick={() => router.push('/pricing')}
                 className="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-lg font-semibold hover:bg-white/30 transition-colors flex items-center gap-2"
               >
                 <ArrowUpRight className="h-4 w-4" />
@@ -350,19 +347,9 @@ export default function BillingPortal() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+            className="lg:col-span-2"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Payment Methods</h2>
-              <button className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
-                View All <ArrowUpRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="text-center py-12 text-gray-500">
-              <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-              <p>Payment methods will be displayed here</p>
-              <p className="text-sm mt-1">(Coming in Phase 2)</p>
-            </div>
+            <PaymentMethodsList onAddNew={() => setShowAddPaymentModal(true)} />
           </motion.div>
 
           {/* Subscription Section */}
@@ -406,6 +393,17 @@ export default function BillingPortal() {
           </motion.div>
         </div>
       </div>
+
+      {/* Add Payment Method Modal */}
+      <AddPaymentMethodForm
+        isOpen={showAddPaymentModal}
+        onClose={() => setShowAddPaymentModal(false)}
+        onSuccess={() => {
+          // Refresh payment methods list
+          // The PaymentMethodsList component will auto-refresh on mount
+          setShowAddPaymentModal(false);
+        }}
+      />
     </div>
   );
 }
