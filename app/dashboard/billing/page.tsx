@@ -19,6 +19,7 @@ import AddPaymentMethodForm from '@/components/billing/AddPaymentMethodForm';
 import ActiveSubscriptionCard from '@/components/billing/ActiveSubscriptionCard';
 import ChangePlanModal from '@/components/billing/ChangePlanModal';
 import CancelSubscriptionModal from '@/components/billing/CancelSubscriptionModal';
+import InvoicesList from '@/components/billing/InvoicesList';
 import { SubscriptionData } from '@/lib/billing/stripe-subscriptions';
 
 /**
@@ -419,19 +420,9 @@ export default function BillingPortal() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 lg:col-span-2"
+            className="lg:col-span-2"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Recent Invoices</h2>
-              <button className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
-                View All <ArrowUpRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="text-center py-12 text-gray-500">
-              <FileText className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-              <p>Invoice history will be displayed here</p>
-              <p className="text-sm mt-1">(Coming in Phase 4)</p>
-            </div>
+            <InvoicesList limit={6} />
           </motion.div>
         </div>
       </div>
