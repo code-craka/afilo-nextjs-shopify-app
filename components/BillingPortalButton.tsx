@@ -2,20 +2,20 @@
  * Billing Portal Button Component
  *
  * Provides a seamless way for authenticated users to manage their
- * Stripe subscriptions, payment methods, and billing details.
+ * subscriptions, payment methods, and billing details.
  *
  * Features:
  * - Clerk authentication integration
- * - Automatic Stripe Customer creation
- * - Loading states and error handling
- * - Redirect to Stripe-hosted portal
+ * - Redirect to custom Afilo billing portal
+ * - No external Stripe portal redirect
+ * - Clean navigation experience
  */
 
 'use client';
 
-import { useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { CreditCard, Loader2, ExternalLink } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { CreditCard, ArrowRight } from 'lucide-react';
 
 interface BillingPortalButtonProps {
   variant?: 'default' | 'outline' | 'ghost';
@@ -30,37 +30,11 @@ export default function BillingPortalButton({
   fullWidth = false,
   className = '',
 }: BillingPortalButtonProps) {
-  const { isSignedIn, user } = useUser();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { isSignedIn } = useUser();
+  const router = useRouter();
 
-  const handleManageBilling = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Create billing portal session
-      const response = await fetch('/api/billing/create-portal-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create billing portal session');
-      }
-
-      // Redirect to Stripe Billing Portal
-      window.location.href = data.url;
-
-    } catch (err: any) {
-      console.error('Error opening billing portal:', err);
-      setError(err.message || 'Something went wrong');
-      setIsLoading(false);
-    }
+  const handleManageBilling = () => {
+    router.push('/dashboard/billing');
   };
 
   if (!isSignedIn) {
@@ -82,40 +56,21 @@ export default function BillingPortalButton({
   };
 
   return (
-    <div className={fullWidth ? 'w-full' : ''}>
-      <button
-        onClick={handleManageBilling}
-        disabled={isLoading}
-        className={`
-          inline-flex items-center justify-center gap-2
-          font-semibold rounded-lg
-          transition-all duration-200
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${variantStyles[variant]}
-          ${sizeStyles[size]}
-          ${fullWidth ? 'w-full' : ''}
-          ${className}
-        `}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Opening Portal...</span>
-          </>
-        ) : (
-          <>
-            <CreditCard className="w-4 h-4" />
-            <span>Manage Billing</span>
-            <ExternalLink className="w-3 h-3 opacity-70" />
-          </>
-        )}
-      </button>
-
-      {error && (
-        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
-    </div>
+    <button
+      onClick={handleManageBilling}
+      className={`
+        inline-flex items-center justify-center gap-2
+        font-semibold rounded-lg
+        transition-all duration-200
+        ${variantStyles[variant]}
+        ${sizeStyles[size]}
+        ${fullWidth ? 'w-full' : ''}
+        ${className}
+      `}
+    >
+      <CreditCard className="w-4 h-4" />
+      <span>Manage Billing</span>
+      <ArrowRight className="w-3 h-3 opacity-70" />
+    </button>
   );
 }

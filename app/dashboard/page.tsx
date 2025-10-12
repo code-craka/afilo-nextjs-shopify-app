@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Package, Download, CreditCard, ArrowUpRight, Sparkles } from 'lucide-react';
 import BillingPortalButton from '@/components/BillingPortalButton';
+import BillingSummaryWidget from '@/components/dashboard/BillingSummaryWidget';
 
 export default function StandardDashboard() {
   const { user, isLoaded } = useUser();
@@ -150,6 +151,17 @@ export default function StandardDashboard() {
             </div>
           </motion.div>
         </div>
+
+        {/* Billing Summary Widget */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-12"
+        >
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Billing & Subscription</h2>
+          <BillingSummaryWidget />
+        </motion.div>
 
         {/* Recent Orders */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
