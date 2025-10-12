@@ -11,6 +11,8 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createSetupIntent } from '@/lib/billing/stripe-payment-methods';
 import { stripe } from '@/lib/stripe-server';
+import { updateUserStripeCustomerId } from '@/lib/clerk-utils';
+import { checkRateLimit, moderateBillingRateLimit } from '@/lib/rate-limit';
 
 export async function POST() {
   try {
@@ -21,6 +23,26 @@ export async function POST() {
       return NextResponse.json(
         { error: 'Unauthorized - Please sign in to add payment methods' },
         { status: 401 }
+      );
+    }
+
+    // SECURITY FIX: Rate limiting for setup operations
+    const rateLimitCheck = await checkRateLimit(`billing-setup:${userId}`, moderateBillingRateLimit);
+
+    if (!rateLimitCheck.success) {
+      console.warn(`[SECURITY] Rate limit exceeded for user ${userId} on setup intent`);
+      return NextResponse.json(
+        {
+          error: 'Too many setup requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimitCheck.reset - Date.now()) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            ...rateLimitCheck.headers,
+            'Retry-After': Math.ceil((rateLimitCheck.reset - Date.now()) / 1000).toString(),
+          },
+        }
       );
     }
 
@@ -63,8 +85,15 @@ export async function POST() {
 
       stripeCustomerId = customer.id;
 
-      // TODO: Update Clerk user metadata with Stripe Customer ID
-      // This requires Clerk Backend API integration
+      // SECURITY FIX: Update Clerk user metadata to prevent race conditions
+      const updated = await updateUserStripeCustomerId(userId, stripeCustomerId);
+
+      if (!updated) {
+        console.warn(`[SECURITY WARNING] Failed to update Clerk metadata for user ${userId}`);
+        // Continue anyway - customer was created in Stripe
+        // This will be retried on next request
+      }
+
       console.log('Created Stripe Customer:', stripeCustomerId);
     }
 

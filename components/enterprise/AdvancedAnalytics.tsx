@@ -126,6 +126,8 @@ export default function AdvancedAnalytics() {
         </div>
         <div className="flex gap-3">
           <select
+            id="analytics-date-range"
+            aria-label="Select date range"
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
             className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -137,6 +139,8 @@ export default function AdvancedAnalytics() {
             <option value="all">All time</option>
           </select>
           <motion.button
+            type="button"
+            aria-label="Open filters"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors"
@@ -145,6 +149,8 @@ export default function AdvancedAnalytics() {
             Filters
           </motion.button>
           <motion.button
+            type="button"
+            aria-label="Export analytics data"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all"
@@ -197,6 +203,8 @@ export default function AdvancedAnalytics() {
           <h3 className="text-xl font-semibold text-white">Growth Trends</h3>
           <div className="flex gap-2">
             <button
+              type="button"
+              aria-label="Line chart view"
               onClick={() => setChartType('line')}
               className={`p-2 rounded-lg transition-colors ${
                 chartType === 'line'
@@ -207,6 +215,8 @@ export default function AdvancedAnalytics() {
               <LineChartIcon className="w-4 h-4" />
             </button>
             <button
+              type="button"
+              aria-label="Area chart view"
               onClick={() => setChartType('area')}
               className={`p-2 rounded-lg transition-colors ${
                 chartType === 'area'
@@ -217,6 +227,8 @@ export default function AdvancedAnalytics() {
               <Activity className="w-4 h-4" />
             </button>
             <button
+              type="button"
+              aria-label="Bar chart view"
               onClick={() => setChartType('bar')}
               className={`p-2 rounded-lg transition-colors ${
                 chartType === 'bar'

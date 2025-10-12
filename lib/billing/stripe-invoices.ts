@@ -73,11 +73,11 @@ export async function listCustomerInvoices(
       dueDate: invoice.due_date,
       periodStart: invoice.period_start,
       periodEnd: invoice.period_end,
-      pdfUrl: invoice.invoice_pdf,
-      hostedUrl: invoice.hosted_invoice_url,
-      subscriptionId: typeof invoice.subscription === 'string'
-        ? invoice.subscription
-        : invoice.subscription?.id || null,
+      pdfUrl: invoice.invoice_pdf ?? null,
+      hostedUrl: invoice.hosted_invoice_url ?? null,
+      subscriptionId: typeof (invoice as any).subscription === 'string'
+        ? (invoice as any).subscription
+        : (invoice as any).subscription?.id ?? null,
       attemptCount: invoice.attempt_count,
     }));
   } catch (error: any) {
@@ -113,11 +113,11 @@ export async function getInvoiceDetails(
       dueDate: invoice.due_date,
       periodStart: invoice.period_start,
       periodEnd: invoice.period_end,
-      pdfUrl: invoice.invoice_pdf,
-      hostedUrl: invoice.hosted_invoice_url,
-      subscriptionId: typeof invoice.subscription === 'string'
-        ? invoice.subscription
-        : invoice.subscription?.id || null,
+      pdfUrl: invoice.invoice_pdf ?? null,
+      hostedUrl: invoice.hosted_invoice_url ?? null,
+      subscriptionId: typeof (invoice as any).subscription === 'string'
+        ? (invoice as any).subscription
+        : (invoice as any).subscription?.id ?? null,
       attemptCount: invoice.attempt_count,
     };
   } catch (error: any) {
@@ -187,11 +187,11 @@ export async function retryInvoicePayment(
       dueDate: invoice.due_date,
       periodStart: invoice.period_start,
       periodEnd: invoice.period_end,
-      pdfUrl: invoice.invoice_pdf,
-      hostedUrl: invoice.hosted_invoice_url,
-      subscriptionId: typeof invoice.subscription === 'string'
-        ? invoice.subscription
-        : invoice.subscription?.id || null,
+      pdfUrl: invoice.invoice_pdf ?? null,
+      hostedUrl: invoice.hosted_invoice_url ?? null,
+      subscriptionId: typeof (invoice as any).subscription === 'string'
+        ? (invoice as any).subscription
+        : (invoice as any).subscription?.id ?? null,
       attemptCount: invoice.attempt_count,
     };
   } catch (error: any) {

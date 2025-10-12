@@ -604,8 +604,8 @@ export default function EnterprisePortal() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                              <select className="w-full p-3 border border-gray-300 rounded-lg">
+                              <label htmlFor="user-role-select" className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                              <select id="user-role-select" aria-label="Select user role" className="w-full p-3 border border-gray-300 rounded-lg">
                                 <option value="admin">Administrator</option>
                                 <option value="manager">Manager</option>
                                 <option value="developer">Developer</option>
@@ -614,8 +614,8 @@ export default function EnterprisePortal() {
                             </div>
 
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                              <select className="w-full p-3 border border-gray-300 rounded-lg">
+                              <label htmlFor="user-department-select" className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                              <select id="user-department-select" aria-label="Select user department" className="w-full p-3 border border-gray-300 rounded-lg">
                                 <option value="Engineering">Engineering</option>
                                 <option value="Product">Product</option>
                                 <option value="Marketing">Marketing</option>
@@ -686,6 +686,8 @@ export default function EnterprisePortal() {
                   <p className="text-gray-600">Monitor platform usage and performance metrics</p>
                 </div>
                 <select
+                  id="analytics-period-select"
+                  aria-label="Select analytics period"
                   value={analyticsperiod}
                   onChange={(e) => setAnalyticsPeriod(e.target.value as 'daily' | 'weekly' | 'monthly')}
                   className="border border-gray-300 rounded-lg px-3 py-2"

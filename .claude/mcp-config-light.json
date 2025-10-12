@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"],
+      "description": "ShadCN UI component management (always available)"
+    }
+  },
+  "description": "Light Mode MCP Configuration - Minimal context load for routine development",
+  "usage": "Use for: Quick fixes, component updates, routine tasks",
+  "contextLoad": "~500 tokens (95% reduction)"
+}

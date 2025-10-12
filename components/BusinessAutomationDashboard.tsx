@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { RecommendationResult } from '@/lib/ai-recommendation-engine';
-import type { CustomerJourney, UpsellOpportunity, ChurnRiskAssessment } from '@/lib/customer-success-automation';
-import type { Lead, Opportunity, PipelineMetrics } from '@/lib/sales-intelligence';
+import type { UpsellOpportunity, ChurnRiskAssessment } from '@/lib/customer-success-automation';
+import type { Opportunity } from '@/lib/sales-intelligence';
 
 interface BusinessAutomationDashboardProps {
   userId?: string;
@@ -40,7 +40,7 @@ interface DashboardMetrics {
 
 export default function BusinessAutomationDashboard({ userId, userRole }: BusinessAutomationDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'sales' | 'customer_success' | 'recommendations'>('overview');
-  const [metrics, setMetrics] = useState<DashboardMetrics>({
+  const [metrics] = useState<DashboardMetrics>({
     revenue: { current: 12500000, target: 15000000, growth: 34.5, forecast: 16800000 },
     pipeline: { totalValue: 8500000, weightedValue: 4200000, deals: 156, conversionRate: 28.5 },
     customers: { total: 847, active: 783, atRisk: 42, churnRate: 4.2 },
@@ -52,10 +52,6 @@ export default function BusinessAutomationDashboard({ userId, userRole }: Busine
   const [atRiskCustomers, setAtRiskCustomers] = useState<ChurnRiskAssessment[]>([]);
   const [upsellOpportunities, setUpsellOpportunities] = useState<UpsellOpportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    loadDashboardData();
-  }, [userId, userRole]);
 
   const loadDashboardData = async () => {
     setIsLoading(true);
@@ -73,6 +69,11 @@ export default function BusinessAutomationDashboard({ userId, userRole }: Busine
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, userRole]);
 
   const loadRecommendations = async () => {
     // Mock AI recommendations

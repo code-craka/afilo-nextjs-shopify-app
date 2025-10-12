@@ -225,6 +225,8 @@ function SubscriptionCard({
         </div>
 
         <button
+          type="button"
+          aria-label="Toggle subscription details"
           onClick={onSelect}
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >

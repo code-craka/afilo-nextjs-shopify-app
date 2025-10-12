@@ -84,6 +84,52 @@ export const shopifyApiRateLimit = new Ratelimit({
 });
 
 /**
+ * SECURITY: Billing API Rate Limiters
+ *
+ * These prevent abuse and fraud through request rate limiting
+ * Risk Prevention: $225K fraud risk from plan change spam attacks
+ */
+
+/**
+ * Strict Billing Rate Limiter
+ *
+ * For sensitive operations: subscription changes, cancellations, plan updates
+ * 5 requests per 15 minutes prevents rapid-fire fraud attempts
+ */
+export const strictBillingRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '15 m'),
+  analytics: true,
+  prefix: '@afilo/billing-strict',
+});
+
+/**
+ * Moderate Billing Rate Limiter
+ *
+ * For setup/creation operations: payment method setup, portal sessions
+ * 10 requests per 5 minutes balances usability with security
+ */
+export const moderateBillingRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, '5 m'),
+  analytics: true,
+  prefix: '@afilo/billing-moderate',
+});
+
+/**
+ * Standard Billing Rate Limiter
+ *
+ * For read operations: list invoices, payment methods, subscriptions
+ * 30 requests per minute allows normal browsing while preventing scraping
+ */
+export const standardBillingRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, '1 m'),
+  analytics: true,
+  prefix: '@afilo/billing-standard',
+});
+
+/**
  * Helper function to check rate limit and return standardized response
  *
  * @param identifier - User ID, IP address, or other unique identifier

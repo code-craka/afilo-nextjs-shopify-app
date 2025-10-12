@@ -357,7 +357,7 @@ export default function BillingOverview() {
                   </span>
                 </div>
               </div>
-              <button className="text-gray-400 hover:text-white transition-colors">
+              <button type="button" aria-label="Manage payment method" className="text-gray-400 hover:text-white transition-colors">
                 <ExternalLink className="w-4 h-4" />
               </button>
             </div>

@@ -169,6 +169,8 @@ export default function PaymentMethodCard({
         {/* Action Menu */}
         <div className="relative">
           <button
+            type="button"
+            aria-label="Payment method options"
             onClick={() => setShowMenu(!showMenu)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             disabled={isSettingDefault || isRemoving}
@@ -189,6 +191,7 @@ export default function PaymentMethodCard({
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                 {!paymentMethod.isDefault && onSetDefault && (
                   <button
+                    type="button"
                     onClick={handleSetDefault}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                   >
@@ -199,6 +202,7 @@ export default function PaymentMethodCard({
 
                 {onRemove && (
                   <button
+                    type="button"
                     onClick={handleRemove}
                     className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 flex items-center gap-2 text-red-600"
                   >

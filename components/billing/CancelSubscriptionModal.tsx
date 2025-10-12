@@ -68,9 +68,10 @@ export default function CancelSubscriptionModal({
         onSuccess?.();
         onClose();
       }, 2000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to cancel subscription:', err);
-      setError(err.message || 'Failed to cancel subscription');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to cancel subscription';
+      setError(errorMessage);
       setLoading(false);
     }
   };

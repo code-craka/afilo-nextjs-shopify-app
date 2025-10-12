@@ -17,6 +17,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { cancelSubscription } from '@/lib/billing/stripe-subscriptions';
 import { stripe } from '@/lib/stripe-server';
+import { checkRateLimit, strictBillingRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized - Please sign in to cancel subscription' },
         { status: 401 }
+      );
+    }
+
+    // SECURITY FIX: Rate limiting to prevent abuse
+    const rateLimitCheck = await checkRateLimit(`billing-cancel:${userId}`, strictBillingRateLimit);
+
+    if (!rateLimitCheck.success) {
+      console.warn(`[SECURITY] Rate limit exceeded for user ${userId} on subscription cancel`);
+      return NextResponse.json(
+        {
+          error: 'Too many cancellation requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimitCheck.reset - Date.now()) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            ...rateLimitCheck.headers,
+            'Retry-After': Math.ceil((rateLimitCheck.reset - Date.now()) / 1000).toString(),
+          },
+        }
       );
     }
 

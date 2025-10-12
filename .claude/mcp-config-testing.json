@@ -1,0 +1,38 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"],
+      "description": "ShadCN UI component management"
+    },
+    "server-sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@smithery-ai/server-sequential-thinking",
+        "--key",
+        "fc1c0930-c457-4042-8088-e052f8dff806",
+        "--profile",
+        "loose-goat-4drgNz"
+      ],
+      "description": "Advanced problem-solving for debugging"
+    },
+    "exa": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "exa",
+        "--key",
+        "fc1c0930-c457-4042-8088-e052f8dff806"
+      ],
+      "description": "Web search for troubleshooting"
+    }
+  },
+  "description": "Testing Mode MCP Configuration - Debugging and testing focus",
+  "usage": "Use for: Bug fixing, testing flows, troubleshooting, performance analysis",
+  "contextLoad": "~1,500 tokens (75% reduction)"
+}

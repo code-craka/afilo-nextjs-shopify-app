@@ -15,6 +15,8 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { getActiveSubscription, changeSubscriptionPlan } from '@/lib/billing/stripe-subscriptions';
+import { checkRateLimit, strictBillingRateLimit } from '@/lib/rate-limit';
+import { validatePriceId, getPriceMetadata } from '@/lib/billing/price-validation';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +27,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized - Please sign in to change subscription plan' },
         { status: 401 }
+      );
+    }
+
+    // SECURITY FIX: Rate limiting to prevent fraud
+    const rateLimitCheck = await checkRateLimit(`billing-change:${userId}`, strictBillingRateLimit);
+
+    if (!rateLimitCheck.success) {
+      console.warn(`[SECURITY] Rate limit exceeded for user ${userId} on plan change`);
+      return NextResponse.json(
+        {
+          error: 'Too many plan change requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimitCheck.reset - Date.now()) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            ...rateLimitCheck.headers,
+            'Retry-After': Math.ceil((rateLimitCheck.reset - Date.now()) / 1000).toString(),
+          },
+        }
       );
     }
 
@@ -59,6 +81,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SECURITY FIX: Validate price ID against whitelist
+    const priceValidation = validatePriceId(newPriceId);
+
+    if (!priceValidation.valid) {
+      console.warn(
+        `[SECURITY] Invalid price ID attempted by user ${userId}: ${newPriceId}`,
+        getPriceMetadata(newPriceId as string)
+      );
+      return NextResponse.json(
+        { error: priceValidation.error || 'Invalid price ID' },
+        { status: 400 }
+      );
+    }
+
+    // Use the sanitized price ID
+    const sanitizedPriceId = priceValidation.sanitized!;
+
     // Get active subscription
     const activeSubscription = await getActiveSubscription(stripeCustomerId);
 
@@ -70,18 +109,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if trying to change to the same plan
-    if (activeSubscription.planId === newPriceId) {
+    if (activeSubscription.planId === sanitizedPriceId) {
       return NextResponse.json(
         { error: 'You are already subscribed to this plan' },
         { status: 400 }
       );
     }
 
-    // Change subscription plan
+    // Change subscription plan with sanitized price ID
     const updatedSubscription = await changeSubscriptionPlan(
       activeSubscription.id,
-      newPriceId
+      sanitizedPriceId
     );
+
+    console.log(`[SECURITY] Plan changed successfully for user ${userId} to price ${sanitizedPriceId}`);
 
     return NextResponse.json({
       success: true,
