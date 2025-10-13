@@ -266,6 +266,9 @@ export async function getPaymentMethod(
  * Creates a SetupIntent for collecting payment method details via Stripe Elements.
  * Used when adding a new payment method without charging.
  *
+ * IMPORTANT: Cannot use both `payment_method_types` and `automatic_payment_methods`
+ * at the same time. Using `automatic_payment_methods` with specific types.
+ *
  * @param customerId - Stripe Customer ID
  * @returns SetupIntent client secret
  */
@@ -275,12 +278,13 @@ export async function createSetupIntent(
   try {
     const setupIntent = await stripe.setupIntents.create({
       customer: customerId,
-      payment_method_types: ['card', 'us_bank_account'],
       usage: 'off_session', // Allow charging later without customer present
       automatic_payment_methods: {
         enabled: true,
         allow_redirects: 'never', // No 3DS for setup
       },
+      // Note: Removed payment_method_types to avoid conflict with automatic_payment_methods
+      // Stripe will automatically determine available payment methods
     });
 
     console.log(`✅ SetupIntent created: ${setupIntent.id} for customer ${customerId}`);
