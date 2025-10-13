@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Package, Download, CreditCard, ArrowUpRight, Sparkles } from 'lucide-react';
 import BillingPortalButton from '@/components/BillingPortalButton';
 import BillingSummaryWidget from '@/components/dashboard/BillingSummaryWidget';
+import UserMenu from '@/components/ui/UserMenu';
 
 export default function StandardDashboard() {
   const { user, isLoaded } = useUser();
@@ -63,11 +64,7 @@ export default function StandardDashboard() {
             </div>
             <div className="flex items-center gap-4">
               <BillingPortalButton variant="outline" size="md" />
-              <img
-                src={user?.imageUrl}
-                alt={user?.firstName || 'User'}
-                className="h-12 w-12 rounded-full"
-              />
+              <UserMenu />
             </div>
           </div>
         </div>
