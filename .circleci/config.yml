@@ -22,7 +22,9 @@ executors:
       - image: cimg/node:18.17
     working_directory: ~/afilo-nextjs-shopify-app
     resource_class: medium
+    shell: /bin/bash -eo pipefail
     environment:
+      SHELL: /bin/bash
       NODE_ENV: production
       PNPM_VERSION: 8.15.6
       # Fallback values for build (real values from CircleCI env vars)
@@ -40,9 +42,11 @@ commands:
     steps:
       - run:
           name: Install pnpm
+          shell: /bin/bash -eo pipefail
           command: |
             echo "Installing pnpm ${PNPM_VERSION}..."
-            curl -fsSL https://get.pnpm.io/install.sh | env PNPM_VERSION=${PNPM_VERSION} sh -
+            export SHELL=/bin/bash
+            curl -fsSL https://get.pnpm.io/install.sh | env PNPM_VERSION=${PNPM_VERSION} SHELL=/bin/bash sh -
             echo 'export PNPM_HOME="$HOME/.local/share/pnpm"' >> $BASH_ENV
             echo 'export PATH="$PNPM_HOME:$PATH"' >> $BASH_ENV
             source $BASH_ENV
@@ -229,8 +233,6 @@ jobs:
 # WORKFLOWS - Orchestrate jobs
 # ========================================
 workflows:
-  version: 2.1
-
   # Main CI/CD Pipeline
   build-test-deploy:
     jobs:
