@@ -13,7 +13,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 // PATCH - Update item (quantity or license type)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -22,7 +22,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const itemId = params.id;
+    const { id: itemId } = await params;
     const body = await request.json();
     const { quantity, licenseType } = body;
 
@@ -114,7 +114,7 @@ export async function PATCH(
 // DELETE - Remove item from cart
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
@@ -123,7 +123,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const itemId = params.id;
+    const { id: itemId } = await params;
 
     const result = await pool.query(
       `DELETE FROM cart_items
