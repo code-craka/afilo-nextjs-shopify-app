@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_cart_items_product
 
 -- Index for cleanup/analytics (oldest items)
 CREATE INDEX IF NOT EXISTS idx_cart_items_created_at
-  ON cart_items(created_at DESC);
+  ON cart_items(created_at);
 
 -- ================================================
 -- Triggers for Auto-Update
@@ -89,7 +89,10 @@ CREATE TRIGGER cart_items_updated_at
 CREATE OR REPLACE FUNCTION update_cart_items_last_modified()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.last_modified = NOW();
+  IF (OLD.quantity IS DISTINCT FROM NEW.quantity OR
+      OLD.license_type IS DISTINCT FROM NEW.license_type) THEN
+    NEW.last_modified = NOW();
+  END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -97,8 +100,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER cart_items_last_modified
   BEFORE UPDATE ON cart_items
   FOR EACH ROW
-  WHEN (OLD.quantity IS DISTINCT FROM NEW.quantity
-        OR OLD.license_type IS DISTINCT FROM NEW.license_type)
   EXECUTE FUNCTION update_cart_items_last_modified();
 
 -- ================================================
