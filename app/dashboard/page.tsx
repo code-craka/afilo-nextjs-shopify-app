@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Package, Download, CreditCard, ArrowUpRight, Sparkles } from 'lucide-react';
 import BillingSummaryWidget from '@/components/dashboard/BillingSummaryWidget';
+import AbandonedCartWidget from '@/components/dashboard/AbandonedCartWidget';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function StandardDashboard() {
@@ -149,11 +150,21 @@ export default function StandardDashboard() {
         <BillingSummaryWidget />
       </motion.div>
 
-      {/* Recent Orders */}
+      {/* Abandoned Carts Widget */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
+        className="mb-8"
+      >
+        <AbandonedCartWidget />
+      </motion.div>
+
+      {/* Recent Orders */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
         className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
       >
         <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Orders</h2>
