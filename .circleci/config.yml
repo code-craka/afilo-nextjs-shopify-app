@@ -108,13 +108,14 @@ jobs:
     steps:
       - checkout
       - install-pnpm
+      - restore-dependencies
       - attach_workspace:
           at: ~/afilo-nextjs-shopify-app
       - run:
           name: TypeScript Type Check
           command: |
             echo "🔍 Running TypeScript type check..."
-            pnpm type-check
+            pnpm run type-check
             echo "✅ Type check passed"
 
   # Job 3: Linting
@@ -123,13 +124,14 @@ jobs:
     steps:
       - checkout
       - install-pnpm
+      - restore-dependencies
       - attach_workspace:
           at: ~/afilo-nextjs-shopify-app
       - run:
           name: ESLint Check
           command: |
             echo "🔍 Running ESLint..."
-            pnpm lint
+            pnpm run lint
             echo "✅ Linting passed"
 
   # Job 4: Prettier check
@@ -138,13 +140,14 @@ jobs:
     steps:
       - checkout
       - install-pnpm
+      - restore-dependencies
       - attach_workspace:
           at: ~/afilo-nextjs-shopify-app
       - run:
           name: Prettier Format Check
           command: |
             echo "🔍 Checking code formatting..."
-            pnpm prettier:check
+            pnpm run prettier:check
             echo "✅ Code formatting is correct"
 
   # Job 5: Security audit
@@ -153,6 +156,7 @@ jobs:
     steps:
       - checkout
       - install-pnpm
+      - restore-dependencies
       - attach_workspace:
           at: ~/afilo-nextjs-shopify-app
       - run:
@@ -169,6 +173,7 @@ jobs:
     steps:
       - checkout
       - install-pnpm
+      - restore-dependencies
       - attach_workspace:
           at: ~/afilo-nextjs-shopify-app
       - run:
@@ -178,7 +183,7 @@ jobs:
             echo "Environment check:"
             echo "NODE_ENV=$NODE_ENV"
             echo "NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=$NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN"
-            pnpm build
+            pnpm run build
             echo "✅ Build completed successfully"
       - persist_to_workspace:
           root: ~/afilo-nextjs-shopify-app
@@ -192,13 +197,14 @@ jobs:
     steps:
       - checkout
       - install-pnpm
+      - restore-dependencies
       - attach_workspace:
           at: ~/afilo-nextjs-shopify-app
       - run:
           name: Run Tests
           command: |
             echo "🧪 Running tests..."
-            pnpm test
+            pnpm run test
             echo "✅ Tests passed"
       - store_test_results:
           path: test-results
