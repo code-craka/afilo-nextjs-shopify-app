@@ -1,7 +1,46 @@
 import Stripe from 'stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
+/**
+ * Get Stripe Secret Key with proper error handling
+ *
+ * This function ensures the error only appears when Stripe is actually used,
+ * not during module import (which can happen during Next.js build/SSR).
+ */
+function getStripeSecretKey(): string {
+  const key = process.env.STRIPE_SECRET_KEY;
+
+  if (!key) {
+    throw new Error(
+      'STRIPE_SECRET_KEY is not set in environment variables. ' +
+      'Please add it to your Vercel environment variables or .env.local file.'
+    );
+  }
+
+  return key;
+}
+
+/**
+ * Lazy Stripe Client Initialization
+ *
+ * This ensures Stripe is only initialized when actually needed (in API routes),
+ * not during page rendering or build time.
+ */
+let stripeInstance: Stripe | null = null;
+
+function getStripeInstance(): Stripe {
+  if (!stripeInstance) {
+    stripeInstance = new Stripe(getStripeSecretKey(), {
+      apiVersion: '2025-09-30.clover',
+      typescript: true,
+      appInfo: {
+        name: 'Afilo Enterprise Marketplace',
+        version: '1.0.0',
+        url: 'https://app.afilo.io',
+      },
+    });
+  }
+
+  return stripeInstance;
 }
 
 /**
@@ -12,16 +51,27 @@ if (!process.env.STRIPE_SECRET_KEY) {
  * - Adaptive 3D Secure (automatic, not forced)
  * - Stripe Radar integration for fraud prevention
  * - Enterprise-grade payment processing
+ * - Lazy initialization to prevent build-time errors
+ *
+ * Usage:
+ * ```typescript
+ * import { stripe } from '@/lib/stripe-server';
+ * const session = await stripe.checkout.sessions.create({ ... });
+ * ```
  *
  * @see https://stripe.com/docs/api
  */
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-09-30.clover',
-  typescript: true,
-  appInfo: {
-    name: 'Afilo Enterprise Marketplace',
-    version: '1.0.0',
-    url: 'https://app.afilo.io',
+export const stripe = new Proxy({} as Stripe, {
+  get: (_target, prop) => {
+    const instance = getStripeInstance();
+    const value = instance[prop as keyof Stripe];
+
+    // Bind methods to the instance to preserve 'this' context
+    if (typeof value === 'function') {
+      return value.bind(instance);
+    }
+
+    return value;
   },
 });
 
