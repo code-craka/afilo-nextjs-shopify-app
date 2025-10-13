@@ -6,6 +6,7 @@ import { Providers } from "./providers";
 import "./globals.css";
 import DigitalCartWidget from "@/components/DigitalCartWidget";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
+import ToastProvider from "@/components/providers/ToastProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -127,6 +128,7 @@ export default function RootLayout({
             {children}
             <DigitalCartWidget />
             <PerformanceMonitor />
+            <ToastProvider />
           </Providers>
           {GA_MEASUREMENT_ID && (
             <>

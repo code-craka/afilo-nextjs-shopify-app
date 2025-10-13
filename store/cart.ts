@@ -2,6 +2,8 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import toast from 'react-hot-toast';
+import { fireSuccessConfetti } from '@/lib/confetti';
 
 /**
  * Simplified Cart Store with Database Sync
@@ -103,6 +105,7 @@ export const useCartStore = create<CartState>()(
               existingItem.id,
               existingItem.quantity + itemData.quantity
             );
+            toast.success(`Updated ${itemData.title} quantity`);
             return;
           }
 
@@ -121,11 +124,16 @@ export const useCartStore = create<CartState>()(
             isLoading: false,
           }));
 
+          // Success feedback
+          toast.success(`Added ${itemData.title} to cart!`);
+          fireSuccessConfetti();
+
           // Auto-open cart on add
           get().openCart();
 
         } catch (error) {
           console.error('Failed to add item:', error);
+          toast.error('Failed to add item to cart');
           set({ isLoading: false });
           throw error;
         }
@@ -144,8 +152,11 @@ export const useCartStore = create<CartState>()(
             items: state.items.filter(item => item.id !== itemId),
             isLoading: false,
           }));
+
+          toast.success('Removed from cart');
         } catch (error) {
           console.error('Failed to remove item:', error);
+          toast.error('Failed to remove item');
           set({ isLoading: false });
           throw error;
         }

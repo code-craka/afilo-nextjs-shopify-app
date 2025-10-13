@@ -64,8 +64,14 @@ export default function StandardDashboard() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl p-6 mb-8 shadow-lg"
+        whileHover={{ scale: 1.01 }}
+        className="relative bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 bg-[length:200%_100%] animate-gradient text-white rounded-xl p-6 mb-8 shadow-lg overflow-hidden"
       >
+        {/* Glassmorphism overlay */}
+        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+
+        {/* Content */}
+        <div className="relative z-10">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
             <Sparkles className="h-8 w-8 flex-shrink-0 mt-1" />
@@ -76,13 +82,16 @@ export default function StandardDashboard() {
               </p>
             </div>
           </div>
-          <button
+          <motion.button
             onClick={() => router.push('/pricing')}
-            className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2 whitespace-nowrap"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2 whitespace-nowrap shadow-lg"
           >
             View Plans
             <ArrowUpRight className="h-4 w-4" />
-          </button>
+          </motion.button>
+        </div>
         </div>
       </motion.div>
 
@@ -91,12 +100,18 @@ export default function StandardDashboard() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+            whileHover={{ scale: 1.02, y: -4 }}
+            transition={{ type: 'spring', stiffness: 300 }}
+            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-xl cursor-pointer transition-shadow"
           >
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
+              <motion.div
+                whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                transition={{ duration: 0.5 }}
+                className="p-3 bg-blue-100 rounded-lg"
+              >
                 <Package className="h-6 w-6 text-blue-600" />
-              </div>
+              </motion.div>
               <div>
                 <p className="text-sm text-gray-600">My Products</p>
                 <p className="text-2xl font-bold text-gray-900">0</p>
@@ -108,12 +123,17 @@ export default function StandardDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+            whileHover={{ scale: 1.02, y: -4 }}
+            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-xl cursor-pointer transition-shadow"
           >
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
+              <motion.div
+                whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                transition={{ duration: 0.5 }}
+                className="p-3 bg-green-100 rounded-lg"
+              >
                 <Download className="h-6 w-6 text-green-600" />
-              </div>
+              </motion.div>
               <div>
                 <p className="text-sm text-gray-600">Downloads</p>
                 <p className="text-2xl font-bold text-gray-900">0</p>
@@ -125,12 +145,17 @@ export default function StandardDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200"
+            whileHover={{ scale: 1.02, y: -4 }}
+            className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-xl cursor-pointer transition-shadow"
           >
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
+              <motion.div
+                whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                transition={{ duration: 0.5 }}
+                className="p-3 bg-purple-100 rounded-lg"
+              >
                 <CreditCard className="h-6 w-6 text-purple-600" />
-              </div>
+              </motion.div>
               <div>
                 <p className="text-sm text-gray-600">Total Spent</p>
                 <p className="text-2xl font-bold text-gray-900">$0</p>
