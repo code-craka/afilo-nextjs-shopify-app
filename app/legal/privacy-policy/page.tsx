@@ -245,9 +245,11 @@ export default function PrivacyPolicyPage() {
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>Stripe:</strong> Payment processing (PCI DSS Level 1 certified)</li>
             <li><strong>Vercel:</strong> Application hosting and deployment</li>
-            <li><strong>Shopify:</strong> E-commerce platform</li>
+            <li><strong>Neon:</strong> PostgreSQL database services</li>
             <li><strong>AWS/Azure:</strong> Cloud infrastructure</li>
             <li><strong>Clerk:</strong> Authentication services</li>
+            <li><strong>Resend:</strong> Email service provider</li>
+            <li><strong>Upstash:</strong> Redis for rate limiting and caching</li>
             <li><strong>Analytics Providers:</strong> Google Analytics, Vercel Analytics</li>
           </ul>
 

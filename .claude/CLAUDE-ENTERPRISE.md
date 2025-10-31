@@ -70,8 +70,28 @@ lib/
 - Refund policy compliant (30-day money-back)
 - Awaiting approval from Paddle support (1-3 days)
 
+## Digital Products System
+
+### Product Management
+- Products stored in Neon PostgreSQL
+- Synced with Stripe Product/Price catalog
+- Real-time inventory tracking
+- Digital download management
+- License key generation
+
+### Key Files
+```
+lib/
+├── stripe-products.ts           # Stripe product sync
+├── db/products.ts               # Database operations
+└── validations/product.ts       # Input validation
+
+app/api/products/
+├── route.ts                     # Product CRUD
+└── sync-stripe/route.ts         # Stripe sync endpoint
+```
+
 ---
 
 **Related Modules:**
-- Shopify integration: `.claude/CLAUDE-SHOPIFY.md`
 - Development workflows: `.claude/CLAUDE-WORKFLOWS.md`

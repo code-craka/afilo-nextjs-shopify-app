@@ -5,31 +5,47 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 // No longer importing from shopify lib directly on client
-import type { ShopifyProduct, ProductsQueryParams } from '@/types/shopify';
+import type { Product } from '@/types/product';
+
+// Backward compatibility - map old Shopify types to new Product types
+interface ProductsQueryParams {
+  first?: number;
+  offset?: number;
+  query?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  after?: string;
+}
 import { log } from '@/lib/logger';
 
 // Types
 interface ProductGridProps {
-  initialProducts?: ShopifyProduct[];
+  initialProducts?: Product[];
   searchQuery?: string;
-  sortBy?: 'TITLE' | 'PRICE' | 'BEST_SELLING' | 'CREATED_AT' | 'UPDATED_AT';
-  sortReverse?: boolean;
+  sortBy?: 'title' | 'price' | 'createdAt' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
   className?: string;
   showLoadMore?: boolean;
   productsPerPage?: number;
-  onProductClick?: (product: ShopifyProduct) => void;
-  onAddToCart?: (product: ShopifyProduct, variantId: string) => Promise<void>; // Pass full product instead of just ID
+  onProductClick?: (product: Product) => void;
+  onAddToCart?: (product: Product, variantId: string) => Promise<void>; // Pass full product instead of just ID
 }
 
 interface ProductCardProps {
-  product: ShopifyProduct;
-  onProductClick?: (product: ShopifyProduct) => void;
-  onAddToCart?: (product: ShopifyProduct, variantId: string) => Promise<void>;
+  product: Product;
+  onProductClick?: (product: Product) => void;
+  onAddToCart?: (product: Product, variantId: string) => Promise<void>;
   index: number;
 }
 
 // Digital product utilities
-const getTechStackFromProduct = (product: ShopifyProduct): string[] => {
+const getTechStackFromProduct = (product: Product): string[] => {
+  // New Product type already has techStack array
+  if (product.techStack && product.techStack.length > 0) {
+    return product.techStack.slice(0, 4); // Limit to 4 badges
+  }
+
+  // Fallback: Extract from title/description if techStack is empty
   const title = product.title.toLowerCase();
   const description = product.description.toLowerCase();
   const tags = product.tags || [];
@@ -73,7 +89,7 @@ const getTechStackFromProduct = (product: ShopifyProduct): string[] => {
   return techStack.slice(0, 4); // Limit to 4 badges
 };
 
-const getLicenseType = (product: ShopifyProduct): string => {
+const getLicenseType = (product: Product): string => {
   const title = product.title.toLowerCase();
   const description = product.description.toLowerCase();
   const tags = product.tags || [];
@@ -84,15 +100,15 @@ const getLicenseType = (product: ShopifyProduct): string => {
   if (title.includes('enterprise') || description.includes('enterprise') || tags.includes('enterprise')) return 'Enterprise';
   if (title.includes('developer') || description.includes('developer') || tags.includes('developer')) return 'Developer';
 
-  // Default based on price range
-  const price = parseFloat(product.priceRange?.minVariantPrice?.amount || '0');
+  // Default based on price (new Product type has basePrice)
+  const price = product.basePrice || 0;
   if (price === 0) return 'Free';
   if (price < 50) return 'Personal';
   if (price < 200) return 'Commercial';
   return 'Extended';
 };
 
-const getDigitalProductType = (product: ShopifyProduct): { type: string; color: string; icon: string } => {
+const getDigitalProductType = (product: Product): { type: string; color: string; icon: string } => {
   const title = product.title.toLowerCase();
   const productType = product.productType?.toLowerCase() || '';
 
@@ -124,7 +140,7 @@ const getDigitalProductType = (product: ShopifyProduct): { type: string; color: 
   return { type: 'Software', color: 'bg-gray-100 text-gray-800', icon: '💻' };
 };
 
-const hasDocumentation = (product: ShopifyProduct): boolean => {
+const hasDocumentation = (product: Product): boolean => {
   const description = product.description.toLowerCase();
   const tags = product.tags || [];
 
@@ -136,7 +152,7 @@ const hasDocumentation = (product: ShopifyProduct): boolean => {
          tags.includes('docs');
 };
 
-const hasDemo = (product: ShopifyProduct): boolean => {
+const hasDemo = (product: Product): boolean => {
   const description = product.description.toLowerCase();
   const tags = product.tags || [];
 
@@ -147,7 +163,7 @@ const hasDemo = (product: ShopifyProduct): boolean => {
          tags.includes('preview');
 };
 
-const getVersionNumber = (product: ShopifyProduct): string | null => {
+const getVersionNumber = (product: Product): string | null => {
   const title = product.title;
   const description = product.description;
 
@@ -180,13 +196,13 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
   const [imageError, setImageError] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Get primary and secondary images - safe access
-  const images = product.images?.edges?.map(edge => edge.node) || [];
-  const primaryImage = product.featuredImage || images[0];
+  // Get primary and secondary images - new Product type has direct arrays
+  const images = product.images || [];
+  const primaryImage = product.featuredImageUrl ? { url: product.featuredImageUrl, altText: product.title } : images[0];
   const secondaryImage = images[1];
 
-  // Get default variant for pricing and availability - safe access with fallbacks
-  const defaultVariant = product.variants?.edges?.[0]?.node;
+  // Get default variant for pricing and availability - new Product type has direct array
+  const defaultVariant = product.variants?.[0];
   // For digital products, if product is available for sale, consider it available even if variant isn't explicitly marked
   const isAvailable = product.availableForSale || (defaultVariant?.availableForSale ?? true);
 
@@ -202,8 +218,8 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
   // console.log('🎯 ProductCard rendering:', { title: product.title, techStack, licenseType, digitalType });
 
   // Format price with premium/subscription detection
-  const formatPrice = (amount: string, currencyCode: string) => {
-    const price = parseFloat(amount);
+  const formatPrice = (amount: number | string, currencyCode: string = 'USD') => {
+    const price = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currencyCode,
@@ -212,7 +228,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
 
   // Detect if this is a premium subscription product
   const isPremiumProduct = () => {
-    const price = parseFloat(defaultVariant?.price?.amount || product.priceRange?.minVariantPrice?.amount || '0');
+    const price = defaultVariant?.price || product.basePrice || 0;
     return price >= 999; // Products priced $999+ are considered premium
   };
 
@@ -319,7 +335,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
             >
               <Image
                 src={currentImageIndex === 0 ? primaryImage.url : (secondaryImage?.url || primaryImage.url)}
-                alt={primaryImage.altText || product.title}
+                alt={primaryImage.alt || primaryImage.altText || product.title}
                 fill
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
                 sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -498,7 +514,7 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
                   <div className="flex flex-col">
                     <div className="flex items-center space-x-1">
                       <span className={`font-bold text-lg ${isPremiumProduct() ? 'text-purple-700' : 'text-gray-900'}`}>
-                        {formatPrice(defaultVariant.price.amount, defaultVariant.price.currencyCode)}
+                        {formatPrice(defaultVariant.price, product.currency)}
                       </span>
                       {getSubscriptionInfo().period && (
                         <span className="text-sm text-gray-600 font-medium">
@@ -521,16 +537,16 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
                   </div>
                   {defaultVariant.compareAtPrice && (
                     <span className="text-sm text-gray-500 line-through">
-                      {formatPrice(defaultVariant.compareAtPrice.amount, defaultVariant.compareAtPrice.currencyCode)}
+                      {formatPrice(defaultVariant.compareAtPrice, product.currency)}
                     </span>
                   )}
                 </>
-              ) : product.priceRange?.minVariantPrice ? (
+              ) : product.basePrice ? (
                 <>
                   <div className="flex flex-col">
                     <div className="flex items-center space-x-1">
                       <span className={`font-bold text-lg ${isPremiumProduct() ? 'text-purple-700' : 'text-gray-900'}`}>
-                        {formatPrice(product.priceRange.minVariantPrice.amount, product.priceRange.minVariantPrice.currencyCode)}
+                        {formatPrice(product.basePrice, product.currency)}
                       </span>
                       {getSubscriptionInfo().period && (
                         <span className="text-sm text-gray-600 font-medium">
@@ -655,15 +671,15 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
 export default function ProductGrid({
   initialProducts = [],
   searchQuery = '',
-  sortBy = 'UPDATED_AT',
-  sortReverse = false,
+  sortBy = 'updatedAt',
+  sortOrder = 'desc',
   className = '',
   showLoadMore = true,
   productsPerPage = 12,
   onProductClick,
   onAddToCart
 }: ProductGridProps) {
-  const [products, setProducts] = useState<ShopifyProduct[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>(initialProducts || []);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -674,19 +690,19 @@ export default function ProductGrid({
   const queryParams = useMemo<ProductsQueryParams>(() => ({
     first: productsPerPage,
     query: searchQuery || undefined,
-    sortKey: sortBy,
-    reverse: sortReverse,
+    sortBy: sortBy,
+    sortOrder: sortOrder,
     after: cursor || undefined
-  }), [searchQuery, sortBy, sortReverse, productsPerPage, cursor]);
+  }), [searchQuery, sortBy, sortOrder, productsPerPage, cursor]);
 
   // Fetch products using TanStack Query for automatic caching
-  const fetchProducts = async (): Promise<ShopifyProduct[]> => {
+  const fetchProducts = async (): Promise<Product[]> => {
     const urlParams = new URLSearchParams({
       first: String(queryParams.first),
       ...(queryParams.after && { after: queryParams.after }),
       ...(queryParams.query && { query: queryParams.query }),
-      ...(queryParams.sortKey && { sortBy: queryParams.sortKey }),
-      ...(queryParams.reverse && { sortReverse: String(queryParams.reverse) }),
+      ...(queryParams.sortBy && { sortBy: queryParams.sortBy }),
+      ...(queryParams.sortOrder && { sortOrder: queryParams.sortOrder }),
     });
 
     const response = await fetch(`/api/products?${urlParams.toString()}`);

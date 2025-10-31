@@ -198,7 +198,7 @@ export default function TermsOfServicePage() {
             <li>Cloud-based SaaS application accessible via web browser and API</li>
             <li>User management, authentication, and access control</li>
             <li>Data storage, processing, and analytics</li>
-            <li>Integration capabilities with third-party services (Shopify, Stripe, etc.)</li>
+            <li>Integration capabilities with third-party services (Stripe, Clerk, Neon, etc.)</li>
             <li>Customer support via email, chat, and phone (plan-dependent)</li>
             <li>Security features including encryption, backups, and monitoring</li>
           </ul>
@@ -529,7 +529,7 @@ export default function TermsOfServicePage() {
 
         <div className="space-y-4 text-gray-700">
           <p>
-            Our Service integrates with third-party services and platforms (e.g., Shopify, Stripe, Google OAuth).
+            Our Service integrates with third-party services and platforms (e.g., Stripe, Clerk, Neon, Google OAuth).
           </p>
 
           <h3 className="text-xl font-semibold text-gray-900">Third-Party Terms:</h3>

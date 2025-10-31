@@ -1,21 +1,45 @@
 'use client';
 
+import React, { Suspense, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDigitalCart } from '@/hooks/useDigitalCart';
+import Image from 'next/image';
 
-export default function DigitalCartWidget() {
-  const { 
-    items, 
-    isOpen, 
-    totals, 
-    toggleCart, 
-    removeItem, 
+// Error boundary for cart widget content
+class CartWidgetErrorBoundary extends React.Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    console.warn('[CartWidget] Error in cart content:', error);
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null; // Fail silently
+    }
+    return this.props.children;
+  }
+}
+
+function CartWidgetContent() {
+  const {
+    items,
+    isOpen,
+    totals,
+    toggleCart,
+    removeItem,
     proceedToCheckout,
     cartSummary,
     changeLicense,
     adjustTeamSize
   } = useDigitalCart();
-
 
   // Don't render if no items
   if (items.length === 0) return null;
@@ -74,10 +98,13 @@ export default function DigitalCartWidget() {
                     Digital Cart ({items.length} {items.length === 1 ? 'license' : 'licenses'})
                   </h2>
                   <button
+                    type="button"
                     onClick={toggleCart}
                     className="p-1 rounded-md hover:bg-gray-100"
+                    aria-label="Close cart"
+                    title="Close cart"
                   >
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -102,9 +129,11 @@ export default function DigitalCartWidget() {
                       {/* Product Info */}
                       <div className="flex items-start gap-3">
                         {item.image && (
-                          <img
+                          <Image
                             src={item.image}
                             alt={item.title}
+                            width={48}
+                            height={48}
                             className="w-12 h-12 rounded object-cover"
                           />
                         )}
@@ -132,11 +161,16 @@ export default function DigitalCartWidget() {
                       {/* License Configuration */}
                       <div className="mt-3 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">License:</span>
+                          <label htmlFor={`license-${item.id}`} className="text-sm font-medium text-gray-700">
+                            License:
+                          </label>
                           <select
+                            id={`license-${item.id}`}
                             value={item.licenseType}
                             onChange={(e) => changeLicense(item.id, e.target.value as 'Personal' | 'Commercial' | 'Extended' | 'Enterprise')}
                             className="text-sm border border-gray-300 rounded px-2 py-1"
+                            aria-label={`Select license type for ${item.title}`}
+                            title={`Select license type for ${item.title}`}
                           >
                             <option value="Personal">Personal</option>
                             <option value="Commercial">Commercial</option>
@@ -149,15 +183,22 @@ export default function DigitalCartWidget() {
                           <span className="text-sm font-medium text-gray-700">Seats:</span>
                           <div className="flex items-center gap-2">
                             <button
+                              type="button"
                               onClick={() => adjustTeamSize(item.id, Math.max(1, item.quantity - 1))}
                               className="w-6 h-6 bg-gray-200 rounded text-sm hover:bg-gray-300"
+                              aria-label={`Decrease seats for ${item.title}`}
+                              title="Decrease seats"
+                              disabled={item.quantity <= 1}
                             >
                               -
                             </button>
-                            <span className="w-8 text-center text-sm">{item.quantity}</span>
+                            <span className="w-8 text-center text-sm" aria-live="polite">{item.quantity}</span>
                             <button
+                              type="button"
                               onClick={() => adjustTeamSize(item.id, item.quantity + 1)}
                               className="w-6 h-6 bg-gray-200 rounded text-sm hover:bg-gray-300"
+                              aria-label={`Increase seats for ${item.title}`}
+                              title="Increase seats"
                             >
                               +
                             </button>
@@ -179,8 +220,11 @@ export default function DigitalCartWidget() {
                         </div>
                         
                         <button
+                          type="button"
                           onClick={() => removeItem(item.id)}
                           className="text-red-600 hover:text-red-800 text-sm"
+                          aria-label={`Remove ${item.title} from cart`}
+                          title={`Remove ${item.title} from cart`}
                         >
                           Remove
                         </button>
@@ -235,8 +279,11 @@ export default function DigitalCartWidget() {
 
                 {/* Checkout Button */}
                 <button
+                  type="button"
                   onClick={proceedToCheckout}
                   className="w-full bg-black text-white py-3 px-4 rounded-md font-medium hover:bg-gray-800 transition-colors"
+                  aria-label="Proceed to checkout"
+                  title="Proceed to checkout with instant access"
                 >
                   Proceed to Checkout • Instant Access
                 </button>
@@ -250,5 +297,16 @@ export default function DigitalCartWidget() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+// Safe export with error boundary for global-error page compatibility
+export default function DigitalCartWidget() {
+  return (
+    <CartWidgetErrorBoundary>
+      <Suspense fallback={null}>
+        <CartWidgetContent />
+      </Suspense>
+    </CartWidgetErrorBoundary>
   );
 }

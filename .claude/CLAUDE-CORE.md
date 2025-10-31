@@ -41,14 +41,14 @@ store/                 # Zustand state management
 
 ## Quick Reference
 
-- Authentication: Clerk + Google OAuth
-- Database: Neon PostgreSQL
-- Payments: Stripe + Paddle
-- E-commerce: Shopify Storefront API
+- **Authentication**: Clerk + Google OAuth
+- **Database**: Neon PostgreSQL (Prisma ORM)
+- **Payments**: Stripe (Subscriptions + One-time) + Paddle
+- **Products**: Digital products in Neon DB (synced with Stripe)
+- **Analytics**: Real-time monitoring + Performance tracking
 
 ---
 
 **Need more context?**
-- Enterprise features: Load `.claude/CLAUDE-ENTERPRISE.md`
-- Shopify integration: Load `.claude/CLAUDE-SHOPIFY.md`
-- Development workflows: Load `.claude/CLAUDE-WORKFLOWS.md`
+- Enterprise features: `.claude/CLAUDE-ENTERPRISE.md`
+- Development workflows: `.claude/CLAUDE-WORKFLOWS.md`

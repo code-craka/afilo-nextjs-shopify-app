@@ -170,7 +170,7 @@ const industries: IndustrySolution[] = [
       'Real-time inventory synchronization across channels',
       'PCI DSS compliance for payment processing',
       'Peak traffic handling (Black Friday, Cyber Monday)',
-      'Integration with Shopify, WooCommerce, Magento'
+      'Integration with Stripe, Payment APIs, E-commerce platforms'
     ],
     solutions: [
       {

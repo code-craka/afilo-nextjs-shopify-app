@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@neondatabase/serverless';
+import prisma from '@/lib/prisma';
 
 /**
  * Abandoned Cart API
@@ -8,7 +8,6 @@ import { Pool } from '@neondatabase/serverless';
  * Retrieves user's abandoned cart items for display on dashboard
  */
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function GET() {
   try {
@@ -18,30 +17,46 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const result = await pool.query(
-      `SELECT
-        id,
-        product_id as "productId",
-        variant_id as "variantId",
-        title,
-        price,
-        quantity,
-        license_type as "licenseType",
-        image_url as "imageUrl",
-        added_at as "addedAt",
-        abandoned_at as "abandonedAt",
-        last_modified as "lastModified"
-      FROM cart_items
-      WHERE user_id = $1 AND status = 'abandoned'
-      ORDER BY abandoned_at DESC
-      LIMIT 10`,
-      [userId]
-    );
+    const items = await prisma.cart_items.findMany({
+      where: {
+        user_id: userId,
+        status: 'abandoned',
+      },
+      orderBy: {
+        abandoned_at: 'desc',
+      },
+      take: 10,
+      select: {
+        id: true,
+        product_id: true,
+        variant_id: true,
+        title: true,
+        price: true,
+        quantity: true,
+        license_type: true,
+        image_url: true,
+        added_at: true,
+        abandoned_at: true,
+        last_modified: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      items: result.rows,
-      count: result.rows.length,
+      items: items.map(item => ({
+        id: item.id,
+        productId: item.product_id,
+        variantId: item.variant_id,
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity,
+        licenseType: item.license_type,
+        imageUrl: item.image_url,
+        addedAt: item.added_at,
+        abandonedAt: item.abandoned_at,
+        lastModified: item.last_modified,
+      })),
+      count: items.length,
     });
 
   } catch (error: any) {
@@ -72,42 +87,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await pool.query(
-      `UPDATE cart_items
-      SET status = 'active',
-          abandoned_at = NULL,
-          last_modified = NOW()
-      WHERE id = $1
-        AND user_id = $2
-        AND status = 'abandoned'
-      RETURNING
-        id,
-        product_id as "productId",
-        variant_id as "variantId",
-        title,
-        price,
-        quantity,
-        license_type as "licenseType",
-        image_url as "imageUrl",
-        added_at as "addedAt"`,
-      [itemId, userId]
-    );
+    const updated = await prisma.cart_items.update({
+      where: {
+        id: itemId,
+        user_id: userId,
+      },
+      data: {
+        status: 'active',
+        abandoned_at: null,
+        last_modified: new Date(),
+      },
+      select: {
+        id: true,
+        product_id: true,
+        variant_id: true,
+        title: true,
+        price: true,
+        quantity: true,
+        license_type: true,
+        image_url: true,
+        added_at: true,
+      },
+    });
 
-    if (result.rows.length === 0) {
+    return NextResponse.json({
+      success: true,
+      message: 'Item restored to cart',
+      item: {
+        id: updated.id,
+        productId: updated.product_id,
+        variantId: updated.variant_id,
+        title: updated.title,
+        price: updated.price,
+        quantity: updated.quantity,
+        licenseType: updated.license_type,
+        imageUrl: updated.image_url,
+        addedAt: updated.added_at,
+      },
+    });
+
+  } catch (error: any) {
+    console.error('POST /api/cart/abandoned error:', error);
+
+    if (error.code === 'P2025') {
       return NextResponse.json(
         { error: 'Item not found or unauthorized' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Item restored to cart',
-      item: result.rows[0],
-    });
-
-  } catch (error: any) {
-    console.error('POST /api/cart/abandoned error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to restore item' },
       { status: 500 }

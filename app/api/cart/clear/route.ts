@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@neondatabase/serverless';
+import prisma from '@/lib/prisma';
 
 /**
  * Cart Clear API
@@ -8,7 +8,6 @@ import { Pool } from '@neondatabase/serverless';
  * Removes all active cart items for the user
  */
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function POST() {
   try {
@@ -19,17 +18,17 @@ export async function POST() {
     }
 
     // Delete all active cart items
-    const result = await pool.query(
-      `DELETE FROM cart_items
-      WHERE user_id = $1 AND status = 'active'
-      RETURNING id`,
-      [userId]
-    );
+    const result = await prisma.cart_items.deleteMany({
+      where: {
+        user_id: userId,
+        status: 'active',
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      message: `Removed ${result.rows.length} items from cart`,
-      removedCount: result.rows.length,
+      message: `Removed ${result.count} items from cart`,
+      removedCount: result.count,
     });
 
   } catch (error: any) {

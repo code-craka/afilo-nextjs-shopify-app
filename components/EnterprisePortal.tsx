@@ -393,8 +393,9 @@ export default function EnterprisePortal() {
                   </div>
                   <div className="w-full bg-blue-200 rounded-full h-2 mt-3">
                     <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: `${calculateUsagePercentage(usageAnalytics.totals.activeUsers, usageAnalytics.limits.activeUsers)}%` }}
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      data-progress
+                      style={{ '--progress-width': `${calculateUsagePercentage(usageAnalytics.totals.activeUsers, usageAnalytics.limits.activeUsers)}%` } as React.CSSProperties}
                     />
                   </div>
                 </div>
@@ -412,8 +413,9 @@ export default function EnterprisePortal() {
                   </div>
                   <div className="w-full bg-green-200 rounded-full h-2 mt-3">
                     <div
-                      className="bg-green-600 h-2 rounded-full"
-                      style={{ width: `${calculateUsagePercentage(usageAnalytics.totals.apiCalls, usageAnalytics.limits.apiCalls)}%` }}
+                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                      data-progress
+                      style={{ '--progress-width': `${calculateUsagePercentage(usageAnalytics.totals.apiCalls, usageAnalytics.limits.apiCalls)}%` } as React.CSSProperties}
                     />
                   </div>
                 </div>
@@ -431,8 +433,9 @@ export default function EnterprisePortal() {
                   </div>
                   <div className="w-full bg-purple-200 rounded-full h-2 mt-3">
                     <div
-                      className="bg-purple-600 h-2 rounded-full"
-                      style={{ width: `${calculateUsagePercentage(usageAnalytics.totals.storageUsed, usageAnalytics.limits.storageGB)}%` }}
+                      className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                      data-progress
+                      style={{ '--progress-width': `${calculateUsagePercentage(usageAnalytics.totals.storageUsed, usageAnalytics.limits.storageGB)}%` } as React.CSSProperties}
                     />
                   </div>
                 </div>
@@ -450,8 +453,9 @@ export default function EnterprisePortal() {
                   </div>
                   <div className="w-full bg-orange-200 rounded-full h-2 mt-3">
                     <div
-                      className="bg-orange-600 h-2 rounded-full"
-                      style={{ width: `${calculateUsagePercentage(usageAnalytics.totals.deployments, usageAnalytics.limits.deployments)}%` }}
+                      className="bg-orange-600 h-2 rounded-full transition-all duration-300"
+                      data-progress
+                      style={{ '--progress-width': `${calculateUsagePercentage(usageAnalytics.totals.deployments, usageAnalytics.limits.deployments)}%` } as React.CSSProperties}
                     />
                   </div>
                 </div>
@@ -710,8 +714,9 @@ export default function EnterprisePortal() {
                           <span className="font-medium">{data.apiCalls.toLocaleString()}</span>
                           <div className="w-20 bg-gray-200 rounded-full h-2">
                             <div
-                              className="bg-blue-600 h-2 rounded-full"
-                              style={{ width: `${(data.apiCalls / 70000) * 100}%` }}
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              data-progress
+                              style={{ '--progress-width': `${(data.apiCalls / 70000) * 100}%` } as React.CSSProperties}
                             />
                           </div>
                         </div>
@@ -730,8 +735,9 @@ export default function EnterprisePortal() {
                           <span className="font-medium">{data.activeUsers} users</span>
                           <div className="w-20 bg-gray-200 rounded-full h-2">
                             <div
-                              className="bg-green-600 h-2 rounded-full"
-                              style={{ width: `${(data.activeUsers / 35) * 100}%` }}
+                              className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                              data-progress
+                              style={{ '--progress-width': `${(data.activeUsers / 35) * 100}%` } as React.CSSProperties}
                             />
                           </div>
                         </div>

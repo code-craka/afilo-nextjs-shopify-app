@@ -11,7 +11,7 @@ import { fireSuccessConfetti } from '@/lib/confetti';
  * Integrates with:
  * - PostgreSQL cart_items table
  * - Clerk authentication
- * - Shopify products
+ * - Digital products
  * - Stripe checkout
  */
 
@@ -19,8 +19,8 @@ export type LicenseType = 'personal' | 'commercial';
 
 export interface CartItem {
   id: string; // Database UUID
-  productId: string; // Shopify product ID
-  variantId: string; // Shopify variant ID
+  productId: string; // Product ID
+  variantId: string; // Product variant ID
   title: string;
   price: number;
   quantity: number;
@@ -265,8 +265,17 @@ export const useCartStore = create<CartState>()(
             lastSyncedAt: new Date(),
             isSyncing: false,
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to sync with server:', error);
+
+          // Don't show error for unauthenticated users (401)
+          if (error.message && !error.message.includes('Unauthorized')) {
+            // Only log in development
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Cart sync error:', error.message);
+            }
+          }
+
           set({ isSyncing: false });
         }
       },
@@ -286,9 +295,22 @@ export const useCartStore = create<CartState>()(
             lastSyncedAt: new Date(),
             isLoading: false,
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to load cart:', error);
-          set({ isLoading: false });
+
+          // Don't show error toast for unauthenticated users (401)
+          // They'll be redirected to sign in
+          if (error.message && !error.message.includes('Unauthorized')) {
+            // Only log other errors silently in development
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Cart load error:', error.message);
+            }
+          }
+
+          set({
+            items: [],  // Clear items on error
+            isLoading: false
+          });
         }
       },
 

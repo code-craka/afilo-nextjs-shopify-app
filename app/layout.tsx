@@ -43,8 +43,10 @@ export const metadata: Metadata = {
     'business automation',
     'Next.js enterprise',
     'TypeScript platform',
-    'Shopify integration',
-    'Stripe subscriptions'
+    'Stripe payments',
+    'Stripe subscriptions',
+    'Neon PostgreSQL',
+    'Clerk authentication'
   ],
   authors: [{ name: 'TechSci, Inc.', url: 'https://app.afilo.io' }],
   creator: 'TechSci, Inc.',
@@ -126,10 +128,10 @@ export default function RootLayout({
         >
           <Providers>
             {children}
-            <DigitalCartWidget />
-            <PerformanceMonitor />
             <ToastProvider />
           </Providers>
+          <DigitalCartWidget />
+          <PerformanceMonitor />
           {GA_MEASUREMENT_ID && (
             <>
               <Script

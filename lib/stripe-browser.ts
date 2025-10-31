@@ -57,8 +57,9 @@ export const getStripe = (): Promise<Stripe | null> => {
       // Optional: Locale for payment form UI
       locale: 'en',
 
-      // Optional: Stripe API version (matches server-side)
-      apiVersion: '2024-10-28',
+      // Optional: Stripe API version (matches server-side and stripe package v19.0.0)
+      // NOTE: Must match stripe-server.ts apiVersion
+      apiVersion: '2025-09-30.clover',
     });
   }
 

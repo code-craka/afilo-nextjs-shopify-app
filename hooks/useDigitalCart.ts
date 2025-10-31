@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { useDigitalCartStore, type DigitalCartItem, type LicenseType, type EducationalTier, type SubscriptionInterval } from '@/store/digitalCart';
-import type { ShopifyProduct } from '@/types/shopify';
+import type { Product } from '@/types/product';
 
 // Cart operations hook for digital products
 export const useDigitalCart = () => {
@@ -41,7 +41,7 @@ export const useDigitalCart = () => {
 
   // Add product to cart with digital-specific configuration
   const addProductToCart = useCallback(async (
-    product: ShopifyProduct,
+    product: Product,
     options: {
       licenseType?: LicenseType;
       quantity?: number;
@@ -54,7 +54,7 @@ export const useDigitalCart = () => {
 
     try {
       // Default to first available variant if not specified
-      const variant = product.variants?.edges?.[0]?.node;
+      const variant = product.variants?.[0];
       if (!variant) {
         throw new Error('No variants available for this product');
       }
@@ -75,26 +75,26 @@ export const useDigitalCart = () => {
         variantId: options.variantId || variant.id,
         title: product.title,
         handle: product.handle,
-        price: parseFloat(variant.price.amount),
-        originalPrice: parseFloat(variant.price.amount),
-        currency: variant.price.currencyCode,
-        image: product.featuredImage?.url,
+        price: variant.price,
+        originalPrice: variant.price,
+        currency: product.currency || 'USD',
+        image: product.featuredImageUrl,
         vendor: product.vendor || 'Afilo',
 
         // Digital product configuration
         licenseType: options.licenseType || defaultLicenseType,
-        subscriptionInterval: options.subscriptionInterval || 'one-time',
+        subscriptionInterval: options.subscriptionInterval || (product.subscriptionSupported ? 'monthly' : 'one-time'),
         quantity: options.quantity || 1,
-        maxSeats: getLicenseMaxSeats(options.licenseType || defaultLicenseType),
+        maxSeats: variant.maxSeats || getLicenseMaxSeats(options.licenseType || defaultLicenseType),
 
         // License terms based on type
-        licenseTerms: getLicenseTerms(options.licenseType || defaultLicenseType),
+        licenseTerms: variant.licenseTerms || getLicenseTerms(options.licenseType || defaultLicenseType),
 
         // Educational discount (will be calculated in store)
         educationalDiscount: {
           tier: userEducationalStatus,
           discountPercent: 0,
-          appliedPrice: parseFloat(variant.price.amount)
+          appliedPrice: variant.price
         },
 
         // Bundle info (will be calculated if applicable)
@@ -137,13 +137,13 @@ export const useDigitalCart = () => {
 
   // Quick purchase for instant checkout
   const quickPurchase = useCallback(async (
-    product: ShopifyProduct,
+    product: Product,
     licenseType: LicenseType = 'Personal'
   ) => {
     const result = await addProductToCart(product, { licenseType, quantity: 1 });
 
     if (result.success) {
-      // Proceed to Shopify checkout
+      // Proceed to Stripe checkout
       return proceedToCheckout();
     }
 
@@ -192,7 +192,7 @@ export const useDigitalCart = () => {
     });
   }, [items, setEducationalStatus, applyEducationalDiscount]);
 
-  // Proceed to Stripe checkout (bypassing Shopify cart)
+  // Proceed to Stripe checkout
   const proceedToCheckout = useCallback(async () => {
     if (items.length === 0) {
       setError('Cart is empty');
@@ -234,7 +234,7 @@ export const useDigitalCart = () => {
 
       console.log('User authenticated, proceeding with Stripe checkout for user:', authData.userId);
 
-      // Create Stripe Checkout Session directly (NO Shopify cart validation)
+      // Create Stripe Checkout Session directly
       const checkoutResponse = await fetch('/api/stripe/create-cart-checkout', {
         method: 'POST',
         headers: {
@@ -284,76 +284,8 @@ export const useDigitalCart = () => {
     }
   }, [items, userRegion, setLoading, setError]);
 
-  // Prepare Shopify checkout data
-  const prepareShopifyCheckout = useCallback(async (userId?: string) => {
-    const lineItems = items.map(item => ({
-      merchandiseId: item.variantId,  // Shopify API expects "merchandiseId"
-      quantity: item.quantity,
-      attributes: [  // Shopify API expects "attributes" not "customAttributes"
-        { key: 'license_type', value: item.licenseType },
-        { key: 'subscription_interval', value: item.subscriptionInterval },
-        { key: 'educational_tier', value: item.educationalDiscount.tier },
-        { key: 'team_size', value: item.quantity.toString() },
-        { key: 'tech_stack', value: item.techStack.join(', ') },
-        { key: 'product_type', value: item.productType },
-        { key: 'version', value: item.version || 'latest' },
-        { key: 'digital_delivery', value: 'true' },
-        // CRITICAL: Include user ID for webhook processing
-        ...(userId ? [{ key: 'clerk_user_id', value: userId }] : [])
-      ]
-    }));
-
-    return {
-      lineItems,
-      customAttributes: [
-        { key: 'cart_type', value: 'digital_products' },
-        { key: 'user_region', value: userRegion },
-        { key: 'total_savings', value: totals.savings.toString() },
-        { key: 'applied_bundles', value: appliedBundles.join(', ') },
-        // CRITICAL: Include user ID at order level for webhook
-        ...(userId ? [{ key: 'clerk_user_id', value: userId }] : [])
-      ],
-      noteAttributes: [
-        // CRITICAL: This is the primary method for passing user ID to webhook
-        ...(userId ? [{ name: 'clerk_user_id', value: userId }] : []),
-        { name: 'cart_type', value: 'digital_products' },
-        { name: 'order_source', value: 'afilo_marketplace' }
-      ],
-      note: `Digital commerce order - ${items.length} license(s) - User: ${userId || 'guest'} - Total savings: $${totals.savings.toFixed(2)}`
-    };
-  }, [items, userRegion, totals.savings, appliedBundles]);
-
-  // Create Shopify checkout session
-  const createShopifyCheckout = useCallback(async (payload: any): Promise<string> => {
-    try {
-      console.log('Creating Shopify checkout with payload:', payload);
-
-      // Call our secure server-side API to create the cart
-      const response = await fetch('/api/cart', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to create checkout`);
-      }
-
-      const result = await response.json();
-
-      if (!result.success || !result.cart?.checkoutUrl) {
-        throw new Error(result.error || 'Invalid checkout response');
-      }
-
-      return result.cart.checkoutUrl;
-    } catch (error) {
-      console.error('Shopify checkout creation failed:', error);
-      throw error instanceof Error ? error : new Error('Unknown checkout error');
-    }
-  }, []);
+  // Note: Legacy Shopify checkout methods have been removed.
+  // All checkouts now use Stripe.
 
   // Validate cart before checkout
   const validateCart = useCallback(() => {
@@ -441,8 +373,8 @@ export const useDigitalCart = () => {
 };
 
 // Helper functions for product analysis
-function determineDefaultLicenseType(product: ShopifyProduct): LicenseType {
-  const price = parseFloat(product.variants?.edges?.[0]?.node?.price?.amount || '0');
+function determineDefaultLicenseType(product: Product): LicenseType {
+  const price = product.basePrice || 0;
 
   if (price === 0) return 'Free';
   if (price < 50) return 'Personal';
@@ -450,7 +382,7 @@ function determineDefaultLicenseType(product: ShopifyProduct): LicenseType {
   return 'Extended';
 }
 
-function getTechStackFromProduct(product: ShopifyProduct): string[] {
+function getTechStackFromProduct(product: Product): string[] {
   const title = product.title.toLowerCase();
   const description = product.description.toLowerCase();
   const tags = product.tags || [];
@@ -476,7 +408,7 @@ function getTechStackFromProduct(product: ShopifyProduct): string[] {
   return techStack.slice(0, 4); // Limit to 4 most relevant
 }
 
-function hasDocumentationDetection(product: ShopifyProduct): boolean {
+function hasDocumentationDetection(product: Product): boolean {
   const description = product.description.toLowerCase();
   const tags = product.tags || [];
 
@@ -486,7 +418,7 @@ function hasDocumentationDetection(product: ShopifyProduct): boolean {
          tags.includes('documented');
 }
 
-function hasDemoDetection(product: ShopifyProduct): boolean {
+function hasDemoDetection(product: Product): boolean {
   const description = product.description.toLowerCase();
   const tags = product.tags || [];
 
@@ -496,7 +428,7 @@ function hasDemoDetection(product: ShopifyProduct): boolean {
          tags.includes('demo');
 }
 
-function extractVersionNumber(product: ShopifyProduct): string | undefined {
+function extractVersionNumber(product: Product): string | undefined {
   const versionRegex = /v?(\\d+\\.?\\d*\\.?\\d*)/i;
   const titleMatch = product.title.match(versionRegex);
   const descMatch = product.description.match(versionRegex);
@@ -504,7 +436,7 @@ function extractVersionNumber(product: ShopifyProduct): string | undefined {
   return titleMatch?.[1] || descMatch?.[1] || undefined;
 }
 
-function getDigitalProductType(product: ShopifyProduct): { type: string; color: string; icon: string } {
+function getDigitalProductType(product: Product): { type: string; color: string; icon: string } {
   const title = product.title.toLowerCase();
   const description = product.description.toLowerCase();
   const productType = product.productType?.toLowerCase() || '';
@@ -541,11 +473,11 @@ function getLicenseMaxSeats(licenseType: LicenseType): number {
   return LICENSE_DEFINITIONS[licenseType].maxSeats;
 }
 
-function generateAccessInstructions(product: ShopifyProduct): string {
+function generateAccessInstructions(product: Product): string {
   return `After purchase, you will receive instant access to download ${product.title}. Check your email for download links and license information.`;
 }
 
-function requiresActivation(product: ShopifyProduct): boolean {
+function requiresActivation(product: Product): boolean {
   const description = product.description.toLowerCase();
   return description.includes('license key') ||
          description.includes('activation') ||

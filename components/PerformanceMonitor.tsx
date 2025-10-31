@@ -9,7 +9,7 @@ import { trackPerformance } from '@/lib/analytics';
  * Metrics: LCP, FID, CLS, FCP, TTFB
  */
 
-export default function PerformanceMonitor() {
+function PerformanceMonitorContent() {
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -176,4 +176,15 @@ export default function PerformanceMonitor() {
 
   // This component doesn't render anything
   return null;
+}
+
+// Safe export with error boundary for global-error page compatibility
+export default function PerformanceMonitor() {
+  try {
+    return <PerformanceMonitorContent />;
+  } catch (error) {
+    // Silently fail - this is non-critical monitoring
+    console.warn('[PerformanceMonitor] Failed to initialize:', error);
+    return null;
+  }
 }

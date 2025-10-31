@@ -229,8 +229,11 @@ export default function BillingPortal() {
             </div>
             <p className="text-red-700 mb-4">{error}</p>
             <button
+              type="button"
               onClick={fetchBillingData}
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              aria-label="Retry loading billing data"
+              title="Try loading billing data again"
             >
               Try Again
             </button>
@@ -255,8 +258,11 @@ export default function BillingPortal() {
               </p>
             </div>
             <button
+              type="button"
               onClick={() => router.push('/dashboard')}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              aria-label="Back to Dashboard"
+              title="Return to dashboard"
             >
               <span className="text-sm font-medium">Back to Dashboard</span>
             </button>
@@ -370,15 +376,21 @@ export default function BillingPortal() {
             </div>
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={() => setShowAddPaymentModal(true)}
                 className="bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2"
+                aria-label="Add payment method"
+                title="Add a new payment method"
               >
                 <Plus className="h-4 w-4" />
                 Add Payment Method
               </button>
               <button
+                type="button"
                 onClick={() => router.push('/pricing')}
                 className="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-lg font-semibold hover:bg-white/30 transition-colors flex items-center gap-2"
+                aria-label="View pricing plans"
+                title="View and upgrade your plan"
               >
                 <ArrowUpRight className="h-4 w-4" />
                 Upgrade Plan

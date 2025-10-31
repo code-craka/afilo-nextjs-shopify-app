@@ -263,7 +263,8 @@ function SubscriptionCard({
                   className={`h-2 rounded-full transition-all duration-300 ${
                     isNearLimit ? 'bg-orange-500' : 'bg-blue-500'
                   }`}
-                  style={{ width: `${Math.min(percentage, 100)}%` }}
+                  data-progress
+                  style={{ '--progress-width': `${Math.min(percentage, 100)}%` } as React.CSSProperties}
                 />
               </div>
             </div>
@@ -322,8 +323,10 @@ function SubscriptionCard({
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => onUpdatePayment?.(subscription.id)}
                   className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                  aria-label="Update payment method"
                 >
                   Update
                 </button>
@@ -333,8 +336,10 @@ function SubscriptionCard({
             {/* Features */}
             <div className="space-y-3">
               <button
+                type="button"
                 onClick={onToggleUsage}
                 className="flex items-center gap-2 font-semibold text-gray-900 hover:text-blue-600"
+                aria-label="Toggle included features list"
               >
                 <span>Included Features</span>
                 <svg
@@ -342,6 +347,7 @@ function SubscriptionCard({
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
@@ -373,20 +379,26 @@ function SubscriptionCard({
               {subscription.status === 'active' && (
                 <>
                   <button
+                    type="button"
                     onClick={() => onUpgrade?.(subscription.id, 'enterprise')}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    aria-label="Upgrade subscription plan"
                   >
                     Upgrade Plan
                   </button>
                   <button
+                    type="button"
                     onClick={() => onDowngrade?.(subscription.id, 'professional')}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    aria-label="Downgrade subscription plan"
                   >
                     Downgrade
                   </button>
                   <button
+                    type="button"
                     onClick={() => onCancel?.(subscription.id)}
                     className="px-4 py-2 text-red-600 hover:text-red-700 transition-colors"
+                    aria-label="Cancel subscription"
                   >
                     Cancel Subscription
                   </button>
@@ -395,8 +407,10 @@ function SubscriptionCard({
 
               {subscription.status === 'cancelled' && (
                 <button
+                  type="button"
                   onClick={() => onReactivate?.(subscription.id)}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  aria-label="Reactivate subscription"
                 >
                   Reactivate Subscription
                 </button>
@@ -404,8 +418,10 @@ function SubscriptionCard({
 
               {subscription.status === 'trial' && (
                 <button
+                  type="button"
                   onClick={() => onUpgrade?.(subscription.id, subscription.planName)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  aria-label="Convert trial to paid plan"
                 >
                   Convert to Paid Plan
                 </button>
@@ -490,7 +506,11 @@ function BillingHistory({ formatCurrency, formatDate }: BillingHistoryProps) {
                   </span>
                 </td>
                 <td className="py-4 px-4">
-                  <button className="text-blue-600 hover:text-blue-700 font-medium">
+                  <button
+                    type="button"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                    aria-label={`Download invoice ${record.invoice}`}
+                  >
                     {record.invoice}
                   </button>
                 </td>
@@ -536,7 +556,8 @@ function UsageAnalytics({ subscriptions, calculateUsagePercentage }: UsageAnalyt
                       className={`h-2 rounded-full transition-all duration-300 ${
                         isHigh ? 'bg-orange-500' : 'bg-blue-500'
                       }`}
-                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                      data-progress
+                      style={{ '--progress-width': `${Math.min(percentage, 100)}%` } as React.CSSProperties}
                     />
                   </div>
                   <div className="text-xs text-gray-600">

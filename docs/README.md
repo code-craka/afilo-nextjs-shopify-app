@@ -27,10 +27,6 @@
 **Authentication:**
 - [Authentication Setup Guide](../AUTHENTICATION_SETUP_GUIDE.md) - Clerk + Google OAuth integration
 
-**Shopify:**
-- [Premium Pricing Guide](../SHOPIFY_PREMIUM_PRICING_GUIDE.md) - Enterprise pricing configuration
-- [Shopify Integration Guide](SHOPIFY_INTEGRATION_GUIDE.md) - Shopify Storefront API integration
-
 **Digital Commerce:**
 - [Digital Commerce Features](DIGITAL_COMMERCE_FEATURES.md) - Digital product features and licensing
 - [ProductGrid Component](PRODUCTGRID.md) - Product grid implementation details
@@ -104,7 +100,7 @@ Historical documentation has been organized in the `archive/` directory:
 ### Other Archives
 - `archive/deployment/` - Deployment status reports
 - `archive/architecture/` - Architecture recommendations
-- `archive/shopify/` - Shopify setup guides
+- `archive/shopify/` - Shopify setup guides (historical - no longer active)
 - `archive/completion/` - Project completion reports
 - `archive/other/` - Miscellaneous documentation
 
@@ -131,7 +127,6 @@ Historical documentation has been organized in the `archive/` directory:
 ### For Integration
 1. [STRIPE_SUBSCRIPTION_IMPLEMENTATION_GUIDE.md](../STRIPE_SUBSCRIPTION_IMPLEMENTATION_GUIDE.md)
 2. [AUTHENTICATION_SETUP_GUIDE.md](../AUTHENTICATION_SETUP_GUIDE.md)
-3. [SHOPIFY_PREMIUM_PRICING_GUIDE.md](../SHOPIFY_PREMIUM_PRICING_GUIDE.md)
 
 ---
 

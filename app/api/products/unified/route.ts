@@ -1,26 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/database';
-import { checkRateLimit, shopifyApiRateLimit, getClientIp } from '@/lib/rate-limit';
+import prisma from '@/lib/prisma';
+import { checkRateLimit, productsApiRateLimit, getClientIp } from '@/lib/rate-limit';
 
 /**
  * Unified Products API
  *
  * Returns products from unified_products table
- * Includes both Shopify and Stripe product IDs
+ * Includes Stripe product information
  *
  * Query Parameters:
  * - active: true/false (filter by active status)
  * - tier: professional|business|enterprise (filter by tier)
- * - shopify: true/false (available on Shopify)
  * - stripe: true/false (available on Stripe)
  *
- * Response includes all necessary data for dual checkout flow
+ * Response includes all necessary data for checkout flow
  */
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
     const ip = getClientIp(request);
-    const rateLimit = await checkRateLimit(ip, shopifyApiRateLimit);
+    const rateLimit = await checkRateLimit(ip, productsApiRateLimit);
 
     if (!rateLimit.success) {
       return NextResponse.json(
@@ -36,18 +35,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const active = searchParams.get('active');
     const tier = searchParams.get('tier');
-    const shopify = searchParams.get('shopify');
     const stripe = searchParams.get('stripe');
 
-    // Build filters
-    const filters: any = {};
-    if (active !== null) filters.active = active === 'true';
-    if (tier) filters.tier = tier;
-    if (shopify !== null) filters.availableOnShopify = shopify === 'true';
-    if (stripe !== null) filters.availableOnStripe = stripe === 'true';
+    // Build where clause
+    const where: any = {};
+    if (active !== null) where.active = active === 'true';
+    if (tier) where.tier = tier;
+    if (stripe !== null) where.available_on_stripe = stripe === 'true';
 
-    // Fetch from database
-    const products = await db.getUnifiedProducts(filters);
+    // Fetch from database using Prisma
+    const products = await prisma.unified_products.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+    });
 
     // Transform to frontend format
     const transformedProducts = products.map((p: any) => ({
@@ -59,14 +59,6 @@ export async function GET(request: NextRequest) {
       basePrice: p.base_price,
       currency: p.currency,
       formattedPrice: `$${(p.base_price / 100).toFixed(2)}`,
-
-      // Shopify Integration
-      shopify: {
-        productId: p.shopify_product_id,
-        variantId: p.shopify_variant_id,
-        handle: p.shopify_handle,
-        available: p.available_on_shopify
-      },
 
       // Stripe Integration
       stripe: {

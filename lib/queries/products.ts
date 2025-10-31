@@ -16,14 +16,6 @@ export interface UnifiedProduct {
   currency: string;
   formattedPrice: string; // e.g., "$499.00"
 
-  // Shopify Integration
-  shopify: {
-    productId: string | null;
-    variantId: string | null;
-    handle: string | null;
-    available: boolean;
-  };
-
   // Stripe Integration
   stripe: {
     productId: string | null;
@@ -51,7 +43,6 @@ export interface UnifiedProduct {
 interface ProductsFilters {
   active?: boolean;
   tier?: string;
-  shopify?: boolean;
   stripe?: boolean;
 }
 
@@ -67,7 +58,6 @@ export function useUnifiedProducts(filters?: ProductsFilters) {
       const params = new URLSearchParams();
       if (filters?.active !== undefined) params.set('active', String(filters.active));
       if (filters?.tier) params.set('tier', filters.tier);
-      if (filters?.shopify !== undefined) params.set('shopify', String(filters.shopify));
       if (filters?.stripe !== undefined) params.set('stripe', String(filters.stripe));
 
       const response = await fetch(`/api/products/unified?${params.toString()}`);
@@ -87,7 +77,7 @@ export function useUnifiedProducts(filters?: ProductsFilters) {
 /**
  * Create Stripe checkout session
  *
- * For subscription-based purchases
+ * For subscription and one-time purchases
  */
 export function useCreateStripeCheckout() {
   return useMutation({
@@ -97,7 +87,7 @@ export function useCreateStripeCheckout() {
       customerEmail
     }: {
       priceId: string;
-      billingInterval: 'month' | 'year';
+      billingInterval?: 'month' | 'year';
       customerEmail: string;
     }) => {
       const response = await fetch('/api/stripe/create-subscription-checkout', {
@@ -121,64 +111,18 @@ export function useCreateStripeCheckout() {
 }
 
 /**
- * Create Shopify cart and checkout
+ * Sync products from Stripe
  *
- * For one-time purchases
- */
-export function useCreateShopifyCart() {
-  return useMutation({
-    mutationFn: async ({
-      variantId,
-      quantity = 1
-    }: {
-      variantId: string;
-      quantity?: number;
-    }) => {
-      const response = await fetch('/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lineItems: [
-            {
-              variantId,
-              quantity,
-              customAttributes: [
-                { key: 'purchase_type', value: 'one-time' },
-                { key: 'checkout_source', value: 'app.afilo.io' }
-              ]
-            }
-          ]
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Cart creation failed');
-      }
-
-      return response.json() as Promise<{ cart: { checkoutUrl: string; id: string } }>;
-    },
-    onSuccess: (data) => {
-      // Redirect to Shopify Checkout
-      window.location.href = data.cart.checkoutUrl;
-    }
-  });
-}
-
-/**
- * Sync products from Shopify to Stripe
- *
- * Admin-only function to trigger product sync
+ * Admin-only function to trigger product sync from Stripe catalog
  */
 export function useSyncProducts() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (productIds?: string[]) => {
-      const response = await fetch('/api/sync/shopify-to-stripe', {
+    mutationFn: async () => {
+      const response = await fetch('/api/products/sync-stripe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productIds })
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (!response.ok) {
@@ -189,8 +133,7 @@ export function useSyncProducts() {
       return response.json() as Promise<{
         success: boolean;
         synced: number;
-        created: number;
-        updated: number;
+        message: string;
       }>;
     },
     onSuccess: () => {

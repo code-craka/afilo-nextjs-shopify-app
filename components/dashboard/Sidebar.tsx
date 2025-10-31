@@ -14,6 +14,8 @@ import {
   ChevronRight,
   Download,
   Clock,
+  BarChart3,
+  Activity,
 } from 'lucide-react';
 
 /**
@@ -40,6 +42,17 @@ const navItems: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
+    label: 'Analytics',
+    href: '/dashboard/analytics',
+    icon: BarChart3,
+  },
+  {
+    label: 'Monitoring',
+    href: '/dashboard/monitoring',
+    icon: Activity,
+    badge: 'NEW',
+  },
+  {
     label: 'Products',
     href: '/dashboard/products',
     icon: Package,
@@ -61,7 +74,7 @@ const navItems: NavItem[] = [
   },
   {
     label: 'Billing',
-    href: '/billing',
+    href: '/dashboard/billing',
     icon: CreditCard,
   },
   {
@@ -143,6 +156,7 @@ export default function Sidebar() {
         {/* Collapse Toggle */}
         <div className="p-4 border-t border-gray-200">
           <button
+            type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}

@@ -133,8 +133,22 @@ export const RISK_THRESHOLDS = {
  *
  * - card: Credit/debit cards (Visa, Mastercard, Amex, Discover)
  * - us_bank_account: ACH Direct Debit (3-5 business days)
+ * - google_pay: Google Pay digital wallet (instant)
+ * - apple_pay: Apple Pay digital wallet (instant)
  */
-export const PAYMENT_METHODS = ['card', 'us_bank_account'] as const;
+export const PAYMENT_METHODS = ['card', 'us_bank_account', 'google_pay', 'apple_pay'] as const;
+
+/**
+ * Digital Wallet Configuration
+ *
+ * Enables Google Pay and Apple Pay via Stripe Payment Request API.
+ * Automatically displays appropriate wallet based on device/browser.
+ */
+export const DIGITAL_WALLET_CONFIG = {
+  requestPayerName: true,
+  requestPayerEmail: true,
+  requestPayerPhone: false,
+} as const;
 
 /**
  * ACH Payment Status Flow

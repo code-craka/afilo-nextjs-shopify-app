@@ -1,8 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { neon } from '@neondatabase/serverless';
-
-const sql = neon(process.env.DATABASE_URL!);
+import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
@@ -12,14 +10,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const result = await sql`
-      SELECT role, purchase_type, created_at
-      FROM user_profiles
-      WHERE clerk_user_id = ${userId}
-      LIMIT 1
-    `;
+    const userProfile = await prisma.user_profiles.findFirst({
+      where: { clerk_user_id: userId },
+      select: {
+        role: true,
+        purchase_type: true,
+        created_at: true,
+      },
+    });
 
-    if (result.length === 0) {
+    if (!userProfile) {
       return NextResponse.json({
         role: 'standard',
         purchase_type: null,
@@ -28,9 +28,9 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      role: result[0].role || 'standard',
-      purchase_type: result[0].purchase_type,
-      created_at: result[0].created_at,
+      role: userProfile.role || 'standard',
+      purchase_type: userProfile.purchase_type,
+      created_at: userProfile.created_at,
     });
   } catch (error) {
     console.error('Error fetching user role:', error);

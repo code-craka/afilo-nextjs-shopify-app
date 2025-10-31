@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+  // Note: driverAdapters is now stable in Prisma 6.18+, no longer needs previewFeatures
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model product_collection_products {
+  product_id          String              @db.Uuid
+  collection_id       String              @db.Uuid
+  position            Int?                @default(0)
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  product_collections product_collections @relation(fields: [collection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products            products            @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([product_id, collection_id])
+  @@index([collection_id], map: "idx_collection_products_collection")
+  @@index([product_id], map: "idx_collection_products_product")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model product_collections {
+  id                          String                        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  handle                      String                        @unique
+  title                       String
+  description                 String?
+  description_html            String?
+  image_url                   String?
+  seo_title                   String?
+  seo_description             String?
+  status                      String                        @default("active")
+  created_at                  DateTime?                     @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime?                     @default(now()) @db.Timestamptz(6)
+  product_collection_products product_collection_products[]
+
+  @@index([handle], map: "idx_collections_handle")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model product_pricing_tiers {
+  id                  String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  product_id          String            @db.Uuid
+  variant_id          String?           @db.Uuid
+  tier_name           String
+  minimum_quantity    Int               @default(1)
+  maximum_quantity    Int?
+  price               Decimal           @db.Decimal(10, 2)
+  discount_percentage Decimal?          @default(0) @db.Decimal(5, 2)
+  features            String[]          @default([])
+  user_limits         Json?             @default("{\"maximum\": 999, \"minimum\": 1}")
+  created_at          DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?         @default(now()) @db.Timestamptz(6)
+  products            products          @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product_variants    product_variants? @relation(fields: [variant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([product_id], map: "idx_pricing_tiers_product")
+  @@index([variant_id], map: "idx_pricing_tiers_variant")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model product_variants {
+  id                    String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  product_id            String                  @db.Uuid
+  title                 String
+  sku                   String?                 @unique
+  license_type          String
+  max_seats             Int                     @default(1)
+  license_terms         Json                    @default("{\"teamUse\": false, \"commercialUse\": false, \"extendedSupport\": false, \"sourceCodeIncluded\": false, \"customizationAllowed\": true, \"redistributionAllowed\": false}")
+  price                 Decimal                 @db.Decimal(10, 2)
+  price_multiplier      Decimal                 @default(1.00) @db.Decimal(5, 2)
+  compare_at_price      Decimal?                @db.Decimal(10, 2)
+  stripe_price_id       String?                 @unique
+  available_for_sale    Boolean?                @default(true)
+  quantity_available    Int?
+  position              Int?                    @default(0)
+  created_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  product_pricing_tiers product_pricing_tiers[]
+  products              products                @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([license_type], map: "idx_variants_license_type")
+  @@index([product_id], map: "idx_variants_product_id")
+  @@index([sku], map: "idx_variants_sku")
+  @@index([stripe_price_id], map: "idx_variants_stripe_price_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model products {
+  id                           String                        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  handle                       String                        @unique
+  title                        String
+  description                  String                        @default("")
+  description_html             String?
+  base_price                   Decimal                       @db.Decimal(10, 2)
+  currency                     String                        @default("USD")
+  compare_at_price             Decimal?                      @db.Decimal(10, 2)
+  product_type                 String
+  vendor                       String                        @default("Afilo")
+  tags                         String[]                      @default([])
+  tech_stack                   String[]                      @default([])
+  version                      String?
+  available_licenses           Json                          @default("[\"Personal\", \"Commercial\", \"Enterprise\"]")
+  subscription_supported       Boolean?                      @default(false)
+  subscription_interval        String?
+  trial_period_days            Int?                          @default(0)
+  minimum_users                Int?                          @default(1)
+  maximum_users                Int?
+  compliance_standards         String[]                      @default([])
+  integration_capabilities     String[]                      @default([])
+  support_level                String?                       @default("standard")
+  has_documentation            Boolean?                      @default(false)
+  has_demo                     Boolean?                      @default(false)
+  demo_url                     String?
+  documentation_url            String?
+  system_requirements          Json?                         @default("{}")
+  download_links               String[]                      @default([])
+  access_instructions          String?
+  activation_required          Boolean?                      @default(false)
+  stripe_product_id            String?                       @unique
+  stripe_price_id              String?
+  stripe_subscription_price_id String?
+  available_for_sale           Boolean?                      @default(true)
+  featured                     Boolean?                      @default(false)
+  status                       String                        @default("active")
+  featured_image_url           String?
+  images                       Json?                         @default("[]")
+  seo_title                    String?
+  seo_description              String?
+  created_at                   DateTime?                     @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime?                     @default(now()) @db.Timestamptz(6)
+  published_at                 DateTime?                     @db.Timestamptz(6)
+  product_collection_products  product_collection_products[]
+  product_pricing_tiers        product_pricing_tiers[]
+  product_variants             product_variants[]
+
+  @@index([created_at(sort: Desc)], map: "idx_products_created_at")
+  @@index([handle], map: "idx_products_handle")
+  @@index([product_type], map: "idx_products_product_type")
+  @@index([stripe_product_id], map: "idx_products_stripe_product_id")
+  @@index([tags], map: "idx_products_tags", type: Gin)
+  @@index([tech_stack], map: "idx_products_tech_stack", type: Gin)
+  @@index([updated_at(sort: Desc)], map: "idx_products_updated_at")
+  @@index([vendor], map: "idx_products_vendor")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model cart_items {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String
+  product_id        String
+  variant_id        String
+  title             String
+  price             Decimal   @db.Decimal(10, 2)
+  quantity          Int       @default(1)
+  license_type      String
+  image_url         String?
+  status            String    @default("active")
+  added_at          DateTime? @default(now()) @db.Timestamptz(6)
+  last_modified     DateTime? @default(now()) @db.Timestamptz(6)
+  abandoned_at      DateTime? @db.Timestamptz(6)
+  purchased_at      DateTime? @db.Timestamptz(6)
+  stripe_session_id String?
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([created_at], map: "idx_cart_items_created_at")
+  @@index([product_id, variant_id], map: "idx_cart_items_product")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model downloads {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clerk_user_id   String
+  subscription_id String?        @db.Uuid
+  product_id      String
+  product_title   String
+  download_url    String
+  license_key     String?
+  download_count  Int?           @default(0)
+  max_downloads   Int?           @default(10)
+  expires_at      DateTime?      @db.Timestamp(6)
+  created_at      DateTime?      @default(now()) @db.Timestamp(6)
+  subscriptions   subscriptions? @relation(fields: [subscription_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([clerk_user_id], map: "idx_downloads_user")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model subscriptions {
+  id                   String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clerk_user_id        String
+  email                String
+  shopify_order_id     String?
+  plan_id              String
+  status               String
+  current_period_start DateTime    @db.Timestamp(6)
+  current_period_end   DateTime    @db.Timestamp(6)
+  cancel_at_period_end Boolean?    @default(false)
+  created_at           DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at           DateTime?   @default(now()) @db.Timestamp(6)
+  downloads            downloads[]
+
+  @@index([clerk_user_id], map: "idx_subscriptions_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model unified_products {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String    @db.VarChar(255)
+  description          String?
+  base_price           Int
+  currency             String?   @default("USD") @db.VarChar(3)
+  shopify_product_id   String?   @unique(map: "unique_shopify_product") @db.VarChar(255)
+  shopify_variant_id   String?   @db.VarChar(255)
+  shopify_handle       String?   @db.VarChar(255)
+  shopify_synced_at    DateTime? @db.Timestamptz(6)
+  stripe_product_id    String?   @unique(map: "unique_stripe_product") @db.VarChar(255)
+  stripe_price_monthly String?   @db.VarChar(255)
+  stripe_price_annual  String?   @db.VarChar(255)
+  stripe_synced_at     DateTime? @db.Timestamptz(6)
+  features             Json?     @default("[]")
+  metadata             Json?     @default("{}")
+  images               Json?     @default("[]")
+  available_on_shopify Boolean?  @default(true)
+  available_on_stripe  Boolean?  @default(false)
+  active               Boolean?  @default(true)
+  tier                 String?   @db.VarChar(50)
+  user_limit           String?   @db.VarChar(50)
+  product_type         String?   @db.VarChar(100)
+  created_at           DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model user_activity_log {
+  id              Int            @id @default(autoincrement())
+  user_profile_id Int?
+  activity_type   String         @db.VarChar(50)
+  activity_data   Json?
+  ip_address      String?        @db.Inet
+  user_agent      String?
+  created_at      DateTime?      @default(now()) @db.Timestamptz(6)
+  user_profiles   user_profiles? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([activity_type], map: "idx_user_activity_log_activity_type")
+  @@index([created_at], map: "idx_user_activity_log_created_at")
+  @@index([user_profile_id], map: "idx_user_activity_log_user_profile_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model user_profiles {
+  id                 Int                  @id @default(autoincrement())
+  clerk_user_id      String               @unique @db.VarChar(255)
+  email              String?              @db.VarChar(255)
+  first_name         String?              @db.VarChar(255)
+  last_name          String?              @db.VarChar(255)
+  oauth_signup       Boolean?             @default(false)
+  subscription_tier  String?              @default("free") @db.VarChar(50)
+  company            String?              @db.VarChar(255)
+  job_title          String?              @db.VarChar(255)
+  phone              String?              @db.VarChar(50)
+  avatar_url         String?
+  last_login         DateTime?            @db.Timestamptz(6)
+  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  role               String?              @default("standard") @db.VarChar(20)
+  purchase_type      String?              @db.VarChar(20)
+  user_activity_log  user_activity_log[]
+  user_subscriptions user_subscriptions[]
+
+  @@index([clerk_user_id], map: "idx_user_profiles_clerk_user_id")
+  @@index([created_at], map: "idx_user_profiles_created_at")
+  @@index([email], map: "idx_user_profiles_email")
+  @@index([role], map: "idx_user_profiles_role")
+  @@index([subscription_tier], map: "idx_user_profiles_subscription_tier")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model user_subscriptions {
+  id                      Int            @id @default(autoincrement())
+  user_profile_id         Int?
+  subscription_tier       String         @db.VarChar(50)
+  price_paid              Decimal?       @db.Decimal(10, 2)
+  billing_period          String?        @db.VarChar(20)
+  start_date              DateTime       @db.Timestamptz(6)
+  end_date                DateTime?      @db.Timestamptz(6)
+  status                  String?        @default("active") @db.VarChar(20)
+  shopify_subscription_id String?        @db.VarChar(255)
+  created_at              DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?      @default(now()) @db.Timestamptz(6)
+  user_profiles           user_profiles? @relation(fields: [user_profile_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([shopify_subscription_id], map: "idx_user_subscriptions_shopify_id")
+  @@index([status], map: "idx_user_subscriptions_status")
+  @@index([user_profile_id], map: "idx_user_subscriptions_user_profile_id")
+}

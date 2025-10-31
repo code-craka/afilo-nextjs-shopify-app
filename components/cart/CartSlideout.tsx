@@ -71,9 +71,11 @@ export default function CartSlideout() {
                 )}
               </div>
               <button
+                type="button"
                 onClick={closeCart}
                 className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
                 aria-label="Close cart"
+                title="Close cart"
               >
                 <X className="h-5 w-5 text-gray-600" />
               </button>
@@ -91,11 +93,14 @@ export default function CartSlideout() {
                     Start shopping to add items to your cart
                   </p>
                   <button
+                    type="button"
                     onClick={() => {
                       closeCart();
                       router.push('/products');
                     }}
                     className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    aria-label="Browse products"
+                    title="Browse our product catalog"
                   >
                     Browse Products
                   </button>
@@ -112,10 +117,12 @@ export default function CartSlideout() {
                     >
                       {/* Remove Button */}
                       <button
+                        type="button"
                         onClick={() => removeItem(item.id)}
                         disabled={isLoading}
                         className="absolute top-3 right-3 p-1 rounded-md hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50"
-                        aria-label="Remove item"
+                        aria-label={`Remove ${item.title} from cart`}
+                        title={`Remove ${item.title} from cart`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -144,10 +151,14 @@ export default function CartSlideout() {
 
                       {/* License Type */}
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-600">
+                        <label
+                          htmlFor={`license-${item.id}`}
+                          className="text-xs font-medium text-gray-600"
+                        >
                           License:
-                        </span>
+                        </label>
                         <select
+                          id={`license-${item.id}`}
                           value={item.licenseType}
                           onChange={(e) =>
                             updateLicenseType(
@@ -157,6 +168,8 @@ export default function CartSlideout() {
                           }
                           disabled={isLoading}
                           className="text-xs border border-gray-300 rounded px-2 py-1 bg-white disabled:opacity-50"
+                          aria-label={`Select license type for ${item.title}`}
+                          title={`Select license type for ${item.title}`}
                         >
                           <option value="personal">Personal</option>
                           <option value="commercial">Commercial</option>
@@ -170,21 +183,27 @@ export default function CartSlideout() {
                         </span>
                         <div className="flex items-center gap-2">
                           <button
+                            type="button"
                             onClick={() =>
                               updateQuantity(item.id, Math.max(1, item.quantity - 1))
                             }
                             disabled={isLoading || item.quantity <= 1}
                             className="w-7 h-7 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 text-sm font-medium"
+                            aria-label={`Decrease quantity for ${item.title}`}
+                            title="Decrease quantity"
                           >
                             −
                           </button>
-                          <span className="w-8 text-center text-sm font-medium">
+                          <span className="w-8 text-center text-sm font-medium" aria-live="polite">
                             {item.quantity}
                           </span>
                           <button
+                            type="button"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             disabled={isLoading}
                             className="w-7 h-7 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 text-sm font-medium"
+                            aria-label={`Increase quantity for ${item.title}`}
+                            title="Increase quantity"
                           >
                             +
                           </button>
@@ -214,9 +233,12 @@ export default function CartSlideout() {
 
                 {/* Checkout Button */}
                 <button
+                  type="button"
                   onClick={handleCheckout}
                   disabled={isLoading}
                   className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  aria-label="Proceed to checkout"
+                  title="Proceed to checkout"
                 >
                   {isLoading ? (
                     <>
@@ -233,11 +255,14 @@ export default function CartSlideout() {
 
                 {/* Continue Shopping */}
                 <button
+                  type="button"
                   onClick={() => {
                     closeCart();
                     router.push('/products');
                   }}
                   className="w-full text-blue-600 text-sm font-medium hover:text-blue-700 transition-colors"
+                  aria-label="Continue shopping"
+                  title="Continue browsing products"
                 >
                   Continue Shopping
                 </button>

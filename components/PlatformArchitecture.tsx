@@ -44,8 +44,8 @@ const techSpecs: TechSpec[] = [
     color: 'from-purple-500 to-pink-500',
     items: [
       { name: 'Next.js API Routes', description: 'Serverless functions with edge runtime support' },
-      { name: 'Shopify Storefront API', description: 'GraphQL API for e-commerce functionality' },
-      { name: 'Stripe API', description: 'Payment processing with subscriptions and webhooks' },
+      { name: 'Stripe Payment API', description: 'Payment processing with subscriptions and webhooks' },
+      { name: 'Neon PostgreSQL', description: 'Serverless database with auto-scaling' },
       { name: 'Clerk API', description: 'Authentication with OAuth and SSO support' }
     ]
   },

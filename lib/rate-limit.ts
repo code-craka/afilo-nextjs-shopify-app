@@ -66,21 +66,20 @@ export const checkoutRateLimit = new Ratelimit({
 });
 
 /**
- * Shopify API Rate Limiter
+ * Products API Rate Limiter
  *
- * Prevents exhausting Shopify API quota: 200 requests per minute (production)
+ * Prevents exhausting database: 100 requests per 15 minutes (production)
  * Development: 1000 requests per minute (allows hot reload and testing)
- * Shopify limit is ~200-500 requests/min depending on query complexity
  * With caching in place, this limit is generous for normal usage
  */
-export const shopifyApiRateLimit = new Ratelimit({
+export const productsApiRateLimit = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(
-    process.env.NODE_ENV === 'development' ? 1000 : 200,
-    '1 m'
+    process.env.NODE_ENV === 'development' ? 1000 : 100,
+    '15 m'
   ),
   analytics: true,
-  prefix: '@afilo/shopify-api',
+  prefix: '@afilo/products-api',
 });
 
 /**

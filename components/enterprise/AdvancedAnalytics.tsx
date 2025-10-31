@@ -381,7 +381,11 @@ export default function AdvancedAnalytics() {
           <div className="grid grid-cols-2 gap-3 mt-4">
             {regionData.map((region, index) => (
               <div key={index} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: region.color }} />
+                <div
+                  className="w-3 h-3 rounded-full"
+                  data-color
+                  style={{ '--region-color': region.color } as React.CSSProperties}
+                />
                 <span className="text-xs text-gray-400">{region.region}</span>
                 <span className="text-xs text-white font-semibold ml-auto">{region.value}%</span>
               </div>

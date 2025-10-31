@@ -5,9 +5,9 @@
 ## Code Review Standards
 
 ### Specialized Agents
-- `@shopify-code-review`: E-commerce, Shopify integration, digital products
 - `@nextjs-design-review`: UI/UX, responsive design, accessibility
 - `@ecommerce-security-review`: Payment security, customer data, API security
+- `@nextjs-performance`: Performance optimization, Core Web Vitals
 
 ### Commands
 ```bash
@@ -18,112 +18,117 @@
 
 ### Review Checklist
 - TypeScript strict mode compliance
-- Digital product specific features
-- License management logic
-- Payment flow security
+- Digital product features
+- Payment flow security (Stripe + Paddle)
 - Responsive design (mobile-first)
 - WCAG 2.1 AA accessibility
-- Performance optimization
+- Performance optimization (Lighthouse CI)
 
 ## Performance Standards
 
-- **Core Web Vitals**: LCP < 2.5s, FID < 100ms, CLS < 0.1
-- **Bundle Size**: Main bundle < 250KB gzipped
-- **API Response**: < 200ms for Shopify API calls
-- **Digital Delivery**: Instant access with <50ms response
+### Lighthouse CI Benchmarks (Enforced)
+- **Performance Score**: ≥90%
+- **Accessibility Score**: ≥90%
+- **Best Practices Score**: ≥90%
+- **SEO Score**: ≥90%
+- **First Contentful Paint (FCP)**: ≤2000ms
+- **Largest Contentful Paint (LCP)**: ≤2500ms
+- **Cumulative Layout Shift (CLS)**: ≤0.1
+
+### API Performance
+- **Stripe API**: < 200ms for checkout creation
+- **Neon Database**: < 100ms for product queries
+- **Digital Delivery**: < 50ms response time
 
 ## Git Workflow
 
 ### Branching Strategy
-- `main` - Production branch
-- Feature branches for new work
+- `main` - Production branch (protected)
+- Feature branches: `feature/name`
+- Bugfix branches: `fix/name`
 - Never commit directly to main
 
 ### Commit Standards
 - Descriptive commit messages
-- Reference issue numbers
-- Group related changes
+- Reference issue numbers when applicable
+- Group related changes logically
 
 ## Testing Strategy
-
-### Test Pages
-```
-/test-shopify           # Shopify API testing
-/test-stripe-payment    # One-time payment testing
-/test-subscription      # Subscription testing
-/test-premium-pricing   # Premium pricing suite
-```
 
 ### Manual Testing Checklist
 - [ ] Authentication flow (Clerk + Google OAuth)
 - [ ] Product catalog loading
 - [ ] Cart operations (add/remove/update)
-- [ ] Checkout flow (Stripe + Shopify)
+- [ ] Stripe checkout flow
 - [ ] Subscription creation and management
+- [ ] Digital product delivery
 - [ ] Email delivery (Resend)
 - [ ] Mobile responsive design
 - [ ] Error handling and loading states
+- [ ] Analytics tracking
 
 ## Deployment Workflow
 
 ### Pre-Deployment
 1. Run `pnpm build` locally
-2. Test production build with `pnpm start`
+2. Test production build
 3. Review environment variables
 4. Run security scan
+5. Run Lighthouse CI tests
 
 ### Vercel Deployment
 - Auto-deploy on push to main
 - Preview deployments for branches
+- Custom domain: app.afilo.io
 - Environment variables configured
-- Custom domains: app.afilo.io
 
 ### Post-Deployment
 1. Verify production URLs
 2. Test critical user flows
-3. Monitor error tracking (Sentry planned)
+3. Monitor error tracking
 4. Check Stripe webhook delivery
+5. Verify analytics collection
 
 ## Development Environment
 
-### Environment Variables (.env.local)
+### Required Environment Variables
 ```env
-# Shopify
-NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=
-NEXT_PUBLIC_SHOPIFY_STOREFRONT_ACCESS_TOKEN=
-
-# Clerk
+# Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 
-# Stripe
+# Stripe Payments
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 
-# Database
+# Neon Database
 DATABASE_URL=
+DIRECT_URL=
+
+# Resend Email
+RESEND_API_KEY=
 ```
 
-## Troubleshooting Common Issues
+## Troubleshooting
 
 ### Build Failures
 - Check TypeScript errors: `pnpm tsc --noEmit`
 - Verify dependencies: `pnpm install`
 - Clear cache: `rm -rf .next`
 
-### API Issues
-- Test Shopify connection on `/test-shopify`
-- Verify environment variables loaded
-- Check network tab for API errors
+### Database Issues
+- Verify connection string
+- Check Prisma schema
+- Run migrations: `pnpm prisma migrate dev`
 
 ### Payment Issues
 - Verify Stripe keys (test vs production)
 - Check webhook delivery in Stripe Dashboard
 - Test with Stripe test cards
+- Review webhook event logs
 
 ---
 
 **Related Modules:**
 - Enterprise features: `.claude/CLAUDE-ENTERPRISE.md`
-- Shopify integration: `.claude/CLAUDE-SHOPIFY.md`

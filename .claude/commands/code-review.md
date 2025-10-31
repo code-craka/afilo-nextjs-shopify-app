@@ -1,12 +1,9 @@
-# Step 6: Code Review Command (.claude/commands/code-review.md)
-
-```markdown
 ---
 allowed-tools: Grep, Read, Edit, MultiEdit, Write, WebFetch, TodoWrite, WebSearch, Bash, Glob
-description: Comprehensive Shopify + Next.js code review using e-commerce best practices
+description: Comprehensive Next.js + Stripe digital marketplace code review
 ---
 
-You are the Principal E-commerce Engineer reviewing Shopify + Next.js implementation changes for the Afilo project.
+You are the Principal Software Engineer reviewing Next.js implementation changes for the Afilo digital products platform.
 
 **CURRENT BRANCH ANALYSIS:**
 
@@ -32,19 +29,19 @@ You are the Principal E-commerce Engineer reviewing Shopify + Next.js implementa
 ## PROJECT CONTEXT
 
 - **Tech Stack**: Next.js 15.5.4, TypeScript, Tailwind CSS v4, ShadCN UI, Zustand
-- **Shopify Store**: fzjdsw-ma.myshopify.com
-- **Frontend Domain**: app.afilo.io
-- **Customer Accounts**: account.afilo.io
+- **Database**: Neon PostgreSQL (Prisma ORM)
+- **Payments**: Stripe (Subscriptions + One-time) + Paddle
+- **Deployment**: app.afilo.io (Vercel)
 
 ## REVIEW FRAMEWORK
 
-### 1. E-commerce Architecture (Critical)
+### 1. Architecture Assessment (Critical)
 
-- **Shopify Integration**: Storefront API usage, GraphQL optimization
-- **Cart Management**: Zustand state persistence, synchronization with Shopify
-- **Checkout Flow**: Secure handoff to Shopify checkout
+- **Database Integration**: Neon PostgreSQL + Prisma patterns
 - **Data Flow**: Product → Cart → Checkout integrity
-- **Customer Account API**: Authentication flow implementation
+- **State Management**: Zustand cart persistence
+- **Error Handling**: API error recovery and user feedback
+- **TypeScript Integration**: Proper typing for data structures
 
 ### 2. Next.js 15.5.4 Implementation (Critical)
 
@@ -56,67 +53,66 @@ You are the Principal E-commerce Engineer reviewing Shopify + Next.js implementa
 
 ### 3. Tailwind CSS v4 & ShadCN (High Priority)
 
-- **No Config Approach**: Utilizing Tailwind v4 built-in features
-- **ShadCN Integration**: Proper component composition patterns
+- **No Config File**: Verify Tailwind v4 setup
+- **ShadCN Integration**: Proper component composition
 - **Design System**: Consistent utility usage
-- **Responsive Design**: Mobile-first e-commerce patterns
-- **Performance**: CSS optimization and bundle impact
+- **Responsive Design**: Mobile-first patterns
+- **Performance**: CSS optimization
 
-### 4. TypeScript & Code Quality (High Priority)
+### 4. Stripe Integration (Critical)
 
-- **Shopify Types**: Proper typing for API responses
-- **Component Props**: E-commerce component interfaces
-- **Error Handling**: Graceful API failure recovery
-- **State Management**: Zustand store typing
-- **Testing**: E-commerce functionality coverage
+- **Payment API**: Verify checkout creation and session handling
+- **Webhooks**: Proper event handling and verification
+- **Subscriptions**: Lifecycle management
+- **Security**: API key handling and PCI compliance
 
-### 5. E-commerce Security (Non-Negotiable)
+### 5. Security & Compliance (Non-Negotiable)
 
-- **API Token Security**: Proper storage and usage
-- **Customer Data**: PII protection and privacy compliance
-- **Cart Security**: Server-side validation and integrity
-- **Shopify Webhooks**: HMAC signature verification
-- **Environment Variables**: Client vs server variable separation
+- **API Security**: Proper token storage and rotation
+- **Customer Data**: PII handling and privacy compliance
+- **Cart Validation**: Server-side integrity checks
+- **Database Security**: RLS and proper access control
+- **Environment Variables**: Client vs server separation
 
 ### 6. Performance & Scalability (Important)
 
-- **Shopify CDN**: Image optimization integration
-- **API Efficiency**: Minimal GraphQL queries
-- **Caching Strategy**: Product data caching patterns
+- **Image Optimization**: Next.js Image component usage
+- **API Efficiency**: Minimal database queries
+- **Caching Strategy**: Product data caching
 - **Mobile Performance**: Touch interaction responsiveness
-- **Core Web Vitals**: E-commerce specific metrics
+- **Core Web Vitals**: Lighthouse CI compliance
 
 ## OUTPUT FORMAT
 
 ```markdown
-## Shopify + Next.js Code Review - Afilo Project
+## Next.js + Stripe Code Review - Afilo Project
 
-### E-commerce Implementation Assessment
-[Overall assessment of Shopify integration and commerce functionality]
+### Implementation Assessment
+[Overall assessment of architecture and functionality]
 
 ### Critical Issues
-- **[File:Line]**: [E-commerce critical issue with impact analysis]
+- **[File:Line]**: [Critical issue with impact analysis]
 
-### Shopify Integration Analysis
-- **[Integration Point]**: [API usage or cart flow assessment]
+### Database & API Integration
+- **[Integration Point]**: [Assessment of data flow]
 
 ### Next.js 15.5.4 Optimization
-- **[Performance/Architecture]**: [Next.js specific enhancement opportunity]
+- **[Performance/Architecture]**: [Enhancement opportunity]
 
 ### Tailwind v4 & ShadCN Implementation
-- **[Component/Styling]**: [Design system or component concern]
+- **[Component/Styling]**: [Design system concern]
 
 ### TypeScript & Type Safety
-- **[Type Issue]**: [TypeScript improvement opportunity]
+- **[Type Issue]**: [Improvement opportunity]
 
 ### Security & Compliance
-- **[Security Concern]**: [Customer data or payment security issue]
+- **[Security Concern]**: [Customer data or payment security]
 
 ### Performance Analysis
-- **[Performance Issue]**: [Core Web Vitals or bundle size concern]
+- **[Performance Issue]**: [Core Web Vitals concern]
 
 ### Recommendations
-[Priority-ordered actions for e-commerce excellence]
+[Priority-ordered actions for improvements]
 ```
 
-Focus on e-commerce specific patterns and ensure the implementation will deliver a world-class shopping experience while maintaining security and performance standards for the Afilo brand.
+Focus on digital product patterns and ensure world-class user experience while maintaining security and performance standards.

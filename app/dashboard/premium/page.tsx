@@ -10,8 +10,7 @@ import {
   Key,
   DollarSign,
   Shield,
-  BarChart3,
-  Settings
+  BarChart3
 } from 'lucide-react';
 import EnterpriseHeader from '@/components/enterprise/EnterpriseHeader';
 import PremiumMetricsCard from '@/components/enterprise/PremiumMetricsCard';
@@ -20,7 +19,7 @@ import ApiKeyManager from '@/components/enterprise/ApiKeyManager';
 import BillingOverview from '@/components/enterprise/BillingOverview';
 import SecurityPanel from '@/components/enterprise/SecurityPanel';
 import AdvancedAnalytics from '@/components/enterprise/AdvancedAnalytics';
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Mock data for charts
 const revenueData = [
@@ -43,20 +42,12 @@ const apiUsageData = [
   { hour: '23:00', calls: 2130 },
 ];
 
-const productDistribution = [
-  { name: 'AI Tools', value: 35, color: '#8b5cf6' },
-  { name: 'Templates', value: 28, color: '#3b82f6' },
-  { name: 'Scripts', value: 22, color: '#10b981' },
-  { name: 'Starter Kits', value: 15, color: '#f59e0b' },
-];
-
 type Tab = 'overview' | 'team' | 'api' | 'billing' | 'security' | 'analytics';
 
 export default function PremiumDashboardPage() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [hasSubscription, setHasSubscription] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
   useEffect(() => {
@@ -79,7 +70,6 @@ export default function PremiumDashboardPage() {
           return;
         }
 
-        setHasSubscription(true);
         setLoading(false);
       } catch (error) {
         console.error('Subscription check failed:', error);
@@ -114,14 +104,7 @@ export default function PremiumDashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Mesh Gradient Overlay */}
       <div className="fixed inset-0 opacity-30 pointer-events-none">
-        <div className="absolute inset-0" style={{
-          background: `
-            radial-gradient(at 0% 0%, #1e1b4b 0%, transparent 50%),
-            radial-gradient(at 100% 0%, #1e3a8a 0%, transparent 50%),
-            radial-gradient(at 100% 100%, #4c1d95 0%, transparent 50%),
-            radial-gradient(at 0% 100%, #0f172a 0%, transparent 50%)
-          `
-        }} />
+        <div className="absolute inset-0 radial-gradient-mesh-dark" />
       </div>
 
       {/* Content */}

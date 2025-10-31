@@ -228,12 +228,12 @@ export default function Footer() {
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <span>Powered by</span>
               <a
-                href="https://shopify.com"
+                href="https://stripe.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-gray-400 hover:text-white transition-colors"
               >
-                Shopify
+                Stripe
               </a>
               <span>•</span>
               <a

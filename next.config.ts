@@ -1,21 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Image Optimization (Week 4)
+  // Image Optimization
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'cdn.shopify.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.myshopify.com',
-        port: '',
-        pathname: '/**',
-      },
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
@@ -32,7 +20,7 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'], // Modern image formats
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840], // Responsive breakpoints
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // Icon sizes
-    minimumCacheTTL: 31536000, // Cache for 1 year (immutable Shopify CDN)
+    minimumCacheTTL: 31536000, // Cache for 1 year
     dangerouslyAllowSVG: false, // Security: block SVG uploads
     contentDispositionType: 'attachment', // Security: force download for unknown types
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;", // CSP for images
@@ -60,9 +48,7 @@ const nextConfig: NextConfig = {
 
   // Build Configuration
   outputFileTracingRoot: __dirname,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Note: eslint configuration moved to eslint.config.js (Next.js 16+)
   typescript: {
     ignoreBuildErrors: false, // Enforce TypeScript strict mode
   },
@@ -81,7 +67,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.shopify.com https://api.stripe.com https://challenges.cloudflare.com https://cloudflareinsights.com https://www.google-analytics.com https://*.clerk.accounts.dev https://clerk.app.afilo.io",
+              "connect-src 'self' https://api.stripe.com https://challenges.cloudflare.com https://cloudflareinsights.com https://www.google-analytics.com https://*.clerk.accounts.dev https://clerk.app.afilo.io",
               "frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://*.clerk.accounts.dev",
               "worker-src 'self' blob:",
               "base-uri 'self'",

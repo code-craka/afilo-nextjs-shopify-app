@@ -22,7 +22,7 @@ interface ErrorDisplayProps {
  * Provides consistent, user-friendly error messages across the application
  *
  * Variants:
- * - api: Shopify/Stripe API failures
+ * - api: Stripe/Payment API failures
  * - validation: Form validation errors
  * - network: Network connectivity issues
  * - permission: Authorization/access denied errors

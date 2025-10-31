@@ -3,8 +3,9 @@
 [![Next.js](https://img.shields.io/badge/Next.js-15.5.4-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC)](https://tailwindcss.com/)
-[![Shopify](https://img.shields.io/badge/Shopify-Storefront_API-95BF47)](https://shopify.dev/docs/storefront-api)
 [![Stripe](https://img.shields.io/badge/Stripe-ACH_+_Cards-635BFF)](https://stripe.com)
+[![Neon](https://img.shields.io/badge/Neon-PostgreSQL-00E699)](https://neon.tech)
+[![Clerk](https://img.shields.io/badge/Clerk-Auth-6C47FF)](https://clerk.com)
 [![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000)](https://vercel.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Build Status](https://github.com/code-craka/afilo-nextjs-shopify-app/workflows/CI/badge.svg)](https://github.com/code-craka/afilo-nextjs-shopify-app/actions)
@@ -15,7 +16,7 @@
 [![Payments](https://img.shields.io/badge/Payments-Ready-success)](docs/STRIPE_SETUP_GUIDE.md)
 [![Production](https://img.shields.io/badge/Status-Production_Ready-success)](https://app.afilo.io)
 
-> **Enterprise-grade digital marketplace commanding Fortune 500 pricing** - Premium AI-powered software platform built with Next.js 15, TypeScript, and Shopify
+> **Enterprise-grade digital marketplace commanding Fortune 500 pricing** - Premium AI-powered software platform built with Next.js 15, TypeScript, Stripe, and Neon PostgreSQL
 
 **Author:** [Rihan](https://github.com/code-craka)
 **Live Demo:** [app.afilo.io](https://app.afilo.io)
@@ -74,11 +75,11 @@
 ### 🔒 Enterprise Security (January 2025)
 - **🛡️ Security Score**: 9/10 (Enterprise-grade, Fortune 500 ready)
 - **🔐 IDOR Protection**: Cart ownership validation on all endpoints
-- **🔑 Token Security**: Server-only Shopify client (never exposed to client)
+- **🔑 Token Security**: Server-only API clients (never exposed to client)
 - **⚡ Distributed Rate Limiting**: Upstash Redis for production-grade rate limiting
-- **📊 Security Monitoring**: `/api/security/test` endpoint with 7 automated tests
+- **📊 Security Monitoring**: Comprehensive security testing and validation
 - **📝 Audit Logging**: Complete security event trail for compliance
-- **🚀 Performance**: 6.7x faster cart validation (batch product fetching)
+- **🚀 Performance**: Optimized cart validation with batch product fetching
 
 ## 💎 Premium Pricing
 
@@ -107,35 +108,40 @@
 
 ```mermaid
 graph TD
-    A[Next.js 15 Frontend] --> B[Shopify Storefront API]
-    A --> C[Enterprise Cart Store]
-    A --> D[Subscription Manager]
-    A --> E[Quote Builder]
-    B --> F[Product Catalog]
-    B --> G[Customer Accounts]
-    C --> H[License Management]
-    C --> I[Volume Discounts]
-    D --> J[Usage Analytics]
-    D --> K[Billing Integration]
-    E --> L[ROI Calculator]
-    E --> M[Requirements Engine]
+    A[Next.js 15 Frontend] --> B[Stripe API]
+    A --> C[Neon PostgreSQL]
+    A --> D[Clerk Auth]
+
+    B --> E[Payment Processing]
+    B --> F[Subscription Management]
+    B --> G[Invoice Generation]
+
+    C --> H[Product Catalog]
+    C --> I[Cart Storage]
+    C --> J[User Profiles]
+    C --> K[Order History]
+
+    D --> L[Google OAuth]
+    D --> M[Session Management]
 
     subgraph "Enterprise Features"
         N[Premium Pricing Display]
         O[Subscription Dashboard]
-        P[Custom Quote System]
-        Q[Volume Calculator]
+        P[Analytics & Monitoring]
+        Q[Billing Portal]
+        R[License Management]
+        S[Volume Discounts]
     end
 
     subgraph "Deployment"
-        R[Vercel Frontend]
-        S[Shopify Backend]
-        T[Custom Domains]
+        T[Vercel Edge]
+        U[Neon Serverless DB]
+        V[Custom Domains]
     end
 
-    A --> R
-    B --> S
-    R --> T
+    A --> T
+    C --> U
+    T --> V
 ```
 
 ### Core Enterprise Components
@@ -153,7 +159,9 @@ graph TD
 - **Node.js**: 18.17+ or 20.3+ (LTS recommended)
 - **pnpm**: 8.0+ (required - do not use npm or yarn)
 - **Git**: Latest version
-- **Shopify Store**: Access to Shopify Storefront API
+- **Stripe Account**: For payment processing and subscriptions
+- **Neon Account**: For PostgreSQL database
+- **Clerk Account**: For authentication
 
 ### Installation
 
@@ -171,7 +179,7 @@ graph TD
 3. **Environment setup**
    ```bash
    cp .env.example .env.local
-   # Edit .env.local with your Shopify credentials
+   # Edit .env.local with your Stripe, Neon, and Clerk credentials
    ```
 
 4. **Start development server**
@@ -193,11 +201,13 @@ graph TD
 - **State**: Zustand with persistence for cart & subscriptions
 
 ### Backend & APIs
-- **E-commerce**: Shopify Storefront API v2024.10
-- **GraphQL**: Advanced fragment optimization
-- **Authentication**: Shopify Customer Accounts API
-- **Subscriptions**: Enhanced Shopify subscription support
-- **Enterprise Features**: Custom pricing, quotes, analytics
+- **Database**: Neon PostgreSQL (Serverless)
+- **ORM**: Prisma 6.18.0 with Neon adapter
+- **Payment Processing**: Stripe 19.1.0 (Subscriptions + One-time)
+- **Authentication**: Clerk 6.34.0 (Google OAuth, WebAuthn)
+- **Rate Limiting**: Upstash Redis (@upstash/ratelimit 2.0.6)
+- **Email**: Resend 6.2.2
+- **Enterprise Features**: Custom pricing, quotes, analytics, invoicing
 
 ### Enterprise Tooling
 - **Package Manager**: pnpm (required)
@@ -212,27 +222,42 @@ graph TD
 afilo-nextjs-shopify-app/
 ├── 📁 app/                          # Next.js App Router
 │   ├── 📄 page.tsx                  # Premium homepage
+│   ├── 📁 dashboard/                # User & admin dashboards
 │   ├── 📁 enterprise/               # Enterprise portal
-│   │   └── 📄 page.tsx             # Enterprise pricing & features
-│   ├── 📁 products/                # Product catalog
-│   └── 📁 test-shopify/            # API testing
+│   ├── 📁 products/                 # Product catalog
+│   ├── 📁 checkout/                 # Checkout flow
+│   ├── 📁 pricing/                  # Pricing pages
+│   └── 📁 api/                      # API routes
+│       ├── 📁 products/             # Product management
+│       ├── 📁 cart/                 # Cart operations
+│       ├── 📁 stripe/               # Stripe integration
+│       ├── 📁 billing/              # Billing & subscriptions
+│       └── 📁 webhooks/             # Webhook handlers
 ├── 📁 components/                   # Enterprise components
-│   ├── 📄 PremiumPricingDisplay.tsx # Enterprise pricing tiers
+│   ├── 📄 StripePricingTable.tsx    # Stripe pricing table
 │   ├── 📄 SubscriptionManager.tsx   # Subscription management
-│   ├── 📄 EnterpriseQuoteBuilder.tsx # Custom quote system
-│   ├── 📄 ProductGrid.tsx          # Enhanced product display
-│   ├── 📄 DigitalCartWidget.tsx    # Advanced cart system
-│   └── 📁 ui/                      # ShadCN UI components
-├── 📁 lib/                         # Core utilities
-│   ├── 📄 shopify.ts              # Enhanced Shopify API client
-│   └── 📄 utils.ts                # Utility functions
-├── 📁 store/                       # State management
-│   └── 📄 digitalCart.ts          # Enterprise cart & licensing
-├── 📁 hooks/                       # Custom React hooks
-│   └── 📄 useDigitalCart.ts       # Cart operations with licensing
-├── 📁 types/                       # TypeScript definitions
-│   └── 📄 shopify.ts              # Enhanced Shopify & enterprise types
-└── 📁 .claude/                     # Claude AI configuration
+│   ├── 📄 ProductGrid.tsx           # Enhanced product display
+│   ├── 📄 DigitalCartWidget.tsx     # Advanced cart system
+│   ├── 📁 dashboard/                # Dashboard components
+│   ├── 📁 billing/                  # Billing components
+│   └── 📁 ui/                       # ShadCN UI components
+├── 📁 lib/                          # Core utilities
+│   ├── 📄 prisma.ts                 # Prisma client (Neon)
+│   ├── 📄 stripe-server.ts          # Stripe server client
+│   ├── 📄 stripe-products.ts        # Product sync
+│   ├── 📁 analytics/                # Analytics services
+│   ├── 📁 billing/                  # Billing utilities
+│   └── 📄 utils.ts                  # Utility functions
+├── 📁 store/                        # State management
+│   └── 📄 cart.ts                   # Cart store (Zustand)
+├── 📁 hooks/                        # Custom React hooks
+│   └── 📄 useDigitalCart.ts         # Cart operations
+├── 📁 types/                        # TypeScript definitions
+│   └── 📄 product.ts                # Product types (Zod)
+├── 📁 prisma/                       # Database
+│   ├── 📄 schema.prisma             # Database schema
+│   └── 📁 migrations/               # Migrations
+└── 📁 .claude/                      # Claude AI configuration
 ```
 
 ## 🔧 Configuration
@@ -242,33 +267,37 @@ afilo-nextjs-shopify-app/
 Create a `.env.local` file in the root directory:
 
 ```env
-# Shopify Configuration (Required)
-NEXT_PUBLIC_SHOPIFY_STORE_DOMAIN=fzjdsw-ma.myshopify.com
+# Database Configuration (Required)
+DATABASE_URL="postgresql://user:password@host/database"
 
-# Shopify Storefront API Access Token (SERVER-SIDE ONLY)
-# This is a secret and should NOT be prefixed with NEXT_PUBLIC_
-# Grant "unauthenticated_read_product_listings" and "unauthenticated_read_checkouts" scopes.
-SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_server_side_storefront_token
+# Clerk Authentication (Required)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
+CLERK_SECRET_KEY="sk_test_..."
+NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
+NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
 
-# Site Metadata
-NEXT_PUBLIC_SITE_URL=https://app.afilo.io
+# Stripe Payment Processing (Required)
+STRIPE_SECRET_KEY="sk_test_..."
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
 
-# Google Analytics (Optional)
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-FTSGZKX3LH
+# Site Configuration
+NEXT_PUBLIC_APP_URL="https://app.afilo.io"
+NEXT_PUBLIC_SITE_URL="https://app.afilo.io"
 
-# Cloudflare Turnstile (Recommended for Forms)
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAB3zV7C4xdvUgE0h
-TURNSTILE_SECRET_KEY=0x4AAAAAAB3zV3oGCjnruHYI65VXbUxWcEQ
+# Email Service (Required)
+RESEND_API_KEY="re_..."
 
-# Customer Accounts (Optional)
-NEXT_PUBLIC_CUSTOMER_ACCOUNT_CLIENT_ID=your_client_id
+# Rate Limiting (Required for Production)
+UPSTASH_REDIS_REST_URL="https://..."
+UPSTASH_REDIS_REST_TOKEN="..."
 
-# Enterprise Integrations (Optional)
-NEXT_PUBLIC_ENTERPRISE_API_URL=your_enterprise_api
-NEXT_PUBLIC_ANALYTICS_KEY=your_analytics_key
+# Analytics (Optional)
+NEXT_PUBLIC_GA_MEASUREMENT_ID="G-..."
+NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION="..."
 
 # Development (Optional)
-NEXT_PUBLIC_VERCEL_URL=your_preview_url
+NEXT_PUBLIC_VERCEL_URL="your_preview_url"
 ANALYZE=true  # Bundle analyzer
 ```
 
@@ -323,7 +352,7 @@ ANALYZE=true  # Bundle analyzer
 3. **Open Enterprise Tools**:
    - Main app: <http://localhost:3000>
    - Enterprise portal: <http://localhost:3000/enterprise>
-   - API testing: <http://localhost:3000/test-shopify>
+   - Dashboard: <http://localhost:3000/dashboard>
    - Product catalog: <http://localhost:3000/products>
 
 ### Enterprise Code Standards
@@ -336,50 +365,42 @@ ANALYZE=true  # Bundle analyzer
 ### Enterprise API Patterns
 
 ```typescript
-// Example: Enterprise pricing integration
-import { PremiumPricingDisplay } from '@/components/PremiumPricingDisplay';
-import { useSubscriptionManager } from '@/hooks/useSubscriptionManager';
+// Example: Product management with Stripe
+import { getProducts } from '@/lib/db/products';
+import { syncWithStripe } from '@/lib/stripe-products';
 
-const EnterprisePage = () => {
-  const { subscriptions, analytics } = useSubscriptionManager();
+// Fetch products from database
+const products = await getProducts({ limit: 20 });
 
-  return (
-    <PremiumPricingDisplay
-      onSelectTier={(tier, billing) => {
-        // Handle enterprise tier selection
-      }}
-      showComparison={true}
-    />
-  );
-};
+// Sync product with Stripe
+await syncWithStripe(productId);
 ```
 
 ## 🧪 Testing
 
 ### Enterprise Testing Suite
 
-1. **API Connectivity**:
+1. **Run Test Suite**:
    ```bash
-   pnpm dev --turbopack
-   # Visit http://localhost:3000/test-shopify
+   pnpm test
    ```
 
 2. **Enterprise Features**:
-   - Test premium pricing display
+   - Test product catalog and search
    - Verify subscription management
-   - Check quote builder functionality
-   - Validate ROI calculations
+   - Check checkout flow
+   - Validate billing and invoicing
 
-3. **Cart & Licensing**:
-   - Add enterprise products to cart
+3. **Cart & Checkout**:
+   - Add products to cart
    - Change license types and quantities
-   - Verify volume discount calculations
-   - Test educational discount application
+   - Test Stripe checkout integration
+   - Verify webhook handling
 
 ### Enterprise Debug Tools
 
 - **Console Logging**: Comprehensive enterprise feature logs
-- **GraphQL Explorer**: Enhanced query testing
+- **API Testing**: Test API routes with proper authentication
 - **Error Boundaries**: Enterprise-grade error handling
 - **Performance Monitoring**: Enterprise SLA compliance tracking
 
@@ -413,29 +434,35 @@ const EnterprisePage = () => {
 
 ## 📖 API Documentation
 
-### Enterprise Shopify Integration
+### Product API
 
 ```typescript
-// Enhanced API Functions with Enterprise Features
-export async function getProducts(params: ProductsQueryParams): Promise<ShopifyProduct[]>
-export async function getEnterpriseProduct(handle: string): Promise<EnterpriseProduct | null>
-export async function createSubscription(params: SubscriptionParams): Promise<Subscription>
-export async function calculateROI(requirements: EnterpriseRequirements): Promise<ROIProjection>
+// Product Management
+GET  /api/products              // List products with filters
+GET  /api/products/[handle]     // Get single product
+POST /api/products              // Create product (admin)
+POST /api/products/sync-stripe  // Sync with Stripe
 ```
 
-### Enterprise Cart API
+### Cart API
 
 ```typescript
-// Advanced Cart Operations with Licensing
-const {
-  cart,
-  subscriptions,
-  addToCart,
-  changeLicense,
-  calculateVolumeDiscount,
-  applyEducationalDiscount,
-  generateQuote
-} = useDigitalCart();
+// Cart Operations
+GET    /api/cart/items          // List cart items
+POST   /api/cart/items          // Add to cart
+PATCH  /api/cart/items/[id]     // Update item
+DELETE /api/cart/items/[id]     // Remove item
+POST   /api/cart/sync           // Sync with server
+```
+
+### Stripe Integration
+
+```typescript
+// Checkout & Billing
+POST /api/stripe/create-checkout-session     // Create checkout
+POST /api/stripe/create-cart-checkout        // Cart checkout
+POST /api/stripe/webhook                     // Handle webhooks
+POST /api/billing/create-portal-session      // Customer portal
 ```
 
 ## 🤝 Contributing
@@ -461,7 +488,7 @@ const {
 
 ### Enterprise Code Review
 
-- Use `@shopify-code-review` for e-commerce reviews
+- Use `@ecommerce-security-review` for payment and security reviews
 - Use `@nextjs-design-review` for enterprise UI changes
 - Run `/security-review` for enterprise security features
 - All enterprise features require thorough testing
@@ -480,7 +507,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-**Built for Enterprise Success** 🚀 | **Commanding Fortune 500 Pricing** 💎 | **Powered by Next.js & Shopify** ⚡
+**Built for Enterprise Success** 🚀 | **Commanding Fortune 500 Pricing** 💎 | **Powered by Next.js, Stripe & Neon** ⚡
 
 [🚀 Live Demo](https://app.afilo.io) • [🏢 Enterprise Portal](https://app.afilo.io/enterprise) • [📚 Documentation](./docs/) • [🐛 Report Bug](https://github.com/code-craka/afilo-nextjs-shopify-app/issues) • [💡 Request Feature](https://github.com/code-craka/afilo-nextjs-shopify-app/issues)
 

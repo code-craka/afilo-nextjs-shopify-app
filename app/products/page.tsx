@@ -6,22 +6,22 @@ import { motion } from 'framer-motion';
 import Navigation from '@/components/Navigation';
 import ProductGrid from '@/components/ProductGrid';
 import { useDigitalCart } from '@/hooks/useDigitalCart';
-import type { ShopifyProduct } from '@/types/shopify';
+import type { Product } from '@/types/product';
 
 export default function ProductsPage() {
   const { addProductToCart } = useDigitalCart();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'TITLE' | 'PRICE' | 'BEST_SELLING' | 'CREATED_AT' | 'UPDATED_AT'>('UPDATED_AT');
-  const [sortReverse, setSortReverse] = useState(false);
+  const [sortBy, setSortBy] = useState<'title' | 'price' | 'createdAt' | 'updatedAt'>('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Handle product click (navigate to product page)
-  const handleProductClick = (product: ShopifyProduct) => {
+  const handleProductClick = (product: Product) => {
     router.push(`/products/${product.handle}`);
   };
 
   // Handle add to cart
-  const handleAddToCart = async (product: ShopifyProduct, variantId: string) => {
+  const handleAddToCart = async (product: Product, variantId: string) => {
     console.log('Adding to digital cart:', { product: product.title, variantId });
     
     // Use the digital cart system
@@ -110,30 +110,29 @@ export default function ProductsPage() {
               <div className="flex items-center gap-3">
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'TITLE' | 'PRICE' | 'BEST_SELLING' | 'CREATED_AT' | 'UPDATED_AT')}
+                  onChange={(e) => setSortBy(e.target.value as 'title' | 'price' | 'createdAt' | 'updatedAt')}
                   aria-label="Sort products by"
                   className="block pl-4 pr-10 py-4 backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 transition-all appearance-none cursor-pointer"
                 >
-                  <option value="UPDATED_AT" className="bg-gray-900">Latest</option>
-                  <option value="TITLE" className="bg-gray-900">Name</option>
-                  <option value="PRICE" className="bg-gray-900">Price</option>
-                  <option value="BEST_SELLING" className="bg-gray-900">Best Selling</option>
-                  <option value="CREATED_AT" className="bg-gray-900">Newest</option>
+                  <option value="updatedAt" className="bg-gray-900">Latest</option>
+                  <option value="title" className="bg-gray-900">Name</option>
+                  <option value="price" className="bg-gray-900">Price</option>
+                  <option value="createdAt" className="bg-gray-900">Newest</option>
                 </select>
 
                 <motion.button
-                  onClick={() => setSortReverse(!sortReverse)}
+                  onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className={`p-4 backdrop-blur-xl rounded-2xl border transition-all ${
-                    sortReverse
+                    sortOrder === 'asc'
                       ? 'bg-blue-500/30 border-blue-400/50'
                       : 'bg-white/10 border-white/20 hover:bg-white/20'
                   }`}
-                  title={`Sort ${sortReverse ? 'ascending' : 'descending'}`}
+                  title={`Sort ${sortOrder === 'asc' ? 'ascending' : 'descending'}`}
                 >
                   <svg
-                    className={`h-5 w-5 text-white transition-transform duration-300 ${sortReverse ? 'rotate-180' : ''}`}
+                    className={`h-5 w-5 text-white transition-transform duration-300 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -152,7 +151,7 @@ export default function ProductsPage() {
         <ProductGrid
           searchQuery={searchQuery}
           sortBy={sortBy}
-          sortReverse={sortReverse}
+          sortOrder={sortOrder}
           onProductClick={handleProductClick}
           onAddToCart={handleAddToCart}
           productsPerPage={16}
@@ -169,7 +168,7 @@ export default function ProductsPage() {
               Afilo
             </h3>
             <p className="text-white/60 text-sm">
-              © 2025 Afilo. All rights reserved. Powered by Shopify & Next.js.
+              © 2025 Afilo. All rights reserved. Powered by Next.js & Stripe.
             </p>
           </div>
         </div>

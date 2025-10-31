@@ -1,6 +1,6 @@
 # Afilo Claude Code Configuration
 
-Optimized context management system for efficient Claude Code development sessions.
+Optimized context management for efficient Claude Code development sessions.
 
 ## 🚀 Quick Start
 
@@ -9,27 +9,25 @@ Optimized context management system for efficient Claude Code development sessio
 ./.claude/context-monitor.sh
 ```
 
-### 2. Switch to Light Mode (Recommended for Daily Use)
+### 2. Switch to Light Mode (Recommended)
 ```bash
 ./.claude/switch-mode.sh light
 ./.claude/update-claude-md.sh light
 ```
 
-This reduces context load by **95%** (42,810 → ~2,000 tokens).
+Reduces context load by **95%** (42,810 → ~2,000 tokens).
 
 ## 📁 Configuration Files
 
 ### Core Modules
-- `CLAUDE-CORE.md` - Essential configuration (100 lines)
-- `CLAUDE-ENTERPRISE.md` - Stripe, pricing, billing features (150 lines)
-- `CLAUDE-SHOPIFY.md` - Product catalog, cart, API integration (120 lines)
-- `CLAUDE-WORKFLOWS.md` - Development workflows and standards (180 lines)
+- `CLAUDE-CORE.md` - Essential configuration (~100 lines)
+- `CLAUDE-ENTERPRISE.md` - Stripe, pricing, billing, products (~150 lines)
+- `CLAUDE-WORKFLOWS.md` - Development workflows and standards (~130 lines)
 
 ### MCP Configurations
 - `mcp-config-light.json` - Minimal (ShadCN only)
-- `mcp-config-enterprise.json` - Enterprise features (ShadCN + Context7 + Mem0)
-- `mcp-config-shopify.json` - E-commerce (ShadCN + Shopify + Context7)
-- `mcp-config-testing.json` - Debugging (ShadCN + Sequential Thinking + Exa)
+- `mcp-config-enterprise.json` - Enterprise (ShadCN + Context7 + Mem0)
+- `mcp-config-testing.json` - Debugging (ShadCN + Sequential Thinking)
 
 ### Scripts
 - `switch-mode.sh` - Switch between MCP modes
@@ -46,14 +44,13 @@ This reduces context load by **95%** (42,810 → ~2,000 tokens).
 |------|--------------|----------|
 | **Light** | ~500 tokens (95% ↓) | Quick fixes, routine tasks |
 | **Testing** | ~1,500 tokens (85% ↓) | Debugging, troubleshooting |
-| **Shopify** | ~2,000 tokens (80% ↓) | Product catalog, cart, API |
-| **Enterprise** | ~3,000 tokens (70% ↓) | Pricing, billing, subscriptions |
+| **Enterprise** | ~2,500 tokens (75% ↓) | Pricing, billing, products |
 
 ## 📊 Performance Improvements
 
 ### Before Optimization
 - Base context: ~42,810 tokens (21% of budget)
-- Session duration: Limited by rapid context consumption
+- Session duration: Limited by context consumption
 - Parallel sessions: Not practical
 
 ### After Optimization (Light Mode)
@@ -73,13 +70,9 @@ This reduces context load by **95%** (42,810 → ~2,000 tokens).
 
 ### Switch Based on Task
 ```bash
-# Working on Stripe billing
+# Working on Stripe billing/products
 ./.claude/switch-mode.sh enterprise
 ./.claude/update-claude-md.sh enterprise
-
-# Working on product grid
-./.claude/switch-mode.sh shopify
-./.claude/update-claude-md.sh shopify
 
 # Debugging
 ./.claude/switch-mode.sh testing
@@ -95,7 +88,7 @@ This reduces context load by **95%** (42,810 → ~2,000 tokens).
 
 - **Full Guide**: [CONTEXT-OPTIMIZATION-GUIDE.md](./CONTEXT-OPTIMIZATION-GUIDE.md)
 - **Quick Reference**: [QUICK-REFERENCE.md](./QUICK-REFERENCE.md)
-- **Project Config**: [CLAUDE.md](../CLAUDE.md) (auto-updated by scripts)
+- **Project Config**: [CLAUDE.md](../CLAUDE.md) (auto-updated)
 
 ## 🔧 Troubleshooting
 
@@ -117,12 +110,6 @@ Recreate:
 ./.claude/switch-mode.sh [mode]
 ```
 
-### Need Full Context
-Use full mode (not recommended for routine tasks):
-```bash
-./.claude/update-claude-md.sh full
-```
-
 ## 📈 Success Metrics
 
 **Expected Improvements:**
@@ -140,6 +127,6 @@ Use full mode (not recommended for routine tasks):
 
 ---
 
-**Version**: 1.0.0
+**Version**: 2.0.0
 **Last Updated**: January 2025
-**Maintained By**: Afilo Enterprise Development Team
+**Maintained By**: Afilo Development Team

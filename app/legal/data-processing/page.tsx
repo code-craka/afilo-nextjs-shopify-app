@@ -149,9 +149,9 @@ export default function DataProcessingPage() {
                   <td className="py-2">United States</td>
                 </tr>
                 <tr className="border-b border-gray-200">
-                  <td className="py-2">Shopify Inc.</td>
-                  <td className="py-2">E-commerce platform integration</td>
-                  <td className="py-2">Canada</td>
+                  <td className="py-2">Neon Inc.</td>
+                  <td className="py-2">Database services (PostgreSQL)</td>
+                  <td className="py-2">United States</td>
                 </tr>
                 <tr className="border-b border-gray-200">
                   <td className="py-2">Clerk.com</td>

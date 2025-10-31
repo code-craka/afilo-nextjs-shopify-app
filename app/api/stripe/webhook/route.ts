@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe, STRIPE_EVENTS, formatDisplayAmount } from '@/lib/stripe-server';
 import { generateUserCredentials } from '@/lib/credentials-generator';
 import { sendCredentialsEmail, sendRenewalConfirmationEmail, sendCancellationEmail, sendPaymentFailedEmail } from '@/lib/email-service';
+import { ProductAccessService } from '@/lib/stripe/services/product-access.service';
+import { prisma } from '@/lib/prisma';
 import { neon } from '@neondatabase/serverless';
 import Stripe from 'stripe';
 
@@ -488,9 +490,11 @@ async function handleDisputeClosed(dispute: Stripe.Dispute) {
 /**
  * Handle Checkout Session Completed
  *
- * ✅ CRITICAL: This is where we send credentials!
- * Fires immediately after customer completes payment for subscription.
- * Generate credentials and send welcome email with login details.
+ * ✅ CRITICAL: This is where we grant product access!
+ * Fires immediately after customer completes payment.
+ * For subscriptions: send credentials and track subscription
+ * For one-time purchases: grant product access
+ * For digital products: grant immediate access
  */
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   console.log('🎉 Checkout Session Completed:', {
@@ -502,90 +506,132 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     mode: session.mode,
   });
 
-  // Only process subscription checkouts (skip one-time payments)
-  if (session.mode !== 'subscription') {
-    console.log('ℹ️  Skipping non-subscription checkout');
-    return;
-  }
-
   try {
-    // Retrieve full subscription details
-    const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-    const product = await stripe.products.retrieve(subscription.items.data[0].price.product as string);
-
     const customerEmail = session.customer_details?.email;
     if (!customerEmail) {
       console.error('❌ No customer email found in session');
       return;
     }
 
-    // Extract plan details from product metadata
-    const planTier = product.metadata.tier || 'professional';
-    const userLimit = product.metadata.user_limit || '25';
-    const planName = product.name;
+    // Get or create clerk user ID from email (if not already in session)
+    // For now, use email as temporary identifier until Clerk integration is in place
+    const clerkUserId = session.client_reference_id || customerEmail;
 
-    // Generate secure credentials for customer
-    const credentials = await generateUserCredentials(
-      customerEmail,
-      planTier,
-      userLimit
-    );
+    // Handle subscription checkouts
+    if (session.mode === 'subscription') {
+      const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+      const product = await stripe.products.retrieve(subscription.items.data[0].price.product as string);
 
-    console.log('✅ Generated credentials for:', {
-      email: customerEmail,
-      username: credentials.username,
-      accountId: credentials.accountId,
-      planTier,
-      userLimit,
-    });
+      // Extract plan details from product metadata
+      const planTier = product.metadata.tier || 'professional';
+      const userLimit = product.metadata.user_limit || '25';
+      const planName = product.name;
+      const priceId = subscription.items.data[0].price.id;
 
-    // TODO: STORE CREDENTIALS IN DATABASE
-    // await db.subscription.create({
-    //   data: {
-    //     accountId: credentials.accountId,
-    //     email: credentials.email,
-    //     username: credentials.username,
-    //     hashedPassword: credentials.hashedPassword,
-    //     planTier: credentials.planTier,
-    //     userLimit: credentials.userLimit,
-    //     stripeSubscriptionId: subscription.id,
-    //     stripeCustomerId: session.customer as string,
-    //     status: 'active',
-    //     createdAt: new Date(),
-    //   },
-    // });
+      // Generate secure credentials for customer
+      const credentials = await generateUserCredentials(
+        customerEmail,
+        planTier,
+        userLimit
+      );
 
-    // Send welcome email with credentials
-    const interval = subscription.items.data[0].price.recurring?.interval;
-    const currentPeriodEnd = (subscription as any).current_period_end || Math.floor(Date.now() / 1000) + 2592000; // Default to 30 days from now
+      console.log('✅ Generated credentials for:', {
+        email: customerEmail,
+        username: credentials.username,
+        accountId: credentials.accountId,
+        planTier,
+        userLimit,
+      });
 
-    await sendCredentialsEmail({
-      credentials,
-      planName,
-      billingInterval: (interval === 'year' ? 'year' : 'month') as 'month' | 'year',
-      amount: session.amount_total || 0,
-      nextBillingDate: new Date(currentPeriodEnd * 1000).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    });
+      // Store subscription in database (optional - for analytics)
+      // NOTE: stripeCustomers table not yet implemented in database schema
+      // TODO: Add stripeCustomers model to prisma/schema.prisma when ready
+      console.log('[Webhook] Subscription stored in Stripe, analytics DB sync pending:', {
+        subscriptionId: subscription.id,
+        customerId: session.customer,
+        priceId,
+      });
 
-    console.log('✅ Credentials email sent to:', customerEmail);
+      // Send welcome email with credentials
+      const interval = subscription.items.data[0].price.recurring?.interval;
+      const currentPeriodEnd = (subscription as any).current_period_end || Math.floor(Date.now() / 1000) + 2592000;
 
-    // Update user role to premium for subscription buyers
-    const sql = neon(process.env.DATABASE_URL!);
-    await sql`
-      UPDATE user_profiles
-      SET role = 'premium', purchase_type = 'subscription'
-      WHERE email = ${customerEmail}
-    `;
-    console.log('✅ User role updated to premium');
+      await sendCredentialsEmail({
+        credentials,
+        planName,
+        billingInterval: (interval === 'year' ? 'year' : 'month') as 'month' | 'year',
+        amount: session.amount_total || 0,
+        nextBillingDate: new Date(currentPeriodEnd * 1000).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+      });
+
+      console.log('✅ Credentials email sent to:', customerEmail);
+
+      // Update user role to premium for subscription buyers
+      try {
+        const sql = neon(process.env.DATABASE_URL!);
+        await sql`
+          UPDATE user_profiles
+          SET role = 'premium', purchase_type = 'subscription'
+          WHERE email = ${customerEmail}
+        `;
+        console.log('✅ User role updated to premium');
+      } catch (dbError) {
+        console.error('ℹ️  Could not update user profile (table may not exist):', dbError);
+      }
+    }
+    // Handle one-time purchases (digital products)
+    else if (session.mode === 'payment') {
+      // Get line items to extract product ID
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+
+      for (const item of lineItems.data) {
+        const priceId = item.price?.id;
+        if (!priceId) continue;
+
+        // Get product ID from price
+        const price = await stripe.prices.retrieve(priceId, { expand: ['product'] });
+        const product = price.product as Stripe.Product;
+        const productId = product.id;
+
+        // Grant access to the product
+        try {
+          await ProductAccessService.grantAccess(
+            clerkUserId,
+            productId,
+            'purchased',
+            // For 1-year courses, set expiry to 1 year from now
+            product.metadata?.license_type === 'ONE_TIME_ANNUAL'
+              ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+              : undefined
+          );
+
+          console.log('✅ Access granted for product:', {
+            productId,
+            productName: product.name,
+            accessType: 'purchased',
+            clerkUserId,
+          });
+        } catch (accessError) {
+          console.error('❌ Error granting product access:', accessError);
+        }
+      }
+
+      // Send download/access confirmation email
+      const amount = session.amount_total || 0;
+      console.log('✅ One-time purchase processed:', {
+        amount: formatDisplayAmount(amount),
+        customer: customerEmail,
+      });
+    }
 
   } catch (error) {
     console.error('❌ Error processing checkout session:', error);
     // Don't throw - we don't want to mark webhook as failed
-    // Customer paid successfully, we'll retry credential delivery separately
+    // Customer paid successfully, we'll retry separately
   }
 }
 
@@ -593,7 +639,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
  * Handle Subscription Created
  *
  * Fires when subscription is created (same time as checkout.session.completed).
- * Use this for logging and analytics.
+ * Mark enterprise customers to grant free access to all marketplace products.
  */
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const sub = subscription as any;
@@ -605,12 +651,48 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     cancel_at_period_end: sub.cancel_at_period_end,
   });
 
-  // TODO: LOG SUBSCRIPTION CREATION
-  // await analytics.track('subscription_created', {
-  //   subscriptionId: subscription.id,
-  //   customerId: subscription.customer,
-  //   planId: subscription.items.data[0].price.id,
-  // });
+  try {
+    // Retrieve customer and subscription details
+    const customer = await stripe.customers.retrieve(subscription.customer as string);
+    const customerEmail = (customer as Stripe.Customer).email;
+    const product = await stripe.products.retrieve(subscription.items.data[0].price.product as string);
+
+    if (!customerEmail) {
+      console.error('❌ No customer email found');
+      return;
+    }
+
+    // Check if this is an enterprise subscription ($415+/month = $49,800+/year)
+    const monthlyPrice = subscription.items.data[0].price.unit_amount || 0;
+    const isEnterprise = monthlyPrice >= 41500; // $415 in cents
+
+    if (isEnterprise) {
+      const clerkUserId = customerEmail; // Temporary identifier
+      const planTier = product.metadata.tier || 'enterprise';
+
+      // Mark as enterprise customer (grants free access to all non-enterprise products)
+      try {
+        await ProductAccessService.markAsEnterpriseCustomer(clerkUserId, planTier);
+
+        console.log('✅ Enterprise customer marked:', {
+          clerkUserId,
+          planTier,
+          monthlyPrice: formatDisplayAmount(monthlyPrice),
+          subscriptionId: subscription.id,
+        });
+      } catch (accessError) {
+        console.error('❌ Error marking enterprise customer:', accessError);
+      }
+    } else {
+      console.log('ℹ️  Non-enterprise subscription:', {
+        monthlyPrice: formatDisplayAmount(monthlyPrice),
+        productName: product.name,
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Error processing subscription created:', error);
+  }
 }
 
 /**
@@ -645,7 +727,8 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
  * Handle Subscription Deleted
  *
  * Fires when subscription is canceled (either immediately or at period end).
- * Revoke access and send cancellation email.
+ * Revoke enterprise access (but preserve purchased/coupon access).
+ * Send cancellation email.
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log('🚫 Subscription Deleted:', {
@@ -666,11 +749,31 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       return;
     }
 
+    const clerkUserId = customerEmail; // Temporary identifier
+
     // Get plan name from subscription
     const priceId = subscription.items.data[0].price.id;
     const price = await stripe.prices.retrieve(priceId, { expand: ['product'] });
     const product = price.product as Stripe.Product;
     const planName = product.name || 'Your Subscription';
+
+    // Check if this was an enterprise subscription
+    const monthlyPrice = subscription.items.data[0].price.unit_amount || 0;
+    const wasEnterprise = monthlyPrice >= 41500; // $415 in cents
+
+    // If enterprise, revoke enterprise status (purchased/coupon access is preserved)
+    if (wasEnterprise) {
+      try {
+        await ProductAccessService.removeEnterpriseStatus(clerkUserId);
+
+        console.log('✅ Enterprise status revoked:', {
+          clerkUserId,
+          subscriptionId: subscription.id,
+        });
+      } catch (accessError) {
+        console.error('❌ Error removing enterprise status:', accessError);
+      }
+    }
 
     // Calculate access until date (current period end)
     const sub = subscription as any;
@@ -685,15 +788,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
           month: 'long',
           day: 'numeric',
         });
-
-    // TODO: REVOKE ACCESS IN DATABASE
-    // await db.subscription.update({
-    //   where: { stripeSubscriptionId: subscription.id },
-    //   data: {
-    //     status: 'canceled',
-    //     canceledAt: new Date(),
-    //   },
-    // });
 
     // Send cancellation confirmation email
     await sendCancellationEmail(

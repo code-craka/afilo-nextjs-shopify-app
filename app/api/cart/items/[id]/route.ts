@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@neondatabase/serverless';
+import prisma from '@/lib/prisma';
 
 /**
  * Cart Item Operations API
@@ -8,7 +8,6 @@ import { Pool } from '@neondatabase/serverless';
  * Individual item management (update, delete)
  */
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // PATCH - Update item (quantity or license type)
 export async function PATCH(
@@ -49,61 +48,63 @@ export async function PATCH(
       );
     }
 
-    // Build update query dynamically
-    const updates: string[] = [];
-    const values: any[] = [];
-    let paramIndex = 1;
+    // Build update data
+    const updateData: any = {
+      last_modified: new Date(),
+    };
 
     if (quantity !== undefined) {
-      updates.push(`quantity = $${paramIndex++}`);
-      values.push(quantity);
+      updateData.quantity = quantity;
     }
 
     if (licenseType !== undefined) {
-      updates.push(`license_type = $${paramIndex++}`);
-      values.push(licenseType);
+      updateData.license_type = licenseType;
     }
 
-    updates.push(`last_modified = NOW()`);
+    const updated = await prisma.cart_items.update({
+      where: {
+        id: itemId,
+        user_id: userId,
+      },
+      data: updateData,
+      select: {
+        id: true,
+        product_id: true,
+        variant_id: true,
+        title: true,
+        price: true,
+        quantity: true,
+        license_type: true,
+        image_url: true,
+        added_at: true,
+        last_modified: true,
+      },
+    });
 
-    // Add WHERE clause parameters
-    values.push(itemId);
-    values.push(userId);
+    return NextResponse.json({
+      success: true,
+      id: updated.id,
+      productId: updated.product_id,
+      variantId: updated.variant_id,
+      title: updated.title,
+      price: updated.price,
+      quantity: updated.quantity,
+      licenseType: updated.license_type,
+      imageUrl: updated.image_url,
+      addedAt: updated.added_at,
+      lastModified: updated.last_modified,
+    });
 
-    const result = await pool.query(
-      `UPDATE cart_items
-      SET ${updates.join(', ')}
-      WHERE id = $${paramIndex++}
-        AND user_id = $${paramIndex}
-        AND status = 'active'
-      RETURNING
-        id,
-        product_id as "productId",
-        variant_id as "variantId",
-        title,
-        price,
-        quantity,
-        license_type as "licenseType",
-        image_url as "imageUrl",
-        added_at as "addedAt",
-        last_modified as "lastModified"`,
-      values
-    );
+  } catch (error: any) {
+    console.error('PATCH /api/cart/items/[id] error:', error);
 
-    if (result.rows.length === 0) {
+    if (error.code === 'P2025') {
       return NextResponse.json(
         { error: 'Item not found or unauthorized' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      ...result.rows[0],
-    });
-
-  } catch (error: any) {
-    console.error('PATCH /api/cart/items/[id] error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to update item' },
       { status: 500 }
@@ -125,21 +126,12 @@ export async function DELETE(
 
     const { id: itemId } = await params;
 
-    const result = await pool.query(
-      `DELETE FROM cart_items
-      WHERE id = $1
-        AND user_id = $2
-        AND status = 'active'
-      RETURNING id`,
-      [itemId, userId]
-    );
-
-    if (result.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Item not found or unauthorized' },
-        { status: 404 }
-      );
-    }
+    await prisma.cart_items.delete({
+      where: {
+        id: itemId,
+        user_id: userId,
+      },
+    });
 
     return NextResponse.json({
       success: true,
@@ -148,6 +140,14 @@ export async function DELETE(
 
   } catch (error: any) {
     console.error('DELETE /api/cart/items/[id] error:', error);
+
+    if (error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Item not found or unauthorized' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       { error: error.message || 'Failed to remove item' },
       { status: 500 }

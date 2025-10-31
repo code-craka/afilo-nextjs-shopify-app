@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@neondatabase/serverless';
+import prisma from '@/lib/prisma';
 
 /**
  * Cart Sync API
@@ -9,7 +9,6 @@ import { Pool } from '@neondatabase/serverless';
  * Handles abandoned cart detection (30+ minutes inactive)
  */
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const ABANDONED_CART_THRESHOLD = 30 * 60 * 1000; // 30 minutes in milliseconds
 
@@ -24,39 +23,56 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { localItems = [] } = body;
 
+    // Calculate the cutoff time for abandoned carts
+    const thirtyMinutesAgo = new Date(Date.now() - ABANDONED_CART_THRESHOLD);
+
     // Mark abandoned carts (items not modified in 30+ minutes)
-    await pool.query(
-      `UPDATE cart_items
+    await prisma.$executeRaw`
+      UPDATE cart_items
       SET status = 'abandoned',
           abandoned_at = NOW()
-      WHERE user_id = $1
+      WHERE user_id = ${userId}
         AND status = 'active'
-        AND last_modified < NOW() - INTERVAL '30 minutes'`,
-      [userId]
-    );
+        AND last_modified < ${thirtyMinutesAgo}
+    `;
 
     // Get all active items from server
-    const result = await pool.query(
-      `SELECT
-        id,
-        product_id as "productId",
-        variant_id as "variantId",
-        title,
-        price,
-        quantity,
-        license_type as "licenseType",
-        image_url as "imageUrl",
-        added_at as "addedAt",
-        last_modified as "lastModified"
-      FROM cart_items
-      WHERE user_id = $1 AND status = 'active'
-      ORDER BY added_at DESC`,
-      [userId]
-    );
+    const items = await prisma.cart_items.findMany({
+      where: {
+        user_id: userId,
+        status: 'active',
+      },
+      orderBy: {
+        added_at: 'desc',
+      },
+      select: {
+        id: true,
+        product_id: true,
+        variant_id: true,
+        title: true,
+        price: true,
+        quantity: true,
+        license_type: true,
+        image_url: true,
+        added_at: true,
+        last_modified: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      items: result.rows,
+      items: items.map(item => ({
+        id: item.id,
+        productId: item.product_id,
+        variantId: item.variant_id,
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity,
+        licenseType: item.license_type,
+        imageUrl: item.image_url,
+        addedAt: item.added_at,
+        lastModified: item.last_modified,
+      })),
       syncedAt: new Date().toISOString(),
     });
 

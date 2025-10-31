@@ -12,7 +12,7 @@
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
 │  │   Pages      │  │  Components  │  │  State Mgmt  │         │
 │  │ /products    │  │ ProductGrid  │  │   Zustand    │         │
-│  │ /enterprise  │  │ PremiumUI    │  │ Digital Cart │         │
+│  │ /enterprise  │  │ Stripe UI    │  │ Digital Cart │         │
 │  │ /dashboard   │  │ Auth UI      │  │   License    │         │
 │  └──────────────┘  └──────────────┘  └──────────────┘         │
 └─────────────────────────────────────────────────────────────────┘
@@ -31,17 +31,18 @@
 │  Server-Side API Routes (app/api/**)                            │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
 │  │ /api/cart    │  │ /api/products│  │ /api/webhooks│         │
-│  │ CRUD + IDOR  │  │ Shopify Proxy│  │ Clerk Events │         │
-│  │ Protection   │  │ GraphQL      │  │ Auto Profile │         │
+│  │ CRUD + IDOR  │  │ DB + Stripe  │  │ Clerk/Stripe │         │
+│  │ Protection   │  │ Sync         │  │ Auto Profile │         │
 │  └──────────────┘  └──────────────┘  └──────────────┘         │
 └─────────────────────────────────────────────────────────────────┘
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    INTEGRATION LAYER                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
-│  │   Shopify    │  │    Clerk     │  │ Neon Database│         │
-│  │ Storefront   │  │ Google OAuth │  │  PostgreSQL  │         │
-│  │  API v2024   │  │ WebAuthN     │  │  Serverless  │         │
+│  │    Stripe    │  │    Clerk     │  │ Neon Database│         │
+│  │   Payments   │  │ Google OAuth │  │  PostgreSQL  │         │
+│  │ Subscriptions│  │ WebAuthN     │  │  Products +  │         │
+│  │   Webhooks   │  │ WebAuthN     │  │  User Data   │         │
 │  └──────────────┘  └──────────────┘  └──────────────┘         │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -56,14 +57,16 @@
 - **Framer Motion 12**: Professional animations, stagger effects, page transitions
 
 ### Backend & Integration
-- **Shopify Storefront API v2024-10**: GraphQL-based headless commerce
-- **Clerk v6.33.0**: Enterprise authentication with Google OAuth
-- **Neon Database**: Serverless PostgreSQL for user profiles & subscriptions
+- **Stripe 19.1.0**: Payment processing, subscriptions, webhooks
+- **Clerk v6.34.0**: Enterprise authentication with Google OAuth
+- **Neon PostgreSQL**: Serverless database for products, users, cart
+- **Prisma 6.18.0**: Type-safe ORM with Neon adapter
 - **Upstash Redis**: Distributed rate limiting across serverless instances
+- **Resend**: Transactional email service
 
 ### State & Data
 - **Zustand 5.0.8**: Cart state with persistence, license management
-- **GraphQL**: Optimized fragments, retry logic, batch fetching
+- **Prisma Client**: Type-safe database queries with connection pooling
 - **Server-Only Pattern**: Token security with `server-only` package
 
 ## Core Architectural Patterns
@@ -72,22 +75,23 @@
 **Enterprise-grade protection implemented Jan 30, 2025**
 
 ```typescript
-// lib/cart-security.ts - IDOR Protection
-validateCartOwnership(cartId, userId) → Prevents unauthorized access
+// Cart Ownership Protection
+validateCartOwnership(userId, cartItem) → Prevents unauthorized access
 logSecurityEvent() → Audit trail for compliance
 
 // lib/rate-limit.ts - Distributed Rate Limiting
+productsApiRateLimit: 100 req/15min
 cartRateLimit: 30 req/min per user/IP
-validationRateLimit: 20 req/15min (prevents pricing enumeration)
 checkoutRateLimit: 5 req/15min (prevents abuse)
 ```
 
 **Security Layers:**
 - IDOR vulnerability protection on all cart endpoints
-- Server-only Shopify token (never exposed to client)
+- Server-only API tokens (Stripe, Clerk - never exposed to client)
 - Clerk authentication with route protection middleware
 - Rate limiting headers in all API responses
 - Security event logging with user/IP tracking
+- Stripe webhook signature verification
 
 ### 2. Digital Product Specialization
 **Not typical e-commerce - software-focused architecture**
@@ -110,25 +114,26 @@ Regional Tax Calculation: US, CA, GB, DE, AU
 
 ```
 Server-Side Only:
-├── lib/shopify-server.ts (700+ lines) - GraphQL client with token
-├── lib/cart-security.ts - Ownership validation
+├── lib/prisma.ts - Database client with Neon adapter
+├── lib/stripe-server.ts - Stripe API client with secret key
 ├── app/api/** - All API routes with auth
 └── Server Components - Product fetching, auth checks
 
 Client-Side:
 ├── components/** - UI components with animations
-├── store/digitalCart.ts - Cart state (no API keys)
+├── store/cart.ts - Cart state (no API keys)
 ├── hooks/useDigitalCart.ts - Cart operations
 └── Client Components - Interactive UI, forms
 ```
 
 ### 4. Performance Optimization
-**6.7x faster cart validation (v3.1.0)**
+**Optimized database queries and caching**
 
-- **Batch Product Fetching**: Single API call for multiple products (2000ms → 300ms)
-- **GraphQL Fragments**: Reusable query patterns, minimal over-fetching
+- **Prisma Connection Pooling**: Efficient database connections with Neon adapter
+- **Request Deduplication**: Prevent duplicate API calls (lib/request-manager.ts)
+- **In-Memory Caching**: Product listings cached for 60s, search for 30s
 - **Redis Rate Limiting**: Distributed, persistent across deployments
-- **Retry Logic**: Exponential backoff for Shopify API failures
+- **Batch Database Queries**: Fetch multiple products in single query
 - **Optimistic Updates**: Instant UI feedback with background sync
 
 ## Data Flow
@@ -136,13 +141,14 @@ Client-Side:
 ### Product Display Flow
 ```
 1. User visits /products
-2. Server Component fetches from Shopify API (lib/shopify-server.ts)
-3. ProductGrid analyzes products:
-   - Tech stack detection (title/description/tags)
-   - License type inference (pricing patterns)
-   - Digital product categorization
-4. Client renders with Framer Motion animations
-5. "Add to Cart" → Zustand store update → API call to /api/cart
+2. Server Component queries Neon DB via Prisma
+3. Products fetched from database with filters/pagination
+4. ProductGrid displays products with:
+   - Tech stack tags (from metadata)
+   - License types (from product_variants)
+   - Pricing (synced with Stripe)
+5. Client renders with Framer Motion animations
+6. "Add to Cart" → Zustand store update → API call to POST /api/cart/items
 ```
 
 ### Authentication Flow
@@ -158,67 +164,103 @@ Client-Side:
 
 ### Cart & Checkout Flow
 ```
-1. Add to cart → Zustand state update
+1. Add to cart → POST /api/cart/items (DB + Zustand update)
 2. License selection → Price calculation with discounts
-3. Cart validation → /api/cart/validate (authenticated)
-   - Batch fetch products from Shopify
-   - Validate availability and pricing
-   - Apply educational/volume discounts
-4. Checkout → Shopify Cart API
-   - Create cart with clerk_user_id attribute
-   - IDOR protection validates ownership
-   - Rate limiting prevents abuse
-5. Digital delivery preparation
+3. Cart stored in PostgreSQL cart_items table
+   - User-scoped via Clerk user_id
+   - Status tracking (active, abandoned, purchased)
+   - Stripe session tracking
+4. Checkout → POST /api/stripe/create-cart-checkout
+   - Create Stripe Checkout Session
+   - Redirect to Stripe-hosted checkout
+   - IDOR protection validates cart ownership
+5. Payment completion → Stripe webhook
+   - checkout.session.completed event
+   - Grant access, send credentials email
+   - Update cart status to 'purchased'
 ```
 
 ## Database Schema (Neon PostgreSQL)
 
 ```sql
--- User Authentication & Profiles
-user_profiles (14 columns)
-├── user_id (clerk_user_id)
-├── email, full_name, avatar_url
-├── subscription_tier, license_type
-└── created_at, updated_at (auto-trigger)
+-- Products & Catalog
+products (39 columns)
+├── id, name, slug, description
+├── stripe_product_id, stripe_price_id
+├── price, currency, product_type
+├── available_licenses (JSONB)
+├── tech_stack (TEXT[])
+└── images, metadata (JSONB)
 
--- Subscription Management
-user_subscriptions (11 columns)
-├── subscription_id, user_id
-├── plan_name, billing_interval
-├── status, current_period_end
-└── stripe_subscription_id
+product_variants (17 columns)
+├── id, product_id, license_type
+├── price, billing_interval
+└── license_terms (JSONB)
+
+-- Shopping Cart
+cart_items (18 columns)
+├── id, user_id (Clerk), product_id
+├── quantity, license_type
+├── status (active, abandoned, purchased)
+├── stripe_session_id
+└── created_at, updated_at
+
+-- User Authentication & Profiles
+user_profiles (18 columns)
+├── id, clerk_user_id, email
+├── subscription_tier, role
+├── purchase_type, last_login
+└── created_at, updated_at
+
+-- Subscriptions
+subscriptions (12 columns)
+├── id, user_id, stripe_subscription_id
+├── plan, status, billing_interval
+└── current_period_start, current_period_end
 
 -- Security & Compliance
-user_activity_log (7 columns)
-├── activity_id, user_id
-├── action, ip_address
-└── timestamp, details
+user_activity_log
+├── id, user_id, action
+├── ip_address, timestamp
+└── details (JSONB)
 ```
 
 ## API Endpoints
 
 ### Cart Operations (Protected)
-- `GET /api/cart?cartId={id}` - Fetch cart (IDOR protected)
-- `POST /api/cart` - Create cart or add items (rate limited: 30/min)
-- `DELETE /api/cart` - Remove items (ownership validated)
-- `POST /api/cart/validate` - Batch validation (auth required, 20/15min)
+- `GET /api/cart/items` - List cart items (IDOR protected)
+- `POST /api/cart/items` - Add to cart (rate limited: 30/min)
+- `PATCH /api/cart/items/[id]` - Update item (ownership validated)
+- `DELETE /api/cart/items/[id]` - Remove item (ownership validated)
+- `POST /api/cart/sync` - Sync cart with server
+- `GET /api/cart/abandoned` - Get abandoned carts (admin)
 
-### Product Discovery
-- `GET /api/products?first=10` - Fetch products (Shopify proxy)
-- `GET /api/collections` - Fetch collections (Shopify proxy)
-- `GET /api/products/[handle]` - Product details
+### Product Management
+- `GET /api/products` - List products (filters, pagination, search)
+- `GET /api/products/[handle]` - Single product details
+- `POST /api/products` - Create product (admin only)
+- `POST /api/products/sync-stripe` - Sync with Stripe
+- `GET /api/products/stripe-pricing` - Stripe-synced pricing
 
-### Security & Testing
-- `GET /api/security/test` - Automated security validation (7 tests)
-- `POST /api/webhooks/clerk` - User profile creation
+### Stripe Integration
+- `POST /api/stripe/create-checkout-session` - Create checkout
+- `POST /api/stripe/create-cart-checkout` - Cart checkout
+- `POST /api/stripe/webhook` - Handle Stripe webhooks
+- `POST /api/billing/create-portal-session` - Customer portal
+
+### Webhooks & Auth
+- `POST /api/webhooks/clerk` - User profile creation (Clerk)
+- `GET /api/user/role` - Get user role
 
 ## Key Design Decisions
 
-### Why Headless Shopify?
-- **Flexibility**: Custom UI/UX for enterprise digital products
-- **Performance**: Optimized frontend with Next.js App Router
-- **Scalability**: Shopify handles inventory, orders, payment processing
-- **Cost-Effective**: No custom backend for commerce logic
+### Why Stripe + Neon PostgreSQL?
+- **Direct Control**: Full ownership of product catalog and customer data
+- **Lower Costs**: Avoid Shopify platform fees (2.9% payment + 2% platform vs 2.9% Stripe only)
+- **Flexibility**: Complete customization of checkout flow and user experience
+- **Serverless Scale**: Neon PostgreSQL scales automatically with demand
+- **Modern Stack**: Type-safe Prisma ORM with bleeding-edge database features
+- **No Lock-in**: Own your data, can migrate to any database if needed
 
 ### Why Clerk for Auth?
 - **Enterprise Features**: SSO, MFA, user management out-of-box
@@ -247,21 +289,30 @@ Production: app.afilo.io (Vercel)
 ├── Environment: Production secrets in Vercel dashboard
 └── Monitoring: Real-time logs, analytics, error tracking
 
-Customer Accounts: account.afilo.io
-└── Shopify-hosted customer portal integration
+Database: Neon PostgreSQL
+├── Serverless: Auto-scaling with WebSocket support
+├── Connection Pooling: Prisma + Neon adapter
+├── Global Regions: Multi-region deployment
+└── Backups: Automatic daily backups
+
+Payment Processing: Stripe
+├── Checkout: Hosted checkout page (PCI-compliant)
+├── Webhooks: Real-time payment notifications
+├── Subscriptions: Automated billing and renewals
+└── Customer Portal: Self-service billing management
 ```
 
 ## Security Posture
 
 **Security Score: 9/10 (Enterprise-Grade)**
 
-✅ IDOR protection with cart ownership validation  
-✅ Shopify token never exposed to client (server-only)  
-✅ Distributed rate limiting (Upstash Redis)  
-✅ Clerk authentication on all sensitive endpoints  
-✅ Security event logging for compliance  
-✅ HSTS, XSS, CSRF protection headers  
-✅ Webhook signature verification (Svix)  
+✅ IDOR protection with cart ownership validation
+✅ API tokens never exposed to client (server-only pattern)
+✅ Distributed rate limiting (Upstash Redis)
+✅ Clerk authentication on all sensitive endpoints
+✅ Stripe webhook signature verification
+✅ Security event logging for compliance
+✅ HSTS, XSS, CSRF protection headers
 
 **Remaining Enhancements:**
 - CSP headers for XSS prevention (planned)
@@ -276,8 +327,9 @@ Customer Accounts: account.afilo.io
 - CLS: < 0.1 (stable layout during loading)
 
 **API Performance:**
-- Shopify API: < 200ms with retry logic
-- Cart validation: < 300ms (6.7x improvement with batching)
+- Database queries: < 100ms (Prisma + connection pooling)
+- Cart operations: < 150ms (optimized batch queries)
+- Stripe checkout: < 500ms (session creation)
 - Rate limiting: < 10ms (Redis lookup)
 - Digital delivery: < 50ms (instant access)
 

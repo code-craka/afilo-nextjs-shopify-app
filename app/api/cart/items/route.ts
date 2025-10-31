@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { Pool } from '@neondatabase/serverless';
+import prisma from '@/lib/prisma';
 
 /**
  * Cart Items API - PostgreSQL Persistent Cart
  *
  * Manages cart_items table with abandoned cart tracking
+ * Uses shared database connection pool to prevent connection exhaustion
  */
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // GET - Fetch user's active cart items
 export async function GET() {
@@ -19,27 +18,42 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const result = await pool.query(
-      `SELECT
-        id,
-        product_id as "productId",
-        variant_id as "variantId",
-        title,
-        price,
-        quantity,
-        license_type as "licenseType",
-        image_url as "imageUrl",
-        added_at as "addedAt",
-        last_modified as "lastModified"
-      FROM cart_items
-      WHERE user_id = $1 AND status = 'active'
-      ORDER BY added_at DESC`,
-      [userId]
-    );
+    const items = await prisma.cart_items.findMany({
+      where: {
+        user_id: userId,
+        status: 'active',
+      },
+      orderBy: {
+        added_at: 'desc',
+      },
+      select: {
+        id: true,
+        product_id: true,
+        variant_id: true,
+        title: true,
+        price: true,
+        quantity: true,
+        license_type: true,
+        image_url: true,
+        added_at: true,
+        last_modified: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      items: result.rows,
+      items: items.map(item => ({
+        id: item.id,
+        productId: item.product_id,
+        variantId: item.variant_id,
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity,
+        licenseType: item.license_type,
+        imageUrl: item.image_url,
+        addedAt: item.added_at,
+        lastModified: item.last_modified,
+      })),
     });
 
   } catch (error: any) {
@@ -88,73 +102,89 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if item already exists
-    const existing = await pool.query(
-      `SELECT id, quantity
-      FROM cart_items
-      WHERE user_id = $1
-        AND product_id = $2
-        AND variant_id = $3
-        AND license_type = $4
-        AND status = 'active'`,
-      [userId, productId, variantId, licenseType]
-    );
+    const existing = await prisma.cart_items.findFirst({
+      where: {
+        user_id: userId,
+        product_id: productId,
+        variant_id: variantId,
+        license_type: licenseType,
+        status: 'active',
+      },
+    });
 
-    if (existing.rows.length > 0) {
+    if (existing) {
       // Update quantity
-      const newQuantity = existing.rows[0].quantity + quantity;
-      const updateResult = await pool.query(
-        `UPDATE cart_items
-        SET quantity = $1,
-            last_modified = NOW()
-        WHERE id = $2
-        RETURNING
-          id,
-          product_id as "productId",
-          variant_id as "variantId",
-          title,
-          price,
-          quantity,
-          license_type as "licenseType",
-          image_url as "imageUrl",
-          added_at as "addedAt"`,
-        [newQuantity, existing.rows[0].id]
-      );
+      const newQuantity = existing.quantity + quantity;
+      const updated = await prisma.cart_items.update({
+        where: { id: existing.id },
+        data: {
+          quantity: newQuantity,
+          last_modified: new Date(),
+        },
+        select: {
+          id: true,
+          product_id: true,
+          variant_id: true,
+          title: true,
+          price: true,
+          quantity: true,
+          license_type: true,
+          image_url: true,
+          added_at: true,
+        },
+      });
 
       return NextResponse.json({
         success: true,
-        ...updateResult.rows[0],
+        id: updated.id,
+        productId: updated.product_id,
+        variantId: updated.variant_id,
+        title: updated.title,
+        price: updated.price,
+        quantity: updated.quantity,
+        licenseType: updated.license_type,
+        imageUrl: updated.image_url,
+        addedAt: updated.added_at,
       });
     }
 
     // Insert new item
-    const result = await pool.query(
-      `INSERT INTO cart_items (
-        user_id,
-        product_id,
-        variant_id,
+    const created = await prisma.cart_items.create({
+      data: {
+        user_id: userId,
+        product_id: productId,
+        variant_id: variantId,
         title,
         price,
         quantity,
-        license_type,
-        image_url,
-        status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
-      RETURNING
-        id,
-        product_id as "productId",
-        variant_id as "variantId",
-        title,
-        price,
-        quantity,
-        license_type as "licenseType",
-        image_url as "imageUrl",
-        added_at as "addedAt"`,
-      [userId, productId, variantId, title, price, quantity, licenseType, imageUrl]
-    );
+        license_type: licenseType,
+        image_url: imageUrl,
+        status: 'active',
+      },
+      select: {
+        id: true,
+        product_id: true,
+        variant_id: true,
+        title: true,
+        price: true,
+        quantity: true,
+        license_type: true,
+        image_url: true,
+        added_at: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      ...result.rows[0],
+      id: created.id,
+      productId: created.product_id,
+      variantId: created.variant_id,
+      title: created.title,
+      price: created.price,
+      quantity: created.quantity,
+      licenseType: created.license_type,
+      imageUrl: created.image_url,
+      addedAt: created.added_at,
     });
 
   } catch (error: any) {

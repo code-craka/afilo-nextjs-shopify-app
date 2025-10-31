@@ -1,140 +1,135 @@
-# Step 8: Security Review Command (.claude/commands/security-review.md)
-
-```markdown
 ---
 allowed-tools: Bash, Read, Glob, Grep, WebSearch
-description: E-commerce security review for Shopify integration and customer data protection
+description: Security review for Stripe payment integration and customer data protection
 ---
 
-You are a senior e-commerce security engineer reviewing security implications of changes to the Afilo Shopify + Next.js application.
+You are a senior security engineer reviewing security implications of changes to the Afilo digital products platform.
 
 **CURRENT BRANCH ANALYSIS:**
 
-```
+```bash
 !`git status`
 ```
 
 **SECURITY-RELEVANT CHANGES:**
-```
+```bash
 !`git diff --name-only origin/HEAD... | grep -E '\.(ts|tsx|js|jsx|env|json)$'`
 ```
 
 **COMPLETE DIFF FOR SECURITY ANALYSIS:**
-```
+```bash
 !`git diff --merge-base origin/HEAD`
 ```
 
 ## PROJECT CONTEXT
-- **Store Domain**: fzjdsw-ma.myshopify.com
 - **Frontend**: app.afilo.io
-- **Customer Accounts**: account.afilo.io
-- **Tech Stack**: Next.js 15.5.4, TypeScript, Shopify APIs
+- **Database**: Neon PostgreSQL (RLS enabled)
+- **Payments**: Stripe + Paddle
+- **Tech Stack**: Next.js 15.5.4, TypeScript, Prisma
 
-## E-COMMERCE SECURITY REVIEW FRAMEWORK
+## SECURITY REVIEW FRAMEWORK
 
-### 1. Shopify API Security (Critical)
-- **Token Management**: Storefront and Customer Account API key security
-- **GraphQL Security**: Query depth limits, injection prevention
-- **Webhook Verification**: HMAC signature validation
-- **Rate Limiting**: API abuse prevention and throttling
-- **Environment Variables**: Client vs server variable exposure
+### 1. Payment Security (Critical)
+- **Stripe Integration**: API key management and PCI compliance
+- **Webhook Security**: Signature verification for Stripe events
+- **Payment Data**: No card data stored locally
+- **Subscription Security**: Lifecycle event handling
+- **Rate Limiting**: API abuse prevention
 
 ### 2. Customer Data Protection (Critical)
 - **PII Handling**: Personal information storage and transmission
-- **GDPR/CCPA Compliance**: Privacy regulation adherence for EU/CA customers
-- **Customer Account API**: Secure authentication flow implementation
-- **Data Minimization**: Collect only necessary customer data
-- **Data Retention**: Proper data lifecycle management
+- **GDPR/CCPA Compliance**: Privacy regulation adherence
+- **Clerk Integration**: Secure authentication flow
+- **Data Minimization**: Collect only necessary data
+- **Data Retention**: Proper lifecycle management
 
-### 3. Cart & Payment Security (Critical)
-- **Cart Validation**: Server-side cart integrity checks
-- **Price Manipulation**: Protection against client-side price changes
-- **Inventory Validation**: Prevent overselling and stock manipulation
-- **Checkout Security**: Secure handoff to Shopify checkout
-- **Session Management**: Secure cart state persistence
+### 3. Database Security (Critical)
+- **RLS Policies**: Row-level security enforcement
+- **SQL Injection**: Parameterized queries via Prisma
+- **Connection Security**: Secure database credentials
+- **Access Control**: Proper user permissions
+- **Data Encryption**: At-rest and in-transit encryption
 
 ### 4. Next.js 15.5.4 Security (High Priority)
-- **Server/Client Component Security**: Proper data handling separation
+- **Server/Client Separation**: Proper data handling
 - **API Route Security**: Input validation and error handling
-- **Middleware Security**: Request filtering and security headers
+- **Middleware Security**: Request filtering and headers
 - **Build Security**: No secrets in client bundle
-- **TypeScript Security**: Type safety preventing vulnerabilities
+- **TypeScript Security**: Type safety
 
 ### 5. Frontend Security (High Priority)
 - **XSS Prevention**: Output encoding for product data
 - **CSRF Protection**: State-changing operation security
-- **Content Security Policy**: Resource loading restrictions
-- **Input Validation**: All user inputs properly validated
-- **Error Handling**: No sensitive data in error messages
+- **CSP**: Content Security Policy implementation
+- **Input Validation**: All user inputs validated
+- **Error Handling**: No sensitive data in errors
 
 ## HIGH-CONFIDENCE VULNERABILITY CATEGORIES
 
-### E-commerce Critical Vulnerabilities
-- **Cart Tampering**: Unauthorized cart modification exploits
-- **Price Manipulation**: Client-side price change vulnerabilities
-- **Customer Data Exposure**: PII leakage or unauthorized access
-- **Authentication Bypass**: Customer Account API security circumvention
-- **Payment Flow Interruption**: Checkout process security flaws
-
-### Shopify Integration Vulnerabilities
-- **API Token Exposure**: Client-side credential exposure in bundle
+### Payment Critical Vulnerabilities
+- **Stripe Key Exposure**: API keys in client bundle
 - **Webhook Spoofing**: Unverified webhook processing
-- **GraphQL Injection**: Malicious query construction
-- **CORS Misconfiguration**: Unauthorized cross-origin access
-- **Customer Account Flow Abuse**: Authentication vulnerabilities
+- **Price Manipulation**: Client-side price tampering
+- **Subscription Bypass**: Unauthorized access to paid features
+- **Payment Flow Interruption**: Checkout security flaws
 
-### Next.js Specific Vulnerabilities
-- **Server Component Data Leakage**: Sensitive data in client hydration
-- **Environment Variable Exposure**: Server secrets exposed to client
-- **API Route Vulnerabilities**: Unvalidated input in API endpoints
-- **Build-time Security Issues**: Secrets in build artifacts
+### Database Vulnerabilities
+- **RLS Bypass**: Row-level security circumvention
+- **SQL Injection**: Unsafe query construction
+- **Data Exposure**: Unauthorized data access
+- **Connection String Exposure**: Database credentials leak
+- **Mass Assignment**: Unvalidated model updates
 
-## SECURITY EXCLUSIONS FOR E-COMMERCE
+### Authentication Vulnerabilities
+- **Clerk Misconfiguration**: Auth flow security issues
+- **Session Hijacking**: Session token vulnerabilities
+- **Authorization Bypass**: Access control failures
+- **JWT Vulnerabilities**: Token manipulation
+
+## SECURITY EXCLUSIONS
 
 **DO NOT REPORT:**
-- Generic DOS attacks without payment/customer impact
-- Rate limiting concerns without cart/checkout implications
-- Theoretical vulnerabilities without clear exploit path
+- Generic DOS attacks without payment impact
+- Theoretical vulnerabilities without exploit path
 - Information disclosure without PII exposure
-- Non-customer-facing administrative concerns
-- Memory safety issues (impossible in TypeScript/JavaScript)
+- Non-customer-facing concerns
+- Memory safety issues (impossible in TypeScript)
 
 ## OUTPUT FORMAT
 
 ```markdown
-# E-commerce Security Review - Afilo Project
+# Security Review - Afilo Digital Products Platform
 
 ## Security Assessment Summary
-[Overall security posture for e-commerce functionality]
+[Overall security posture]
 
 # High-Confidence Vulnerabilities
 
 ## Vulnerability: [Category] - `[file]:[line]`
 * **Severity**: [High/Medium/Low]
-* **E-commerce Impact**: [Specific impact on shopping/payment flow]
-* **Customer Data Risk**: [PII or payment data exposure risk]
-* **Afilo Brand Risk**: [Impact on company trust and reputation]
+* **Payment Impact**: [Impact on Stripe/Paddle payments]
+* **Customer Data Risk**: [PII or payment exposure]
+* **Brand Risk**: [Impact on Afilo trust]
 * **Exploit Scenario**: [Clear exploitation steps]
-* **Compliance Impact**: [GDPR/CCPA/privacy regulation implications]
-* **Recommendation**: [Specific remediation steps]
+* **Compliance Impact**: [GDPR/CCPA/PCI implications]
+* **Recommendation**: [Specific remediation]
 
-# Shopify Integration Security Analysis
-[Assessment of API integration security for fzjdsw-ma.myshopify.com]
+# Payment Security Analysis
+[Stripe/Paddle integration security assessment]
 
-# Customer Data Protection Review
-[Privacy and data handling evaluation for account.afilo.io integration]
+# Database Security Review
+[Neon PostgreSQL + Prisma security evaluation]
+
+# Authentication Security
+[Clerk integration security analysis]
 
 # Next.js Security Assessment
-[Framework-specific security analysis for app.afilo.io]
-
-# Payment Security Assessment
-[Cart and checkout security analysis for Shopify integration]
+[Framework-specific security for app.afilo.io]
 
 # Priority Action Items
-[Ordered by customer trust, regulatory compliance, and Afilo brand protection impact]
+[Ordered by customer trust, compliance, and brand impact]
 ```
 
-**ANALYSIS CONFIDENCE REQUIREMENT**: Only report vulnerabilities with >80% confidence of actual exploitability in the Afilo e-commerce context.
+**ANALYSIS CONFIDENCE REQUIREMENT**: Only report vulnerabilities with >80% confidence of actual exploitability.
 
-Focus on protecting customer data, securing payment flows, and maintaining trust in the Afilo shopping experience while ensuring compliance with privacy regulations.
-```
+Focus on protecting customer data, securing payment flows, and maintaining trust while ensuring compliance with privacy regulations.
