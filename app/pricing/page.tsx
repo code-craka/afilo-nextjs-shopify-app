@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { SubscriptionCheckout } from '@/components/stripe/SubscriptionCheckout';
 import { Check, X } from 'lucide-react';
 

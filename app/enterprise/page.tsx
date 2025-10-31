@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { SubscriptionCheckout } from '@/components/stripe/SubscriptionCheckout';
 import { Check, X } from 'lucide-react';
 import SubscriptionManager from '@/components/SubscriptionManager';
