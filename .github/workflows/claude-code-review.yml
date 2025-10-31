@@ -1,17 +1,27 @@
-name: Afilo Shopify Next.js Code Review
+name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
-  workflow_dispatch:
+    types: [opened, synchronize]
+    # Optional: Only run on specific file changes
+    # paths:
+    #   - "src/**/*.ts"
+    #   - "src/**/*.tsx"
+    #   - "src/**/*.js"
+    #   - "src/**/*.jsx"
 
 jobs:
-  claude-afilo-review:
+  claude-review:
+    # Optional: Filter by PR author
+    # if: |
+    #   github.event.pull_request.user.login == 'external-contributor' ||
+    #   github.event.pull_request.user.login == 'new-developer' ||
+    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+
     runs-on: ubuntu-latest
-    if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: read
       issues: read
       id-token: write
 
@@ -19,82 +29,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Afilo Shopify + Next.js Code Review
+      - name: Run Claude Code Review
+        id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          track_progress: true
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            **Afilo Project Context:**
-            REPOSITORY: ${{ github.repository }}
+            REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            You are reviewing code for the Afilo e-commerce platform - a modern headless Shopify storefront.
+            Please review this pull request and provide feedback on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Performance considerations
+            - Security concerns
+            - Test coverage
 
-            **Tech Stack:**
-            - Frontend: Next.js 15.5.4 (App Router), TypeScript
-            - Styling: Tailwind CSS v4 (no config file), ShadCN UI
-            - Backend: Shopify (fzjdsw-ma.myshopify.com)
-            - State: Zustand for cart management
-            - Deployment: app.afilo.io (frontend), account.afilo.io (customer accounts)
+            Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
 
-            **Review Priorities:**
-            1. **E-commerce Functionality**: Cart, checkout, product display
-            2. **Shopify Integration**: API usage, data flow, error handling
-            3. **Security**: Customer data protection, API token security
-            4. **Performance**: Core Web Vitals, bundle optimization
-            5. **Tailwind v4**: Proper usage without config file
-            6. **TypeScript**: Strict typing for Shopify data
-            7. **Brand Consistency**: Modern AI/software aesthetic
+            Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
 
-            Use the `@shopify-code-review` agent perspective for comprehensive analysis.
-            Focus on e-commerce patterns and Afilo brand requirements.
+          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
+          # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
+          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
 
-            After analysis, use `gh pr comment` to post your review.
-
-          claude_args: '--model claude-sonnet-4 --allowed-tools "Bash(gh pr comment:*),Bash(gh pr view:*),Bash(gh pr diff:*)"'
-
-      - name: Design Review for UI Changes
-        if: contains(github.event.pull_request.changed_files, '.tsx') || contains(github.event.pull_request.changed_files, 'globals.css')
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            **Afilo Design Review**
-
-            Review UI/UX changes for the Afilo e-commerce platform.
-            Focus on:
-            - Conversion optimization for e-commerce
-            - Tailwind v4 implementation (no config file)
-            - ShadCN component usage
-            - Mobile-first responsive design
-            - Accessibility (WCAG 2.1 AA)
-            - Afilo brand consistency (modern AI/software aesthetic)
-
-            Use the `@nextjs-design-review` agent perspective.
-            Post findings with `gh pr comment` if issues found.
-
-          claude_args: '--model claude-sonnet-4 --allowed-tools "Bash(gh pr comment:*)"'
-
-      - name: Security Review for E-commerce Changes
-        if: contains(github.event.pull_request.changed_files, 'lib/') || contains(github.event.pull_request.changed_files, 'app/api/') || contains(github.event.pull_request.changed_files, 'store/')
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            **Afilo Security Review**
-
-            Security review for changes affecting:
-            - Shopify API integration (fzjdsw-ma.myshopify.com)
-            - Customer data handling (account.afilo.io)
-            - Cart security and state management
-            - Payment flow security
-            - Environment variable usage
-
-            Use the `@ecommerce-security-review` agent.
-            Only report high-confidence security vulnerabilities.
-            Post findings with `gh pr comment` if critical issues found.
-
-          claude_args: '--model claude-sonnet-4 --allowed-tools "Bash(gh pr comment:*)"'
