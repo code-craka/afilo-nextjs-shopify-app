@@ -41,9 +41,6 @@ dependencies:
   '@react-pdf/renderer':
     specifier: ^4.3.1
     version: 4.3.1(react@19.1.0)
-  '@shopify/storefront-api-client':
-    specifier: ^1.0.9
-    version: 1.0.9
   '@stripe/react-stripe-js':
     specifier: ^5.2.0
     version: 5.2.0(@stripe/stripe-js@8.1.0)(react-dom@19.1.0)(react@19.1.0)
@@ -2292,16 +2289,6 @@ packages:
     dependencies:
       domhandler: 5.0.3
       selderee: 0.11.0
-    dev: false
-
-  /@shopify/graphql-client@1.4.1:
-    resolution: {integrity: sha512-/w4Uchx8ueI8gwmJd1ZbbIGndsjfMEFlzmay3P7rya5zj7K308xne/ggIvWDweueIut2qf1A8lI58xQl9Pu22w==}
-    dev: false
-
-  /@shopify/storefront-api-client@1.0.9:
-    resolution: {integrity: sha512-vgc0ZczMvrbsQQFYcIIONnIiqiafpcMyq5osI8X6PB65DhnmCQEp3kSlXKOjBPzyAWYvp28nLHS0+r4xsp4yQA==}
-    dependencies:
-      '@shopify/graphql-client': 1.4.1
     dev: false
 
   /@stablelib/base64@1.0.1:
