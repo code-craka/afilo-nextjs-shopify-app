@@ -88,9 +88,10 @@ export default function ChangePlanModal({
         onSuccess?.();
         onClose();
       }, 1500);
-    } catch (err: any) {
-      console.error('Failed to change plan:', err);
-      setError(err.message || 'Failed to change plan');
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to change plan:', error);
+      setError(error.message || 'Failed to change plan');
       setLoading(false);
     }
   };

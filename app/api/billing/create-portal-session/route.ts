@@ -18,16 +18,20 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { updateUserStripeCustomerId } from '@/lib/clerk-utils';
 import { checkRateLimit, moderateBillingRateLimit } from '@/lib/rate-limit';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
   typescript: true,
 });
 
-export async function POST(req: Request) {
+export async function POST() {
+  let userId: string | null = null;
+
   try {
     // Step 1: Authenticate user with Clerk
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -119,16 +123,10 @@ export async function POST(req: Request) {
       customerId: stripeCustomerId,
     });
 
-  } catch (error: any) {
-    console.error('Error creating billing portal session:', error);
+  } catch (error: unknown) {
+    logError('BILLING_PORTAL_SESSION', error, { userId });
 
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to create billing portal session',
-        details: process.env.NODE_ENV === 'development' ? error : undefined,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error);
   }
 }
 

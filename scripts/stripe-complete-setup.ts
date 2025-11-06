@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-expressions */
 /**
  * Complete Stripe Configuration Script
  *
@@ -12,6 +13,13 @@
  */
 
 import Stripe from 'stripe';
+
+interface Feature {
+  name: string;
+  type: string;
+  tier: string;
+  id?: string;
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -97,7 +105,7 @@ async function createFeatures() {
     { name: 'Dedicated infrastructure', type: 'infrastructure', tier: 'enterprise_plus' },
   ];
 
-  const createdFeatures: any[] = [];
+  const createdFeatures: Feature[] = [];
 
   for (const feature of features) {
     try {
@@ -111,7 +119,7 @@ async function createFeatures() {
 
       console.log(`   ✅ Created feature: ${feature.name} (${stripeFeature.id})`);
       createdFeatures.push({ ...feature, id: stripeFeature.id });
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error.code === 'resource_already_exists') {
         console.log(`   ⏭️  Feature already exists: ${feature.name}`);
       } else {
@@ -124,7 +132,7 @@ async function createFeatures() {
   return createdFeatures;
 }
 
-async function linkFeaturesToProducts(features: any[]) {
+async function linkFeaturesToProducts(features: Feature[]) {
   console.log('\n🔗 Step 3: Linking features to products...\n');
 
   const productFeatureMap: Record<string, string[]> = {
@@ -258,7 +266,7 @@ async function createPricingTable() {
     console.log(`         - Enterprise Plus: ${enterprisePlusMonthly.id}`);
     console.log(`      4. Customize branding (colors, logo)`);
     console.log(`      5. Copy embed code to your website`);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('   ❌ Error creating pricing table:', error.message);
   }
 

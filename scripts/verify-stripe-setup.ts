@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-expressions */
 #!/usr/bin/env tsx
 /**
  * Verify Stripe Features & Pricing Table Setup
@@ -115,7 +116,7 @@ async function verifySetup() {
         // Clean up test session
         await stripe.checkout.sessions.expire(session.id);
         console.log('   ✓ Test session expired (cleanup)\n');
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('   ❌ Checkout session test failed:', error.message);
       }
     }

@@ -418,7 +418,7 @@ export default function EnterprisePage() {
 
                     {/* Features list */}
                     <div className="space-y-3">
-                      <p className="text-sm font-semibold text-gray-900 mb-3">What's included:</p>
+                      <p className="text-sm font-semibold text-gray-900 mb-3">What&apos;s included:</p>
                       {plan.features.map((feature, index) => (
                         <div key={index} className="flex items-start gap-2">
                           <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />

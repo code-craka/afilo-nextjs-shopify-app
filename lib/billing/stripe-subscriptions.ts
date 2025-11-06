@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Stripe Subscriptions Utilities
  *
@@ -127,9 +128,9 @@ export async function getActiveSubscription(
       trialEnd: sub.trial_end,
       created: sub.created,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching active subscription:', error);
-    throw new Error(error.message || 'Failed to fetch active subscription');
+    throw new Error(error instanceof Error ? error.message : 'Failed to fetch active subscription');
   }
 }
 
@@ -173,9 +174,9 @@ export async function listSubscriptionHistory(
         created: sub.created,
       };
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error listing subscription history:', error);
-    throw new Error(error.message || 'Failed to list subscription history');
+    throw new Error(error instanceof Error ? error.message : 'Failed to list subscription history');
   }
 }
 
@@ -230,9 +231,9 @@ export async function changeSubscriptionPlan(
       trialEnd: updatedSub.trial_end,
       created: updatedSub.created,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error changing subscription plan:', error);
-    throw new Error(error.message || 'Failed to change subscription plan');
+    throw new Error(error instanceof Error ? error.message : 'Failed to change subscription plan');
   }
 }
 
@@ -285,9 +286,9 @@ export async function cancelSubscription(
       trialEnd: updatedSub.trial_end,
       created: updatedSub.created,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error canceling subscription:', error);
-    throw new Error(error.message || 'Failed to cancel subscription');
+    throw new Error(error instanceof Error ? error.message : 'Failed to cancel subscription');
   }
 }
 
@@ -328,9 +329,9 @@ export async function reactivateSubscription(
       trialEnd: updatedSub.trial_end,
       created: updatedSub.created,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error reactivating subscription:', error);
-    throw new Error(error.message || 'Failed to reactivate subscription');
+    throw new Error(error instanceof Error ? error.message : 'Failed to reactivate subscription');
   }
 }
 

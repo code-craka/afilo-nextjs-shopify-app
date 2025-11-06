@@ -601,7 +601,7 @@ export default function DataProcessingPage() {
             <strong>Data Protection Officer (DPO):</strong><br />
             Email: <a href="mailto:dpo@techsci.io" className="text-blue-600 hover:underline">dpo@techsci.io</a><br />
             Phone: +1 302 415 3171<br />
-            Mail: TechSci, Inc. (operating the Afilo platform), 1111B S Governors Ave STE 34002, Dover, DE 19904
+            Mail: TechSci, Inc. (operating the Afilo platform), 651 N Broad St, Suite 201, Middletown Delaware 19709
           </p>
 
           <p>

@@ -10,11 +10,16 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { listPaymentMethods } from '@/lib/billing/stripe-payment-methods';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 
 export async function GET() {
+  let userId: string | null = null;
+  let stripeCustomerId: string | undefined = undefined;
+
   try {
     // Authenticate user
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -34,7 +39,7 @@ export async function GET() {
     }
 
     // Get Stripe Customer ID
-    const stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
+    stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
 
     if (!stripeCustomerId) {
       // User has never made a purchase or set up payment methods
@@ -53,16 +58,10 @@ export async function GET() {
       paymentMethods,
       count: paymentMethods.length,
     });
-  } catch (error: any) {
-    console.error('Error listing payment methods:', error);
+  } catch (error: unknown) {
+    logError('PAYMENT_METHODS_LIST', error, { userId, stripeCustomerId });
 
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to list payment methods',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error);
   }
 }
 

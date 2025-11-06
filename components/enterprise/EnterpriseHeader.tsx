@@ -37,7 +37,7 @@ export default function EnterpriseHeader() {
     router.push('/');
   };
 
-  const notifications = [
+  const notifications: { id: number; text: string; time: string; type: string }[] = [
     { id: 1, text: 'New subscription payment received', time: '2m ago', type: 'success' },
     { id: 2, text: 'API usage at 75% of limit', time: '1h ago', type: 'warning' },
     { id: 3, text: 'Team member invited to workspace', time: '3h ago', type: 'info' },
@@ -202,7 +202,7 @@ function UserMenuItem({
 }
 
 // Notification Dropdown
-function NotificationDropdown({ notifications }: { notifications: any[] }) {
+function NotificationDropdown({ notifications }: { notifications: { id: number; text: string; time: string; type: string }[] }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (

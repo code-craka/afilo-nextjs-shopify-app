@@ -17,10 +17,19 @@ const isSubscriptionRoute = createRouteMatcher([
   '/api/keys(.*)',
 ]);
 
+// Define admin-only routes (require admin role)
+const isAdminRoute = createRouteMatcher([
+  '/dashboard/admin(.*)',
+  '/api/admin(.*)',
+]);
+
 // Define public routes (no authentication required)
 const isPublicRoute = createRouteMatcher([
   '/',
   '/products(.*)',
+  '/pricing',
+  '/contact',
+  '/legal(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/sso-callback',
@@ -28,6 +37,10 @@ const isPublicRoute = createRouteMatcher([
   '/api/cart(.*)',
   '/api/shopify(.*)',
   '/api/collections(.*)',
+  '/api/stripe/webhook',
+  '/api/stripe/create-checkout-session',
+  '/api/stripe/create-payment-intent',
+  '/api/stripe/create-subscription-checkout',
 ]);
 
 // Define test routes (development only)
@@ -60,6 +73,9 @@ const RATE_LIMIT_RULES: Record<string, { maxRequests: number; windowMs: number }
   '/api/cart': { maxRequests: 60, windowMs: 60000 },
   '/api/users': { maxRequests: 20, windowMs: 60000 },
   '/api/webhooks': { maxRequests: 100, windowMs: 60000 },
+  '/api/chat': { maxRequests: 30, windowMs: 300000 }, // 30 requests per 5 minutes
+  '/api/admin': { maxRequests: 100, windowMs: 300000 }, // 100 requests per 5 minutes for admins
+  '/api/stripe': { maxRequests: 1000, windowMs: 300000 }, // High limit for webhooks
   'default': { maxRequests: 100, windowMs: 60000 }
 };
 
@@ -136,6 +152,23 @@ export default clerkMiddleware(async (auth, req) => {
           return response;
         }
         throw error;
+      }
+    }
+
+    // Enhanced admin route protection
+    if (isAdminRoute(req)) {
+      try {
+        const { userId } = await auth();
+        if (!userId) {
+          return NextResponse.redirect(new URL('/sign-in?redirect_url=' + encodeURIComponent(req.url), req.url));
+        }
+
+        // Note: Full admin role verification happens in the API routes themselves
+        // This middleware just ensures authentication for admin routes
+        console.log(`[PROXY] Admin route access by user: ${userId} to ${req.nextUrl.pathname}`);
+      } catch (error) {
+        console.error('[PROXY] Admin route auth error:', error);
+        return NextResponse.redirect(new URL('/sign-in?error=admin_access_denied', req.url));
       }
     }
 

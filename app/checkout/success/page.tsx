@@ -112,7 +112,7 @@ function SuccessContent() {
           className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 mb-6"
         >
           <h2 className="text-2xl font-semibold text-white mb-6">
-            What's Next?
+            What&apos;s Next?
           </h2>
 
           <div className="space-y-4">
@@ -125,7 +125,7 @@ function SuccessContent() {
                   Check Your Email
                 </h3>
                 <p className="text-gray-300 text-sm">
-                  We've sent order confirmation and download instructions to your email address.
+                  We&apos;ve sent order confirmation and download instructions to your email address.
                 </p>
               </div>
             </div>

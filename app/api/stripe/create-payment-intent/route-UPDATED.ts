@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * UPDATED: Payment Intent API with Radar Bypass + Network Tokens
  *

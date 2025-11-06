@@ -1,0 +1,85 @@
+{
+  "env": {
+    "DATABASE_URL": "postgresql://neondb_owner:npg_CAu5dvmhGER1@ep-square-forest-a10q31a6-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+    "UPSTASH_REDIS_REST_URL": "https://electric-muskox-9187.upstash.io",
+    "UPSTASH_REDIS_REST_TOKEN": "ASPjAAImcDJiMGYyM2Q5ODQ5YTY0OWJmYjBjMTExODYxZDUxZDlhZXAyOTE4Nw",
+    "MEM0_API_KEY": "m0-k8Ttw7VU1Wkty6Geab9a6VdOcjGV3m4tM1V3GcTF",
+    "NODE_ENV": "development",
+    "CLAUDE_CACHE_VERSION": "v2.0_global",
+    "ENABLE_TRAINING_DATA_EXPORT": "true",
+    "GLOBAL_CACHE_DEBUG": "true"
+  },
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Bash(npm run :*)",
+      "Bash(yarn :*)",
+      "Bash(git :*)",
+      "Bash(psql :*)",
+      "Bash(curl :*)",
+      "Edit(*.md)",
+      "Edit(*.json)",
+      "Edit(src/**/*)",
+      "Edit(*.ts)",
+      "Edit(*.tsx)",
+      "Edit(*.js)",
+      "Edit(*.jsx)",
+      "Edit(app/**/*)",
+      "Edit(components/**/*)",
+      "Edit(lib/**/*)",
+      "Write(src/**/*)",
+      "Write(app/**/*)",
+      "Write(components/**/*)",
+      "Write(lib/**/*)",
+      "Write(docs/**/*)",
+      "Write(~/.claude/**/*)",
+      "Bash(rm:*)",
+      "mcp__memory__read_graph",
+      "Bash(pnpm add:*)",
+      "mcp__memory__add_observations",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(mkdir:*)",
+      "mcp__memory__create_entities",
+      "Edit(.env.*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm tsx:*)"
+    ],
+    "deny": [
+      "Edit(node_modules/**/*)",
+      "Write(node_modules/**/*)",
+      "Edit(.env)"
+    ],
+    "ask": [
+      "Bash(pnpm install:*)",
+      "Bash(npm install:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse:Edit": [
+      {
+        "matcher": "*.ts|*.tsx|*.js|*.jsx",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm lint --fix --quiet || true",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUse:Write": [
+      {
+        "matcher": "*.json",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "prettier --write --loglevel silent \"$CLAUDE_FILE_PATH\" || true",
+            "timeout": 3000
+          }
+        ]
+      }
+    ]
+  },
+  "alwaysThinkingEnabled": false
+}

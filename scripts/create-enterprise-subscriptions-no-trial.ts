@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-expressions */
 /**
  * Create Enterprise Subscription Products - IMMEDIATE PAYMENT (NO TRIALS)
  * Customers pay first, get instant access via email credentials

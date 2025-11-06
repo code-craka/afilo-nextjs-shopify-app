@@ -56,10 +56,10 @@ export async function GET() {
       })),
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('GET /api/cart/items error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch cart items' },
+      { error: (error as Error).message || 'Failed to fetch cart items' },
       { status: 500 }
     );
   }
@@ -187,10 +187,10 @@ export async function POST(request: NextRequest) {
       addedAt: created.added_at,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('POST /api/cart/items error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to add item' },
+      { error: (error as Error).message || 'Failed to add item' },
       { status: 500 }
     );
   }

@@ -1,0 +1,349 @@
+/**
+ * Semantic Search for Knowledge Base
+ *
+ * Searches knowledge base using vector similarity and full-text search.
+ * Combines both approaches for best results.
+ *
+ * Phase 2: Knowledge Base Implementation
+ */
+
+import { neon } from '@neondatabase/serverless';
+import { generateEmbedding, prepareTextForEmbedding } from './embeddings';
+
+const sql = neon(process.env.DATABASE_URL!);
+
+export interface SearchResult {
+  id: string;
+  url: string;
+  title: string;
+  content: string;
+  contentType: 'page' | 'product' | 'faq' | 'documentation';
+  relevanceScore: number;
+  metadata: {
+    wordCount: number;
+    tags: string[];
+    lastCrawled: Date;
+  };
+}
+
+export interface SearchOptions {
+  limit?: number;
+  threshold?: number; // Minimum similarity score (0-1)
+  contentTypes?: Array<'page' | 'product' | 'faq' | 'documentation'>;
+}
+
+/**
+ * Search knowledge base using vector similarity
+ *
+ * Uses cosine similarity with pgvector
+ */
+export async function vectorSearch(
+  query: string,
+  options: SearchOptions = {}
+): Promise<SearchResult[]> {
+  const {
+    limit = 5,
+    threshold = 0.5,
+    contentTypes,
+  } = options;
+
+  try {
+    // Generate embedding for query
+    const preparedQuery = prepareTextForEmbedding(query);
+    const queryEmbedding = await generateEmbedding(preparedQuery);
+
+    // Convert embedding to PostgreSQL array format
+    const embeddingArray = `[${queryEmbedding.join(',')}]`;
+
+    // Build content type filter
+    let contentTypeFilter = '';
+    if (contentTypes && contentTypes.length > 0) {
+      const types = contentTypes.map((t) => `'${t}'`).join(',');
+      contentTypeFilter = `AND content_type IN (${types})`;
+    }
+
+    // Search using vector similarity
+    // Note: Using 1 - (embedding <=> query) for similarity score (0-1 range)
+    const results = await sql`
+      SELECT
+        id,
+        url,
+        title,
+        content,
+        content_type,
+        metadata,
+        1 - (embedding <=> ${embeddingArray}::vector) AS similarity_score
+      FROM knowledge_base
+      WHERE 1 - (embedding <=> ${embeddingArray}::vector) >= ${threshold}
+      ${contentTypeFilter ? sql.unsafe(contentTypeFilter) : sql``}
+      ORDER BY embedding <=> ${embeddingArray}::vector
+      LIMIT ${limit}
+    `;
+
+    return results.map((row: any) => ({
+      id: row.id,
+      url: row.url,
+      title: row.title,
+      content: row.content,
+      contentType: row.content_type,
+      relevanceScore: parseFloat(row.similarity_score),
+      metadata: row.metadata,
+    }));
+  } catch (error) {
+    console.error('[SEMANTIC_SEARCH] Vector search failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Search knowledge base using full-text search
+ *
+ * Uses PostgreSQL full-text search with tsvector
+ */
+export async function fullTextSearch(
+  query: string,
+  options: SearchOptions = {}
+): Promise<SearchResult[]> {
+  const {
+    limit = 5,
+    contentTypes,
+  } = options;
+
+  try {
+    // Build content type filter
+    let contentTypeFilter = '';
+    if (contentTypes && contentTypes.length > 0) {
+      const types = contentTypes.map((t) => `'${t}'`).join(',');
+      contentTypeFilter = `AND content_type IN (${types})`;
+    }
+
+    // Search using full-text search
+    const results = await sql`
+      SELECT
+        id,
+        url,
+        title,
+        content,
+        content_type,
+        metadata,
+        ts_rank(searchable_text, plainto_tsquery('english', ${query})) AS rank
+      FROM knowledge_base
+      WHERE searchable_text @@ plainto_tsquery('english', ${query})
+      ${contentTypeFilter ? sql.unsafe(contentTypeFilter) : sql``}
+      ORDER BY rank DESC
+      LIMIT ${limit}
+    `;
+
+    return results.map((row: any) => ({
+      id: row.id,
+      url: row.url,
+      title: row.title,
+      content: row.content,
+      contentType: row.content_type,
+      relevanceScore: parseFloat(row.rank),
+      metadata: row.metadata,
+    }));
+  } catch (error) {
+    console.error('[SEMANTIC_SEARCH] Full-text search failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Hybrid search: Combines vector and full-text search
+ *
+ * This approach gives best results by leveraging both:
+ * - Vector search: Semantic understanding
+ * - Full-text search: Exact keyword matching
+ */
+export async function hybridSearch(
+  query: string,
+  options: SearchOptions = {}
+): Promise<SearchResult[]> {
+  const { limit = 5 } = options;
+
+  try {
+    // Run both searches in parallel
+    const [vectorResults, ftsResults] = await Promise.all([
+      vectorSearch(query, { ...options, limit: limit * 2 }),
+      fullTextSearch(query, { ...options, limit: limit * 2 }),
+    ]);
+
+    // Merge and deduplicate results
+    const resultsMap = new Map<string, SearchResult>();
+
+    // Add vector results with weight
+    vectorResults.forEach((result) => {
+      resultsMap.set(result.id, {
+        ...result,
+        relevanceScore: result.relevanceScore * 0.7, // 70% weight for vector
+      });
+    });
+
+    // Add/update with FTS results
+    ftsResults.forEach((result) => {
+      const existing = resultsMap.get(result.id);
+      if (existing) {
+        // Boost score if found in both searches
+        existing.relevanceScore += result.relevanceScore * 0.3; // 30% weight for FTS
+      } else {
+        resultsMap.set(result.id, {
+          ...result,
+          relevanceScore: result.relevanceScore * 0.3,
+        });
+      }
+    });
+
+    // Sort by combined score and return top results
+    return Array.from(resultsMap.values())
+      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .slice(0, limit);
+  } catch (error) {
+    console.error('[SEMANTIC_SEARCH] Hybrid search failed:', error);
+    // Fallback to vector search only
+    return vectorSearch(query, options);
+  }
+}
+
+/**
+ * Format search results for AI context
+ *
+ * Converts search results into a formatted string for Claude's system prompt
+ */
+export function formatResultsForAI(results: SearchResult[]): string {
+  if (results.length === 0) {
+    return 'No relevant knowledge base articles found for this query.';
+  }
+
+  const formatted = results.map((result, index) => {
+    // Truncate content to avoid context overflow
+    const truncatedContent = result.content.slice(0, 500);
+    const contentPreview = truncatedContent + (result.content.length > 500 ? '...' : '');
+
+    return `
+[Article ${index + 1}] ${result.title}
+URL: ${result.url}
+Type: ${result.contentType}
+Relevance: ${(result.relevanceScore * 100).toFixed(1)}%
+
+${contentPreview}
+`.trim();
+  });
+
+  return `
+RELEVANT KNOWLEDGE BASE ARTICLES:
+
+${formatted.join('\n\n---\n\n')}
+
+Use the above articles to inform your response. Reference specific articles when appropriate.
+`.trim();
+}
+
+/**
+ * Get related articles based on content similarity
+ *
+ * Useful for "See also" recommendations
+ */
+export async function getRelatedArticles(
+  articleId: string,
+  limit: number = 3
+): Promise<SearchResult[]> {
+  try {
+    // Get the article's embedding
+    const article = await sql`
+      SELECT embedding
+      FROM knowledge_base
+      WHERE id = ${articleId}
+      LIMIT 1
+    `;
+
+    if (article.length === 0) {
+      return [];
+    }
+
+    const embedding = article[0].embedding;
+
+    // Find similar articles
+    const results = await sql`
+      SELECT
+        id,
+        url,
+        title,
+        content,
+        content_type,
+        metadata,
+        1 - (embedding <=> ${embedding}::vector) AS similarity_score
+      FROM knowledge_base
+      WHERE id != ${articleId}
+      ORDER BY embedding <=> ${embedding}::vector
+      LIMIT ${limit}
+    `;
+
+    return results.map((row: any) => ({
+      id: row.id,
+      url: row.url,
+      title: row.title,
+      content: row.content,
+      contentType: row.content_type,
+      relevanceScore: parseFloat(row.similarity_score),
+      metadata: row.metadata,
+    }));
+  } catch (error) {
+    console.error('[SEMANTIC_SEARCH] Get related articles failed:', error);
+    return [];
+  }
+}
+
+/**
+ * Simple keyword search (fallback when embeddings aren't available)
+ */
+export async function keywordSearch(
+  query: string,
+  options: SearchOptions = {}
+): Promise<SearchResult[]> {
+  const { limit = 5, contentTypes } = options;
+
+  try {
+    // Build content type filter
+    let contentTypeFilter = '';
+    if (contentTypes && contentTypes.length > 0) {
+      const types = contentTypes.map((t) => `'${t}'`).join(',');
+      contentTypeFilter = `AND content_type IN (${types})`;
+    }
+
+    // Simple LIKE search on title and content
+    const results = await sql`
+      SELECT
+        id,
+        url,
+        title,
+        content,
+        content_type,
+        metadata,
+        CASE
+          WHEN LOWER(title) LIKE LOWER('%' || ${query} || '%') THEN 2
+          WHEN LOWER(content) LIKE LOWER('%' || ${query} || '%') THEN 1
+          ELSE 0
+        END AS match_score
+      FROM knowledge_base
+      WHERE LOWER(title) LIKE LOWER('%' || ${query} || '%')
+         OR LOWER(content) LIKE LOWER('%' || ${query} || '%')
+      ${contentTypeFilter ? sql.unsafe(contentTypeFilter) : sql``}
+      ORDER BY match_score DESC, updated_at DESC
+      LIMIT ${limit}
+    `;
+
+    return results.map((row: any) => ({
+      id: row.id,
+      url: row.url,
+      title: row.title,
+      content: row.content,
+      contentType: row.content_type,
+      relevanceScore: parseFloat(row.match_score) / 2, // Normalize to 0-1
+      metadata: row.metadata,
+    }));
+  } catch (error) {
+    console.error('[SEMANTIC_SEARCH] Keyword search failed:', error);
+    return [];
+  }
+}

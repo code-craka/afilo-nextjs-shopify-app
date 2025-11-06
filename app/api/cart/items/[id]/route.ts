@@ -49,7 +49,11 @@ export async function PATCH(
     }
 
     // Build update data
-    const updateData: any = {
+    const updateData: {
+      last_modified: Date;
+      quantity?: number;
+      license_type?: string;
+    } = {
       last_modified: new Date(),
     };
 
@@ -95,10 +99,10 @@ export async function PATCH(
       lastModified: updated.last_modified,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('PATCH /api/cart/items/[id] error:', error);
 
-    if (error.code === 'P2025') {
+    if ((error as any).code === 'P2025') {
       return NextResponse.json(
         { error: 'Item not found or unauthorized' },
         { status: 404 }
@@ -106,7 +110,7 @@ export async function PATCH(
     }
 
     return NextResponse.json(
-      { error: error.message || 'Failed to update item' },
+      { error: (error as Error).message || 'Failed to update item' },
       { status: 500 }
     );
   }
@@ -138,10 +142,10 @@ export async function DELETE(
       message: 'Item removed from cart',
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('DELETE /api/cart/items/[id] error:', error);
 
-    if (error.code === 'P2025') {
+    if ((error as any).code === 'P2025') {
       return NextResponse.json(
         { error: 'Item not found or unauthorized' },
         { status: 404 }
@@ -149,7 +153,7 @@ export async function DELETE(
     }
 
     return NextResponse.json(
-      { error: error.message || 'Failed to remove item' },
+      { error: (error as Error).message || 'Failed to remove item' },
       { status: 500 }
     );
   }

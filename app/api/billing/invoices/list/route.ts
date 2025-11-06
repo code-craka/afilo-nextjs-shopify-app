@@ -13,11 +13,16 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { listCustomerInvoices } from '@/lib/billing/stripe-invoices';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 
 export async function GET(request: NextRequest) {
+  let userId: string | null = null;
+  let stripeCustomerId: string | undefined = undefined;
+
   try {
     // Authenticate user
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -37,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get Stripe Customer ID
-    const stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
+    stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
 
     if (!stripeCustomerId) {
       return NextResponse.json(
@@ -64,16 +69,10 @@ export async function GET(request: NextRequest) {
       count: invoices.length,
       message: `Found ${invoices.length} invoice${invoices.length !== 1 ? 's' : ''}`,
     });
-  } catch (error: any) {
-    console.error('Error listing invoices:', error);
+  } catch (error: unknown) {
+    logError('INVOICE_LIST', error, { userId, stripeCustomerId });
 
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to list invoices',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error);
   }
 }
 

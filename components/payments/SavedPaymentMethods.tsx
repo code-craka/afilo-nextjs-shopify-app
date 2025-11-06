@@ -81,7 +81,7 @@ export function SavedPaymentMethods({
         setSelectedId(defaultMethod.id);
         onSelectPaymentMethod(defaultMethod.id);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading payment methods:', error);
       toast.error('Failed to load saved payment methods');
     } finally {

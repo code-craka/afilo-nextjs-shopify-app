@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import prisma from '@/lib/prisma';
 
@@ -31,10 +31,10 @@ export async function POST() {
       removedCount: result.count,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('POST /api/cart/clear error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to clear cart' },
+      { error: (error as Error).message || 'Failed to clear cart' },
       { status: 500 }
     );
   }

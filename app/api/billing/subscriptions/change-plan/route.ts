@@ -17,11 +17,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getActiveSubscription, changeSubscriptionPlan } from '@/lib/billing/stripe-subscriptions';
 import { checkRateLimit, strictBillingRateLimit } from '@/lib/rate-limit';
 import { validatePriceId, getPriceMetadata } from '@/lib/billing/price-validation';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 
 export async function POST(request: NextRequest) {
+  let userId: string | null = null;
+  let stripeCustomerId: string | undefined = undefined;
+  let subscriptionId: string | undefined = undefined;
+
   try {
     // Authenticate user
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -61,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Stripe Customer ID
-    const stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
+    stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
 
     if (!stripeCustomerId) {
       return NextResponse.json(
@@ -108,6 +114,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    subscriptionId = activeSubscription.id;
+
     // Check if trying to change to the same plan
     if (activeSubscription.planId === sanitizedPriceId) {
       return NextResponse.json(
@@ -129,16 +137,9 @@ export async function POST(request: NextRequest) {
       subscription: updatedSubscription,
       message: 'Subscription plan changed successfully',
     });
-  } catch (error: any) {
-    console.error('Error changing subscription plan:', error);
-
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to change subscription plan',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    logError('SUBSCRIPTION_CHANGE_PLAN', error, { userId, stripeCustomerId, subscriptionId });
+    return createErrorResponse(error);
   }
 }
 

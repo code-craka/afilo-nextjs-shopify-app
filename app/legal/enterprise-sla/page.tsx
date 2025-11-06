@@ -216,7 +216,7 @@ export default function EnterpriseSLA() {
             </p>
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-gray-700"><strong>Enterprise Support:</strong> enterprise@afilo.io</p>
-              <p className="text-gray-700"><strong>Emergency Hotline:</strong> +1-800-AFILO-911</p>
+              <p className="text-gray-700"><strong>Emergency Hotline:</strong> +1 302 415 3171</p>
               <p className="text-gray-700"><strong>Account Manager:</strong> Available through customer portal</p>
               <p className="text-gray-700"><strong>Status Page:</strong> status.afilo.io</p>
             </div>

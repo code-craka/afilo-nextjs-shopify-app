@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import HeroSection from '@/components/HeroSection';
@@ -18,6 +19,52 @@ import PricingComparisonTable from '@/components/PricingComparisonTable';
 import FAQSection from '@/components/FAQSection';
 import PrimaryCTASection from '@/components/PrimaryCTASection';
 import Footer from '@/components/Footer';
+
+export const metadata: Metadata = {
+  title: 'Afilo Enterprise | Fortune 500 Digital Commerce Platform - Trusted by 847 Companies',
+  description: 'Enterprise-grade digital commerce platform powering 847 companies including 67 Fortune 500 organizations. SOC 2, ISO 27001, HIPAA certified. 450% average ROI. Pricing: $499-$9,999+/month.',
+  keywords: [
+    'enterprise digital commerce platform',
+    'Fortune 500 software',
+    'B2B digital marketplace',
+    'enterprise ecommerce solution',
+    'digital transformation platform',
+    'SOC 2 certified software',
+    'ISO 27001 compliance',
+    'HIPAA compliant platform',
+    'enterprise SaaS',
+    'business automation',
+    'ROI calculator',
+    'subscription management',
+    'Next.js enterprise platform',
+    'TypeScript commerce',
+    'Stripe payments enterprise',
+    'Neon PostgreSQL'
+  ],
+  openGraph: {
+    title: 'Afilo Enterprise | Fortune 500 Digital Commerce Platform',
+    description: '847 enterprises trust Afilo for digital transformation. SOC 2, ISO 27001, HIPAA certified with 450% average ROI.',
+    url: 'https://app.afilo.io',
+    type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Afilo Enterprise - Digital Commerce Platform for Fortune 500 Companies',
+      }
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Afilo Enterprise | Fortune 500 Digital Commerce Platform',
+    description: '847 enterprises trust Afilo. SOC 2, ISO 27001, HIPAA certified. 450% ROI.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: 'https://app.afilo.io',
+  },
+};
 
 export default function Home() {
   return (

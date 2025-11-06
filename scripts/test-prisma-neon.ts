@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-expressions */
 /**
  * Test Script: Verify Prisma Queries with Neon PostgreSQL Serverless Adapter
  *

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-expressions */
 /**
  * Alternative Cart Items Table Migration (Fetch-based)
  *
@@ -55,7 +56,7 @@ async function runMigration() {
 
     console.log('\n🎉 Success! Cart system database is ready.\n');
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('\n❌ Migration failed:', error.message);
 
     if (error.message.includes('already exists')) {

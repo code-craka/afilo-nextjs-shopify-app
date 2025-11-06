@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { localItems = [] } = body;
+    const { localItems: _localItems = [] } = body;
 
     // Calculate the cutoff time for abandoned carts
     const thirtyMinutesAgo = new Date(Date.now() - ABANDONED_CART_THRESHOLD);
@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
       syncedAt: new Date().toISOString(),
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('POST /api/cart/sync error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to sync cart' },
+      { error: (error as Error).message || 'Failed to sync cart' },
       { status: 500 }
     );
   }

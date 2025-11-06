@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 import { LoaderCircle } from 'lucide-react';
+import TwoFactorVerification from '@/components/auth/TwoFactorVerification';
 
 export default function SignInPage() {
   const { isLoaded, signIn, setActive } = useSignIn();
@@ -12,6 +13,7 @@ export default function SignInPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [requires2FA, setRequires2FA] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams?.get('redirect_url') || searchParams?.get('redirect') || '/';
@@ -55,10 +57,12 @@ export default function SignInPage() {
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
         router.push(redirectUrl);
+      } else if (result.status === 'needs_second_factor') {
+        // 2FA is required
+        setRequires2FA(true);
       } else {
-        // Handle 2FA if needed
-        console.log('Additional verification required:', result);
-        setError('Additional verification required');
+        console.log('Unexpected sign-in status:', result.status);
+        setError('Sign-in failed. Please try again.');
       }
     } catch (err: any) {
       console.error('Sign-in error:', err);
@@ -70,19 +74,31 @@ export default function SignInPage() {
 
   if (!isLoaded) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <LoaderCircle className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
+  // Show 2FA verification if required
+  if (requires2FA) {
+    return (
+      <TwoFactorVerification
+        onBack={() => {
+          setRequires2FA(false);
+          setError('');
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-xl p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Enterprise Portal</h1>
-            <p className="text-gray-600 mt-2">Sign in to your account</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Enterprise Portal</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">Sign in to your account</p>
           </div>
 
           {(error || errorParam === 'session_expired') && (

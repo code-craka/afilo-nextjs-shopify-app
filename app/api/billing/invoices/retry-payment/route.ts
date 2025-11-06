@@ -13,12 +13,18 @@
 
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 import { retryInvoicePayment, verifyInvoiceOwnership } from '@/lib/billing/stripe-invoices';
 
 export async function POST(request: NextRequest) {
+  let userId: string | null = null;
+  let stripeCustomerId: string | undefined = undefined;
+  let invoiceId: string | undefined = undefined;
+
   try {
     // Authenticate user
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -38,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Stripe Customer ID
-    const stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
+    stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
 
     if (!stripeCustomerId) {
       return NextResponse.json(
@@ -49,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { invoiceId } = body;
+    invoiceId = body.invoiceId;
 
     if (!invoiceId) {
       return NextResponse.json(
@@ -78,27 +84,10 @@ export async function POST(request: NextRequest) {
         ? 'Payment successful'
         : 'Payment attempted - please check status',
     });
-  } catch (error: any) {
-    console.error('Error retrying invoice payment:', error);
+  } catch (error: unknown) {
+    logError('INVOICE_RETRY_PAYMENT', error, { userId, stripeCustomerId, invoiceId });
 
-    // Handle specific Stripe errors
-    if (error.type === 'StripeCardError') {
-      return NextResponse.json(
-        {
-          error: 'Payment failed - please update your payment method',
-          details: error.message,
-        },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to retry invoice payment',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error);
   }
 }
 

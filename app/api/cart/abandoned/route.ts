@@ -59,10 +59,10 @@ export async function GET() {
       count: items.length,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('GET /api/cart/abandoned error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch abandoned carts' },
+      { error: (error as Error).message || 'Failed to fetch abandoned carts' },
       { status: 500 }
     );
   }
@@ -126,10 +126,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('POST /api/cart/abandoned error:', error);
 
-    if (error.code === 'P2025') {
+    if ((error as any).code === 'P2025') {
       return NextResponse.json(
         { error: 'Item not found or unauthorized' },
         { status: 404 }
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || 'Failed to restore item' },
+      { error: (error as Error).message || 'Failed to restore item' },
       { status: 500 }
     );
   }

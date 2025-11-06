@@ -801,7 +801,7 @@ export default function TermsOfServicePage() {
           <h3 className="text-xl font-semibold text-gray-900 mt-4">Notices:</h3>
           <p>
             Legal notices to TechSci, Inc. (operating the Afilo platform) must be sent to:{' '}
-            <a href="mailto:legal@techsci.io" className="text-blue-600 hover:underline">legal@techsci.io</a> or 1111B S Governors Ave STE 34002, Dover, DE 19904.
+            <a href="mailto:legal@techsci.io" className="text-blue-600 hover:underline">legal@techsci.io</a> or 651 N Broad St, Suite 201, Middletown Delaware 19709.
           </p>
           <p>
             We will send notices to the email address associated with your account.
@@ -816,7 +816,7 @@ export default function TermsOfServicePage() {
         <div className="space-y-3 text-gray-700">
           <p>
             <strong>Company:</strong> TechSci, Inc. (operating the Afilo platform)<br />
-            <strong>Address:</strong> 1111B S Governors Ave STE 34002, Dover, DE 19904, United States
+            <strong>Address:</strong> 651 N Broad St, Suite 201, Middletown Delaware 19709, United States
           </p>
 
           <p>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Stripe Network Tokenization Implementation
  *
@@ -72,7 +73,6 @@ export async function createNetworkTokenSetup(
       payment_method_options: {
         card: {
           request_three_d_secure: 'any', // Skip 3DS for setup
-          // @ts-ignore - network_token is supported but not in current type definitions
           network_token: {
             used: true, // Force network token usage
           },
@@ -153,7 +153,7 @@ export async function createNetworkTokenPayment(
           request_three_d_secure: 'any', // Stripe decides (network tokens skip this)
 
           // ENABLE NETWORK TOKEN USAGE
-          // @ts-ignore - network_token is supported but not in current type definitions
+          // @ts-expect-error - network_token is supported but not in current type definitions
           network_token: {
             used: true, // Force network token if available
           },
@@ -240,7 +240,6 @@ export async function createNetworkTokenSubscriptionCheckout(
       payment_method_options: {
         card: {
           request_three_d_secure: 'any', // Let Stripe decide (should skip for network tokens)
-          // @ts-ignore - network_token is supported but not in current type definitions
           network_token: {
             used: true, // Force network token usage
           },

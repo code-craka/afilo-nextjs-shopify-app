@@ -129,6 +129,39 @@ export const standardBillingRateLimit = new Ratelimit({
 });
 
 /**
+ * PHASE 5: Chat Bot Rate Limiters
+ *
+ * Tiered rate limiting based on subscription status
+ * Prevents abuse while allowing premium customers higher limits
+ */
+
+/**
+ * Standard Chat Rate Limiter
+ *
+ * For free and professional tier users: 30 messages per 5 minutes
+ * Allows normal conversation flow while preventing spam/abuse
+ */
+export const chatRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, '5 m'),
+  analytics: true,
+  prefix: '@afilo/chat-standard',
+});
+
+/**
+ * Premium Chat Rate Limiter
+ *
+ * For Enterprise and Enterprise Plus customers: 100 messages per 5 minutes
+ * Higher limits for paying customers with more complex support needs
+ */
+export const premiumChatRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(100, '5 m'),
+  analytics: true,
+  prefix: '@afilo/chat-premium',
+});
+
+/**
  * Helper function to check rate limit and return standardized response
  *
  * @param identifier - User ID, IP address, or other unique identifier
@@ -195,4 +228,20 @@ export function getClientIp(request: Request): string {
   if (forwarded) return forwarded.split(',')[0].trim();
 
   return 'unknown';
+}
+
+/**
+ * Get appropriate chat rate limiter based on subscription tier
+ *
+ * @param subscriptionTier - User's subscription tier from CustomerContext
+ * @returns Rate limiter instance (premium for Enterprise/Enterprise Plus, standard for others)
+ */
+export function getChatRateLimit(subscriptionTier: string | null): Ratelimit {
+  // Premium customers (Enterprise and Enterprise Plus) get higher limits
+  if (subscriptionTier === 'enterprise' || subscriptionTier === 'enterprise_plus') {
+    return premiumChatRateLimit;
+  }
+
+  // Standard limits for free and professional users
+  return chatRateLimit;
 }

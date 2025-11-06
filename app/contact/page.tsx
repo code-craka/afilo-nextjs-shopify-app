@@ -176,7 +176,7 @@ export default function ContactPage() {
                 </div>
                 <div className="ml-4">
                   <h3 className="text-lg font-semibold text-gray-900">Phone</h3>
-                  <p className="text-gray-600">+1-800-AFILO-PRO</p>
+                  <p className="text-gray-600">+1 302 415 3171</p>
                   <p className="text-sm text-gray-500">24/7 Enterprise Support</p>
                 </div>
               </div>
@@ -190,7 +190,7 @@ export default function ContactPage() {
                 </div>
                 <div className="ml-4">
                   <h3 className="text-lg font-semibold text-gray-900">Address</h3>
-                  <p className="text-gray-600">1 Enterprise Way<br />Tech City, TC 12345</p>
+                  <p className="text-gray-600">651 N Broad St, Suite 201<br />Middletown Delaware 19709<br />United States</p>
                   <p className="text-sm text-gray-500">By appointment only</p>
                 </div>
               </div>

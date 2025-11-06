@@ -37,7 +37,7 @@ export default function Footer() {
             <div className="space-y-2 text-sm text-gray-400">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>1111B S Governors Ave STE 34002<br />Dover, DE 19904, United States</span>
+                <span>651 N Broad St, Suite 201<br />Middletown Delaware 19709<br />United States</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 flex-shrink-0" />

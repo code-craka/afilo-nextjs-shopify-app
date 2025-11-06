@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { stripe } from '@/lib/stripe-server';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 
 /**
  * GET /api/billing/invoices/download?invoiceId=in_xxx
@@ -15,8 +16,12 @@ import { stripe } from '@/lib/stripe-server';
  * - Redirect to Stripe hosted invoice PDF
  */
 export async function GET(request: NextRequest) {
+  let userId: string | null = null;
+  let invoiceId: string | null = null;
+
   try {
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -26,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const invoiceId = searchParams.get('invoiceId');
+    invoiceId = searchParams.get('invoiceId');
 
     if (!invoiceId) {
       return NextResponse.json(
@@ -47,11 +52,9 @@ export async function GET(request: NextRequest) {
 
     // Redirect to Stripe hosted PDF
     return NextResponse.redirect(invoice.invoice_pdf);
-  } catch (error: any) {
-    console.error('Error downloading invoice:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to download invoice' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    logError('INVOICE_DOWNLOAD', error, { invoiceId, userId });
+
+    return createErrorResponse(error);
   }
 }

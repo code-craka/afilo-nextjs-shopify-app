@@ -1,27 +1,53 @@
 # 📖 API Documentation
 
-**Project**: Afilo Digital Marketplace  
-**Author**: Rihan (@code-craka)  
-**Repository**: [afilo-nextjs-shopify-app](https://github.com/code-craka/afilo-nextjs-shopify-app)  
-**Live Demo**: [app.afilo.io](https://app.afilo.io)  
+**Version**: 2.3.0
+**Project**: Afilo Digital Marketplace
+**Author**: Rihan (@code-craka)
+**Repository**: [afilo-nextjs-shopify-app](https://github.com/code-craka/afilo-nextjs-shopify-app)
+**Live Demo**: [app.afilo.io](https://app.afilo.io)
+**Last Updated**: January 27, 2025
 
 ## 🏗️ Architecture Overview
 
-Afilo Digital Marketplace uses a headless commerce architecture with Next.js frontend and Shopify backend, specialized for digital software products.
+Afilo Digital Marketplace uses a modern Next.js 16.0.0 architecture with Stripe-native payments, Neon PostgreSQL, and Anthropic AI integration, specialized for digital software products.
 
 ### Core Components
 
 ```mermaid
 graph TD
-    A[Next.js Frontend] --> B[Shopify Storefront API]
-    A --> C[Digital Cart Store]
-    A --> D[Product Analysis Engine]
-    B --> E[GraphQL Queries]
-    C --> F[License Management]
-    D --> G[Tech Stack Detection]
+    A[Next.js 16 Frontend] --> B[Stripe API]
+    A --> C[Neon PostgreSQL]
+    A --> D[Anthropic Claude AI]
+    A --> E[Clerk Authentication]
+    B --> F[Payment Processing]
+    B --> G[Subscription Management]
+    C --> H[Product Catalog]
+    C --> I[User Management]
+    C --> J[Knowledge Base]
+    D --> K[AI Chat Bot]
+    E --> L[Google OAuth]
 ```
 
-## 🛒 Shopify Integration API
+## 📡 API Endpoints Overview
+
+**Total Routes**: 49 endpoints across 8 domains
+**Authentication**: Clerk-based with JWT tokens
+**Rate Limiting**: Upstash Redis distributed rate limiting
+**Database**: Neon PostgreSQL with Prisma ORM
+
+### Endpoint Categories
+
+| Category | Count | Purpose |
+|----------|--------|---------|
+| Products | 6 | Digital product catalog |
+| Cart | 6 | Shopping cart operations |
+| Billing | 11 | Stripe billing integration |
+| Chat | 7 | AI chat bot system |
+| Admin | 11 | Administrative operations |
+| Stripe | 6 | Payment processing |
+| Auth | 2 | Authentication |
+
+## 🛒 Products API
 
 ### Core Functions
 

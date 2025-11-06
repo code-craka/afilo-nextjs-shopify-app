@@ -15,7 +15,7 @@ export default function AcceptableUsePage() {
           Effective Date: January 30, 2025
         </p>
         <p className="text-gray-700 leading-relaxed">
-          This Acceptable Use Policy ("AUP") defines prohibited uses of the Afilo platform and services provided by
+          This Acceptable Use Policy (&quot;AUP&quot;) defines prohibited uses of the Afilo platform and services provided by
           TechSci, Inc. By using Afilo, you agree to comply with this policy and all applicable laws and regulations.
         </p>
       </section>
@@ -35,7 +35,7 @@ export default function AcceptableUsePage() {
             <li><strong>Hacking:</strong> Unauthorized access to computer systems, networks, or data</li>
             <li><strong>Phishing:</strong> Impersonating others to steal credentials or sensitive information</li>
             <li><strong>Intellectual Property Theft:</strong> Piracy, trademark infringement, copyright violation, or patent infringement</li>
-            <li><strong>Identity Theft:</strong> Stealing or using another person's identity</li>
+            <li><strong>Identity Theft:</strong> Stealing or using another person&apos;s identity</li>
             <li><strong>Drug Trafficking:</strong> Facilitating illegal drug sales or distribution</li>
             <li><strong>Weapons Sales:</strong> Illegal sale of firearms, explosives, or weapons</li>
             <li><strong>Human Trafficking:</strong> Any involvement in human trafficking or exploitation</li>
@@ -156,7 +156,7 @@ export default function AcceptableUsePage() {
             <li><strong>Copyright Infringement:</strong> Unauthorized copyrighted content (see{' '}
               <a href="#dmca" className="text-blue-600 hover:underline">DMCA section</a>)</li>
             <li><strong>Trademark Infringement:</strong> Unauthorized use of trademarks or brand names</li>
-            <li><strong>Privacy Violations:</strong> Content violating others' privacy rights</li>
+            <li><strong>Privacy Violations:</strong> Content violating others&apos; privacy rights</li>
           </ul>
         </div>
       </section>
@@ -347,8 +347,8 @@ export default function AcceptableUsePage() {
               Email: <a href="mailto:dmca@techsci.io" className="text-blue-600 hover:underline">dmca@techsci.io</a><br />
               Mailing Address:<br />
               TechSci, Inc. - DMCA Agent<br />
-              1111B S Governors Ave STE 34002<br />
-              Dover, DE 19904, United States
+              651 N Broad St, Suite 201<br />
+              Middletown Delaware 19709, United States
             </p>
           </div>
 
@@ -421,7 +421,7 @@ export default function AcceptableUsePage() {
         </h2>
         <p className="text-gray-700">
           We may update this Acceptable Use Policy at any time to reflect new threats, legal requirements, or service changes.
-          Material changes will be notified via email with 14 days' notice. Continued use after changes constitutes acceptance.
+          Material changes will be notified via email with 14 days&apos; notice. Continued use after changes constitutes acceptance.
         </p>
       </section>
 

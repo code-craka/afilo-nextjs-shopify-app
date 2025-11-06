@@ -7,6 +7,8 @@ import "./globals.css";
 import DigitalCartWidget from "@/components/DigitalCartWidget";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
 import ToastProvider from "@/components/providers/ToastProvider";
+import { ChatWidget } from "@/components/chat/ChatWidget";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -122,16 +124,19 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300`}
         >
-          <Providers>
-            {children}
-            <ToastProvider />
-          </Providers>
-          <DigitalCartWidget />
-          <PerformanceMonitor />
+          <ThemeProvider defaultTheme="system" storageKey="afilo-theme">
+            <Providers>
+              {children}
+              <ToastProvider />
+            </Providers>
+            <DigitalCartWidget />
+            <ChatWidget />
+            {/* <PerformanceMonitor /> */}
+          </ThemeProvider>
           {GA_MEASUREMENT_ID && (
             <>
               <Script
@@ -145,6 +150,24 @@ export default function RootLayout({
                   gtag('js', new Date());
                   gtag('config', '${GA_MEASUREMENT_ID}', {
                     page_path: window.location.pathname,
+                    send_page_view: true,
+                    // Enhanced tracking for enterprise customers
+                    custom_map: {
+                      'dimension1': 'user_type',
+                      'dimension2': 'subscription_tier',
+                      'dimension3': 'company_size'
+                    },
+                    // Privacy settings
+                    anonymize_ip: true,
+                    allow_google_signals: true,
+                    allow_ad_personalization_signals: false
+                  });
+
+                  // Track initial page load with enhanced context
+                  gtag('event', 'page_view', {
+                    page_title: document.title,
+                    page_location: window.location.href,
+                    content_group1: 'Enterprise Platform'
                   });
                 `}
               </Script>

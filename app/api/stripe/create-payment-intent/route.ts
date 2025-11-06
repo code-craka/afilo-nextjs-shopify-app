@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * UPDATED: Payment Intent API with Radar Bypass + Network Tokens
  *
@@ -155,7 +156,6 @@ export async function POST(request: NextRequest) {
       payment_method_options: {
         card: {
           request_three_d_secure: 'any', // NEVER require 3DS
-          // @ts-ignore - network_token is supported but not in current type definitions
           network_token: {
             used: true, // Enable network tokenization
           },

@@ -113,8 +113,9 @@ function CheckoutForm({
           setError(`Payment status: ${paymentIntent.status}. Please contact support.`);
         }
       }
-    } catch (err: any) {
-      const errorMessage = err.message || 'An unexpected error occurred';
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      const errorMessage = error.message || 'An unexpected error occurred';
       setError(errorMessage);
       onError?.(errorMessage);
     } finally {
@@ -324,9 +325,9 @@ export default function StripePaymentForm(props: PaymentFormProps) {
       }
 
       setClientSecret(data.clientSecret);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating PaymentIntent:', error);
-      setIntentError(error.message || 'Failed to initialize payment');
+      setIntentError(error instanceof Error ? error.message : 'Failed to initialize payment');
     } finally {
       setLoadingIntent(false);
     }

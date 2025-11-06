@@ -64,9 +64,10 @@ export default function BillingSummaryWidget() {
       } else {
         setSubscription(null);
       }
-    } catch (err: any) {
-      console.error('Failed to fetch subscription:', err);
-      setError(err.message || 'Failed to load subscription');
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to fetch subscription:', error);
+      setError(error.message || 'Failed to load subscription');
     } finally {
       setLoading(false);
     }

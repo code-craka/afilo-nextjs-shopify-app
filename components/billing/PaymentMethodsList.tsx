@@ -47,9 +47,10 @@ export default function PaymentMethodsList({ onAddNew }: PaymentMethodsListProps
       }
 
       setPaymentMethods(data.paymentMethods || []);
-    } catch (err: any) {
-      console.error('Failed to fetch payment methods:', err);
-      setError(err.message || 'Failed to load payment methods');
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to fetch payment methods:', error);
+      setError(error.message || 'Failed to load payment methods');
     } finally {
       setLoading(false);
     }
@@ -79,10 +80,11 @@ export default function PaymentMethodsList({ onAddNew }: PaymentMethodsListProps
 
       // Show success message (you can use a toast library here)
       console.log('✅ Default payment method updated');
-    } catch (err: any) {
-      console.error('Failed to set default:', err);
-      alert(err.message || 'Failed to set default payment method');
-      throw err;
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to set default:', error);
+      alert(error.message || 'Failed to set default payment method');
+      throw error;
     }
   };
 
@@ -105,10 +107,11 @@ export default function PaymentMethodsList({ onAddNew }: PaymentMethodsListProps
 
       // Show success message
       console.log('✅ Payment method removed');
-    } catch (err: any) {
-      console.error('Failed to remove payment method:', err);
-      alert(err.message || 'Failed to remove payment method');
-      throw err;
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to remove payment method:', error);
+      alert(error.message || 'Failed to remove payment method');
+      throw error;
     }
   };
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Stripe Invoices Utilities
  *
@@ -80,9 +81,9 @@ export async function listCustomerInvoices(
         : (invoice as any).subscription?.id ?? null,
       attemptCount: invoice.attempt_count,
     }));
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error listing customer invoices:', error);
-    throw new Error(error.message || 'Failed to list customer invoices');
+    throw new Error(error instanceof Error ? error.message : 'Failed to list customer invoices');
   }
 }
 
@@ -120,14 +121,14 @@ export async function getInvoiceDetails(
         : (invoice as any).subscription?.id ?? null,
       attemptCount: invoice.attempt_count,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error retrieving invoice details:', error);
 
-    if (error.code === 'resource_missing') {
+    if (error instanceof Error && (error as any).code === 'resource_missing') {
       return null;
     }
 
-    throw new Error(error.message || 'Failed to retrieve invoice details');
+    throw new Error(error instanceof Error ? error.message : 'Failed to retrieve invoice details');
   }
 }
 
@@ -153,7 +154,7 @@ export async function verifyInvoiceOwnership(
       : invoice.customer?.id;
 
     return invoiceCustomerId === customerId;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error verifying invoice ownership:', error);
     return false;
   }
@@ -194,9 +195,9 @@ export async function retryInvoicePayment(
         : (invoice as any).subscription?.id ?? null,
       attemptCount: invoice.attempt_count,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error retrying invoice payment:', error);
-    throw new Error(error.message || 'Failed to retry invoice payment');
+    throw new Error(error instanceof Error ? error.message : 'Failed to retry invoice payment');
   }
 }
 

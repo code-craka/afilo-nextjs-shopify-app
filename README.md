@@ -214,6 +214,7 @@ graph TD
 - **Build Tool**: Turbopack (Next.js native)
 - **Code Quality**: ESLint, Prettier, TypeScript strict
 - **AI Integration**: Claude AI with MCP servers
+- **Claude Code Skills**: 6 comprehensive development skills
 - **Version Control**: Git with conventional commits
 
 ## 📁 Project Structure
@@ -258,7 +259,49 @@ afilo-nextjs-shopify-app/
 │   ├── 📄 schema.prisma             # Database schema
 │   └── 📁 migrations/               # Migrations
 └── 📁 .claude/                      # Claude AI configuration
+    ├── 📄 Skills.md                 # Skills authoring guide
+    └── 📁 skills/                   # 6 development skills
+        ├── 📁 stripe-payments/      # Payment integration workflows
+        ├── 📁 chatbot-kb/           # AI chat & knowledge base
+        ├── 📁 database-ops/         # Prisma schema operations
+        ├── 📁 api-routes/           # Next.js API patterns
+        ├── 📁 performance/          # Lighthouse optimization
+        └── 📁 docs-management/      # Documentation automation
 ```
+
+## 🧠 Claude Code Skills System
+
+**Status**: ✅ 6 comprehensive skills covering all development workflows
+
+### Available Skills
+
+- **`stripe-payments`**: Payment integration, adaptive checkout, subscription management
+- **`chatbot-kb`**: AI chat system, semantic search, knowledge base operations
+- **`database-ops`**: Prisma schema management, migrations, product data models
+- **`api-routes`**: Next.js API patterns, authentication, error handling
+- **`performance`**: Lighthouse optimization, analytics tracking, Core Web Vitals
+- **`docs-management`**: Automated documentation, version control, changelog generation
+
+### Skills Auto-Activation
+
+Skills automatically activate when you mention relevant keywords:
+- "Stripe integration", "payment flows" → `stripe-payments`
+- "knowledge base", "semantic search" → `chatbot-kb`
+- "database schema", "Prisma migration" → `database-ops`
+- "API routes", "authentication" → `api-routes`
+- "performance", "Lighthouse" → `performance`
+- "update documentation", "README" → `docs-management`
+
+### Skills Features
+
+Each skill provides:
+- ✅ **Workflow checklists** for complex operations
+- ✅ **Real code examples** from this codebase
+- ✅ **Error handling patterns** and troubleshooting guides
+- ✅ **Best practices** and security guidelines
+- ✅ **Progressive disclosure** - main skill + detailed references
+
+**Skills Location**: `.claude/skills/` directory
 
 ## 🔧 Configuration
 

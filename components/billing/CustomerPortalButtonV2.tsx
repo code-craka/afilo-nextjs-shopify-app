@@ -84,6 +84,15 @@ const SUPPORTED_LOCALES = [
   'en', 'es', 'fr', 'de', 'it', 'ja', 'pt', 'nl', 'auto',
 ] as const;
 
+type SupportedLocale = typeof SUPPORTED_LOCALES[number];
+
+/**
+ * Type guard to check if a string is a supported locale
+ */
+function isSupportedLocale(locale: string): locale is SupportedLocale {
+  return SUPPORTED_LOCALES.includes(locale as SupportedLocale);
+}
+
 /**
  * CustomerPortalButtonV2 Component
  *
@@ -151,7 +160,7 @@ export const CustomerPortalButtonV2: React.FC<CustomerPortalButtonV2Props> = ({
       });
 
       // Validate locale
-      if (!SUPPORTED_LOCALES.includes(locale as any)) {
+      if (!isSupportedLocale(locale)) {
         console.warn('[CustomerPortalButtonV2] Unsupported locale:', locale, 'falling back to en');
       }
 
@@ -163,7 +172,7 @@ export const CustomerPortalButtonV2: React.FC<CustomerPortalButtonV2Props> = ({
         },
         body: JSON.stringify({
           return_url: returnUrl,
-          locale: SUPPORTED_LOCALES.includes(locale as any) ? locale : 'en',
+          locale: isSupportedLocale(locale) ? locale : 'en',
         }),
       });
 

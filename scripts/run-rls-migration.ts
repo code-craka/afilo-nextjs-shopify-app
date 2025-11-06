@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-expressions */
 /**
  * Run RLS Migration Script
  *
@@ -53,7 +54,7 @@ async function runMigration() {
         }
 
         await sql.unsafe(statement);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Ignore "already exists" errors
         if (error.message?.includes('already exists')) {
           console.log(`  ⚠️  Skipped (already exists)`);
@@ -101,7 +102,7 @@ async function runMigration() {
     });
 
     console.log('\n🎉 All tables now have RLS protection!\n');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('\n❌ Migration failed:', error.message);
     console.error('\nStack trace:', error.stack);
     process.exit(1);

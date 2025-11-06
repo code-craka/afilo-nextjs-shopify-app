@@ -111,7 +111,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     // Step 6: Device-specific optimization
-    let recommendedForDevice = optimalMethods.methods[0]?.type;
+    const recommendedForDevice = optimalMethods.methods[0]?.type;
 
     if (deviceType === 'mobile') {
       // Prioritize digital wallets for mobile (if any available)

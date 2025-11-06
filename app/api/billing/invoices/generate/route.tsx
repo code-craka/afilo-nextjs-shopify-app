@@ -92,10 +92,10 @@ export async function POST(request: NextRequest) {
         'Content-Length': pdfBuffer.length.toString(),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error generating invoice PDF:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to generate invoice' },
+      { error: (error as Error).message || 'Failed to generate invoice' },
       { status: 500 }
     );
   }

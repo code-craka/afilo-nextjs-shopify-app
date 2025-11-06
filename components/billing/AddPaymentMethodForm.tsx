@@ -73,9 +73,10 @@ function PaymentMethodForm({ onClose, onSuccess }: Omit<AddPaymentMethodFormProp
           onClose();
         }, 1500);
       }
-    } catch (err: any) {
-      console.error('Failed to add payment method:', err);
-      setError(err.message || 'Failed to add payment method');
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to add payment method:', error);
+      setError(error.message || 'Failed to add payment method');
       setLoading(false);
     }
   };
@@ -190,9 +191,10 @@ export default function AddPaymentMethodForm({
       }
 
       setClientSecret(data.clientSecret);
-    } catch (err: any) {
-      console.error('Failed to create setup intent:', err);
-      setIntentError(err.message || 'Failed to initialize payment form');
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to create setup intent:', error);
+      setIntentError(error.message || 'Failed to initialize payment form');
     } finally {
       setLoadingIntent(false);
     }

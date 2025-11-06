@@ -136,6 +136,8 @@ export default function CartSlideout() {
                               alt={item.title}
                               fill
                               className="object-cover"
+                              sizes="64px"
+                              loading="lazy"
                             />
                           </div>
                         )}

@@ -25,6 +25,7 @@ import { CustomerPortalV2Service } from '@/lib/stripe/services/customer-portal-v
 import { getUserStripeCustomerId } from '@/lib/clerk-utils';
 import { checkRateLimit, moderateBillingRateLimit } from '@/lib/rate-limit';
 import { isFeatureEnabled } from '@/lib/feature-flags';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 
 /**
  * Request body validation
@@ -37,7 +38,11 @@ interface CreatePortalSessionRequest {
 /**
  * POST: Create portal session
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: NextRequest): Promise<NextResponse | Response> {
+  let userId: string | null = null;
+  let stripeCustomerId: string | undefined = undefined;
+  const subscriptionId: string | undefined = undefined;
+
   try {
     // Step 1: Check if v2 is enabled
     if (!isFeatureEnabled('STRIPE_V2_ENABLED')) {
@@ -51,7 +56,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Step 2: Authenticate with Clerk
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -101,6 +107,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Step 5: Get Accounts v2 ID
     const accountId = await getUserStripeCustomerId(userId);
+    stripeCustomerId = accountId || undefined;
 
     if (!accountId) {
       return NextResponse.json(
@@ -131,7 +138,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         });
         // Allow it but log warning
       }
-    } catch (urlError) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid return URL', message: 'Return URL must be valid' },
         { status: 400 }
@@ -221,16 +228,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
       { status: 201 }
     );
-  } catch (error) {
-    console.error('[API] Portal session error:', error);
-
-    return NextResponse.json(
-      {
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error occurred',
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    logError('BILLING_PORTAL_V2_SESSION', error, { userId, stripeCustomerId, subscriptionId });
+    return createErrorResponse(error);
   }
 }
 

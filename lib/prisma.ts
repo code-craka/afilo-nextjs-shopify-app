@@ -15,6 +15,8 @@
  * @see https://neon.tech/docs/guides/prisma
  */
 
+import 'server-only';
+
 // Load environment variables from .env.local
 // Note: We use override: true to ensure .env.local takes precedence over shell environment
 import dotenv from 'dotenv';
@@ -48,7 +50,7 @@ const adapter = new PrismaNeon({ connectionString });
 
 // Global type declaration for development hot-reload
 declare global {
-  // eslint-disable-next-line no-var
+   
   var prisma: PrismaClient | undefined;
 }
 

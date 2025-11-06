@@ -450,8 +450,8 @@ export default function DisputeResolutionPage() {
             Email: <a href="mailto:legal@techsci.io" className="text-blue-600 hover:underline">legal@techsci.io</a><br />
             Mailing Address:<br />
             TechSci, Inc. - Legal Department<br />
-            1111B S Governors Ave STE 34002<br />
-            Dover, DE 19904, United States
+            651 N Broad St, Suite 201<br />
+            Middletown Delaware 19709, United States
           </p>
 
           <p>

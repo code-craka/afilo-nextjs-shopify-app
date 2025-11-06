@@ -13,11 +13,17 @@ import {
   setDefaultPaymentMethod,
   verifyPaymentMethodOwnership,
 } from '@/lib/billing/stripe-payment-methods';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 
 export async function POST(request: NextRequest) {
+  let userId: string | null = null;
+  let stripeCustomerId: string | undefined = undefined;
+  let paymentMethodId: string | undefined = undefined;
+
   try {
     // Authenticate user
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -37,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Stripe Customer ID
-    const stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
+    stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
 
     if (!stripeCustomerId) {
       return NextResponse.json(
@@ -48,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { paymentMethodId } = body;
+    paymentMethodId = body.paymentMethodId;
 
     if (!paymentMethodId) {
       return NextResponse.json(
@@ -80,16 +86,10 @@ export async function POST(request: NextRequest) {
       message: 'Default payment method updated successfully',
       paymentMethodId,
     });
-  } catch (error: any) {
-    console.error('Error setting default payment method:', error);
+  } catch (error: unknown) {
+    logError('PAYMENT_METHOD_SET_DEFAULT', error, { userId, stripeCustomerId, paymentMethodId });
 
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to set default payment method',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error);
   }
 }
 

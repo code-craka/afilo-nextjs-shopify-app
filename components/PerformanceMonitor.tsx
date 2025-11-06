@@ -9,12 +9,37 @@ import { trackPerformance } from '@/lib/analytics';
  * Metrics: LCP, FID, CLS, FCP, TTFB
  */
 
+interface WebVitalMetric {
+  name: string;
+  value: number;
+  id: string;
+}
+
+interface LCPEntry extends PerformanceEntry {
+  renderTime: number;
+  loadTime: number;
+}
+
+interface FIDEntry extends PerformanceEntry {
+  processingStart: number;
+  startTime: number;
+}
+
+interface CLSEntry extends PerformanceEntry {
+  value: number;
+  hadRecentInput: boolean;
+}
+
+interface FCPEntry extends PerformanceEntry {
+  startTime: number;
+}
+
 function PerformanceMonitorContent() {
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
     // Track Core Web Vitals using web-vitals library pattern
-    const reportWebVitals = (metric: any) => {
+    const reportWebVitals = (metric: WebVitalMetric) => {
       const { name, value, id } = metric;
 
       // Send to analytics
@@ -54,7 +79,7 @@ function PerformanceMonitorContent() {
     const observeLCP = () => {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1] as any;
+        const lastEntry = entries[entries.length - 1] as LCPEntry;
         reportWebVitals({
           name: 'LCP',
           value: lastEntry.renderTime || lastEntry.loadTime,
@@ -68,10 +93,11 @@ function PerformanceMonitorContent() {
     const observeFID = () => {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        entries.forEach((entry: any) => {
+        entries.forEach((entry) => {
+          const fidEntry = entry as FIDEntry;
           reportWebVitals({
             name: 'FID',
-            value: entry.processingStart - entry.startTime,
+            value: fidEntry.processingStart - fidEntry.startTime,
             id: `fid-${Date.now()}`,
           });
         });
@@ -84,9 +110,10 @@ function PerformanceMonitorContent() {
       let clsValue = 0;
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        entries.forEach((entry: any) => {
-          if (!entry.hadRecentInput) {
-            clsValue += entry.value;
+        entries.forEach((entry) => {
+          const clsEntry = entry as CLSEntry;
+          if (!clsEntry.hadRecentInput) {
+            clsValue += clsEntry.value;
             reportWebVitals({
               name: 'CLS',
               value: clsValue,
@@ -102,7 +129,7 @@ function PerformanceMonitorContent() {
     const observeFCP = () => {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        entries.forEach((entry: any) => {
+        entries.forEach((entry: FCPEntry) => {
           reportWebVitals({
             name: 'FCP',
             value: entry.startTime,

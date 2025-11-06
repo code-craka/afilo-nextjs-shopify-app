@@ -48,9 +48,10 @@ export default function InvoicesList({ limit = 12 }: InvoicesListProps) {
       }
 
       setInvoices(data.invoices || []);
-    } catch (err: any) {
-      console.error('Failed to fetch invoices:', err);
-      setError(err.message || 'Failed to load invoices');
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to fetch invoices:', error);
+      setError(error.message || 'Failed to load invoices');
     } finally {
       setLoading(false);
     }
@@ -77,10 +78,11 @@ export default function InvoicesList({ limit = 12 }: InvoicesListProps) {
 
       // Show success message
       console.log('✅ Payment retried successfully');
-    } catch (err: any) {
-      console.error('Failed to retry payment:', err);
-      alert(err.message || 'Failed to retry payment');
-      throw err;
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error('Failed to retry payment:', error);
+      alert(error.message || 'Failed to retry payment');
+      throw error;
     }
   };
 

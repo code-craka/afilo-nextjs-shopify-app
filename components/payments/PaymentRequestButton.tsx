@@ -109,9 +109,9 @@ export function PaymentRequestButton({
 
         // Notify parent component
         onSuccess(paymentMethodId);
-      } catch (error: any) {
+      } catch (error: unknown) {
         event.complete('fail');
-        onError(error.message || 'Payment failed');
+        onError(error instanceof Error ? error.message : 'Payment failed');
       }
     });
 

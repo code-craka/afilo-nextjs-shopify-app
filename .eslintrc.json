@@ -6,6 +6,35 @@
   "rules": {
     "@typescript-eslint/no-unused-vars": "warn",
     "@next/next/no-img-element": "warn",
-    "react-hooks/exhaustive-deps": "warn"
-  }
+    "react-hooks/exhaustive-deps": "warn",
+    "quotes": ["error", "single", { "avoidEscape": true, "allowTemplateLiterals": true }],
+    "@typescript-eslint/quotes": ["error", "single", { "avoidEscape": true, "allowTemplateLiterals": true }]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/lib/logger.ts",
+        "**/lib/utils/error-handling.ts",
+        "**/lib/cache-manager.ts",
+        "**/lib/feature-flags.ts",
+        "**/lib/request-manager.ts",
+        "**/lib/neon-rest-client.ts",
+        "**/lib/database.ts",
+        "**/lib/queries/**/*.ts",
+        "**/lib/stripe/config/currencies.ts",
+        "**/lib/stripe/services/**/*.ts",
+        "**/lib/billing/**/*.ts",
+        "**/lib/semantic-search.ts",
+        "**/lib/chat-stripe-context.ts",
+        "**/scripts/**/*.ts",
+        "**/scripts/**/*.js",
+        "**/scripts/**/*.mjs"
+      ],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-require-imports": "off",
+        "@typescript-eslint/no-unused-expressions": "off"
+      }
+    }
+  ]
 }

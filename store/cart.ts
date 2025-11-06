@@ -59,7 +59,7 @@ interface CartState {
 }
 
 // API helper functions
-async function apiCall(endpoint: string, method: string = 'GET', body?: any) {
+async function apiCall(endpoint: string, method: string = 'GET', body?: Record<string, unknown>) {
   const response = await fetch(`/api/cart${endpoint}`, {
     method,
     headers: {
@@ -257,19 +257,58 @@ export const useCartStore = create<CartState>()(
           });
 
           // Update local state with server items
+          const updatedItems = result.items.map((item: Omit<CartItem, 'addedAt'> & { addedAt: string }) => ({
+            ...item,
+            addedAt: new Date(item.addedAt),
+          }));
+
           set({
-            items: result.items.map((item: any) => ({
-              ...item,
-              addedAt: new Date(item.addedAt),
-            })),
+            items: updatedItems,
             lastSyncedAt: new Date(),
             isSyncing: false,
           });
-        } catch (error: any) {
+
+          // Track cart recovery if user is authenticated and has items
+          try {
+            if (updatedItems.length > 0 && typeof window !== 'undefined') {
+              // Get user ID from Clerk (available globally)
+              const userId = (window as any).__clerk_user_id;
+              if (userId) {
+                const sessionId = `cart_${userId}_${Date.now()}`;
+                const totalValue = updatedItems.reduce((sum: number, item: CartItem) => sum + (item.price * item.quantity), 0);
+
+                // Track cart session via API route
+                await fetch('/api/cart/track', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    sessionId,
+                    userId,
+                    items: updatedItems.map((item: CartItem) => ({
+                      productId: item.productId,
+                      variantId: item.variantId,
+                      title: item.title,
+                      price: item.price,
+                      quantity: item.quantity,
+                      imageUrl: item.imageUrl,
+                      licenseType: item.licenseType,
+                    })),
+                    totalValue,
+                  }),
+                });
+              }
+            }
+          } catch (recoveryError) {
+            // Don't fail the sync if recovery tracking fails
+            console.warn('Cart recovery tracking failed:', recoveryError);
+          }
+        } catch (error: unknown) {
           console.error('Failed to sync with server:', error);
 
           // Don't show error for unauthenticated users (401)
-          if (error.message && !error.message.includes('Unauthorized')) {
+          if (error instanceof Error && !error.message.includes('Unauthorized')) {
             // Only log in development
             if (process.env.NODE_ENV === 'development') {
               console.warn('Cart sync error:', error.message);
@@ -288,19 +327,19 @@ export const useCartStore = create<CartState>()(
           const result = await apiCall('/items', 'GET');
 
           set({
-            items: result.items.map((item: any) => ({
+            items: result.items.map((item: Omit<CartItem, 'addedAt'> & { addedAt: string }) => ({
               ...item,
               addedAt: new Date(item.addedAt),
             })),
             lastSyncedAt: new Date(),
             isLoading: false,
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Failed to load cart:', error);
 
           // Don't show error toast for unauthenticated users (401)
           // They'll be redirected to sign in
-          if (error.message && !error.message.includes('Unauthorized')) {
+          if (error instanceof Error && !error.message.includes('Unauthorized')) {
             // Only log other errors silently in development
             if (process.env.NODE_ENV === 'development') {
               console.warn('Cart load error:', error.message);

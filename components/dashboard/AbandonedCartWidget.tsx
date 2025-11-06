@@ -156,6 +156,8 @@ export default function AbandonedCartWidget() {
                   alt={item.title}
                   fill
                   className="object-cover"
+                  sizes="48px"
+                  loading="lazy"
                 />
               </div>
             )}

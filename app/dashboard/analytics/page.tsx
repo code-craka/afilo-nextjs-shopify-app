@@ -217,6 +217,8 @@ export default function AnalyticsPage() {
                         alt={product.title}
                         fill
                         className="object-cover"
+                        sizes="64px"
+                        loading="lazy"
                       />
                     </div>
                   ) : (
@@ -342,6 +344,8 @@ export default function AnalyticsPage() {
                           alt={purchase.title}
                           fill
                           className="object-cover"
+                          sizes="48px"
+                          loading="lazy"
                         />
                       </div>
                     ) : (

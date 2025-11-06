@@ -13,11 +13,16 @@ import { createSetupIntent } from '@/lib/billing/stripe-payment-methods';
 import { stripe } from '@/lib/stripe-server';
 import { updateUserStripeCustomerId } from '@/lib/clerk-utils';
 import { checkRateLimit, moderateBillingRateLimit } from '@/lib/rate-limit';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 
 export async function POST() {
+  let userId: string | null = null;
+  let stripeCustomerId: string | undefined = undefined;
+
   try {
     // Authenticate user
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -66,7 +71,7 @@ export async function POST() {
     }
 
     // Get or create Stripe Customer
-    let stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
+    stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
 
     if (!stripeCustomerId) {
       console.log('Creating new Stripe customer for setup intent:', email);
@@ -106,16 +111,10 @@ export async function POST() {
       customerId: stripeCustomerId,
       message: 'SetupIntent created successfully',
     });
-  } catch (error: any) {
-    console.error('Error creating setup intent:', error);
+  } catch (error: unknown) {
+    logError('SETUP_INTENT_CREATE', error, { userId, stripeCustomerId });
 
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to create setup intent',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error);
   }
 }
 

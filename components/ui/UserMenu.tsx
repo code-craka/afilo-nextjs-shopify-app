@@ -12,6 +12,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 /**
  * UserMenu Component
@@ -97,10 +98,13 @@ export default function UserMenu() {
       >
         {/* User Avatar */}
         {user.imageUrl ? (
-          <img
+          <Image
             src={user.imageUrl}
             alt={`${user.firstName || 'User'}'s avatar`}
+            width={40}
+            height={40}
             className="h-10 w-10 rounded-full ring-2 ring-gray-200"
+            priority={true}
           />
         ) : (
           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-gray-200">

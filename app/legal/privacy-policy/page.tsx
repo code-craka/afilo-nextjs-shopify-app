@@ -20,8 +20,8 @@ export default function PrivacyPolicyPage() {
           <p className="text-sm text-gray-700">
             <strong>Contact Information:</strong><br />
             TechSci, Inc. (operating the Afilo platform)<br />
-            1111B S Governors Ave STE 34002<br />
-            Dover, DE 19904, United States<br />
+            651 N Broad St, Suite 201<br />
+            Middletown Delaware 19709, United States<br />
             Email: <a href="mailto:privacy@techsci.io" className="text-blue-600 hover:underline">privacy@techsci.io</a><br />
             Phone: +1 302 415 3171
           </p>

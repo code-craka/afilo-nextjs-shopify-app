@@ -25,8 +25,8 @@ interface PricingPlan {
   description: string;
   monthlyPrice: number;
   annualPrice: number;
-  monthlyPriceId: string; // TODO: Update with actual Stripe Price ID
-  annualPriceId: string;  // TODO: Update with actual Stripe Price ID
+  monthlyPriceId: string; // Stripe Price ID for monthly billing
+  annualPriceId: string;  // Stripe Price ID for annual billing
   users: string;
   popular?: boolean;
   features: string[];

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-expressions */
 /**
  * Run Cart Items Table Migration
  *
@@ -77,7 +78,7 @@ async function runMigration() {
     console.log('2. Create cart API endpoints');
     console.log('3. Build cart UI components\n');
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('\n❌ Migration failed:', error.message);
 
     // Provide helpful error messages

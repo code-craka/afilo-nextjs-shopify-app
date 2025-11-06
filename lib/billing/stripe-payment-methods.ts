@@ -98,9 +98,9 @@ export async function listPaymentMethods(
     );
 
     return allMethods;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error listing payment methods:', error);
-    throw new Error(error.message || 'Failed to list payment methods');
+    throw new Error(error instanceof Error ? error.message : 'Failed to list payment methods');
   }
 }
 
@@ -140,9 +140,9 @@ export async function attachPaymentMethod(
 
     console.log(`✅ Payment method attached: ${paymentMethodId} to customer ${customerId}`);
     return formattedMethod;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error attaching payment method:', error);
-    throw new Error(error.message || 'Failed to attach payment method');
+    throw new Error(error instanceof Error ? error.message : 'Failed to attach payment method');
   }
 }
 
@@ -162,15 +162,15 @@ export async function detachPaymentMethod(
     await stripe.paymentMethods.detach(paymentMethodId);
     console.log(`✅ Payment method detached: ${paymentMethodId}`);
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error detaching payment method:', error);
 
     // Provide helpful error messages
-    if (error.code === 'resource_missing') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'resource_missing') {
       throw new Error('Payment method not found or already removed');
     }
 
-    throw new Error(error.message || 'Failed to remove payment method');
+    throw new Error(error instanceof Error ? error.message : 'Failed to remove payment method');
   }
 }
 
@@ -197,9 +197,9 @@ export async function setDefaultPaymentMethod(
 
     console.log(`✅ Default payment method updated: ${paymentMethodId} for customer ${customerId}`);
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error setting default payment method:', error);
-    throw new Error(error.message || 'Failed to set default payment method');
+    throw new Error(error instanceof Error ? error.message : 'Failed to set default payment method');
   }
 }
 
@@ -249,14 +249,14 @@ export async function getPaymentMethod(
     };
 
     return formattedMethod;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error retrieving payment method:', error);
 
-    if (error.code === 'resource_missing') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'resource_missing') {
       return null;
     }
 
-    throw new Error(error.message || 'Failed to retrieve payment method');
+    throw new Error(error instanceof Error ? error.message : 'Failed to retrieve payment method');
   }
 }
 
@@ -289,9 +289,9 @@ export async function createSetupIntent(
 
     console.log(`✅ SetupIntent created: ${setupIntent.id} for customer ${customerId}`);
     return setupIntent.client_secret!;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating setup intent:', error);
-    throw new Error(error.message || 'Failed to create setup intent');
+    throw new Error(error instanceof Error ? error.message : 'Failed to create setup intent');
   }
 }
 
@@ -317,7 +317,7 @@ export async function verifyPaymentMethodOwnership(
       : paymentMethod.customer?.id;
 
     return pmCustomerId === customerId;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error verifying payment method ownership:', error);
     return false;
   }

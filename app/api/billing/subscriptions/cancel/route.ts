@@ -18,11 +18,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cancelSubscription } from '@/lib/billing/stripe-subscriptions';
 import { stripe } from '@/lib/stripe-server';
 import { checkRateLimit, strictBillingRateLimit } from '@/lib/rate-limit';
+import { createErrorResponse, logError } from '@/lib/utils/error-handling';
 
 export async function POST(request: NextRequest) {
+  let userId: string | null = null;
+  let stripeCustomerId: string | undefined = undefined;
+  let subscriptionId: string | undefined = undefined;
+
   try {
     // Authenticate user
-    const { userId } = await auth();
+    const authResult = await auth();
+    userId = authResult.userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -62,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Stripe Customer ID
-    const stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
+    stripeCustomerId = user.publicMetadata.stripeCustomerId as string | undefined;
 
     if (!stripeCustomerId) {
       return NextResponse.json(
@@ -73,7 +79,8 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { subscriptionId, cancelImmediately = false } = body;
+    subscriptionId = body.subscriptionId;
+    const { cancelImmediately = false } = body;
 
     if (!subscriptionId) {
       return NextResponse.json(
@@ -108,16 +115,9 @@ export async function POST(request: NextRequest) {
         ? 'Subscription canceled immediately'
         : 'Subscription scheduled for cancellation at end of billing period',
     });
-  } catch (error: any) {
-    console.error('Error canceling subscription:', error);
-
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to cancel subscription',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    logError('SUBSCRIPTION_CANCEL', error, { userId, stripeCustomerId, subscriptionId });
+    return createErrorResponse(error);
   }
 }
 

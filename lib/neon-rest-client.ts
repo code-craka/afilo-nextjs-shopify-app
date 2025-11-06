@@ -1,19 +1,21 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * Neon REST API Client
+ * Neon Database Client (Updated)
  *
- * Provides direct database access via Neon's REST API endpoint.
- * Used for read-heavy operations (analytics, dashboards, stats).
+ * IMPORTANT: Neon Data API requires specific authentication that is not compatible
+ * with Clerk JWT tokens. For now, this client uses API routes for database operations.
  *
- * Authentication: Clerk JWT via JWKS
- * Endpoint: https://ep-square-forest-a10q31a6.apirest.ap-southeast-1.aws.neon.tech/neondb/rest/v1
+ * This provides a unified interface for database queries while using secure
+ * server-side database connections.
+ *
+ * Updated: Uses internal API routes instead of direct Data API access
  */
 
 import { useAuth } from '@clerk/nextjs';
 import { useState, useCallback } from 'react';
 
-// Neon REST API configuration
-const NEON_REST_ENDPOINT = process.env.NEXT_PUBLIC_NEON_REST_API_URL ||
-  'https://ep-square-forest-a10q31a6.apirest.ap-southeast-1.aws.neon.tech/neondb/rest/v1';
+// Internal API endpoint for database operations
+const DB_API_ENDPOINT = '/api/internal/database';
 
 export interface NeonQueryResult<T = any> {
   rows: T[];
@@ -58,8 +60,8 @@ export function useNeonAPI() {
         throw new Error('Authentication required. Please sign in.');
       }
 
-      // Make request to Neon REST API
-      const response = await fetch(NEON_REST_ENDPOINT, {
+      // Make request to internal database API
+      const response = await fetch(DB_API_ENDPOINT, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -78,7 +80,7 @@ export function useNeonAPI() {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.message ||
-          `Neon API error: ${response.status} ${response.statusText}`
+          `Database API error: ${response.status} ${response.statusText}`
         );
       }
 
@@ -126,7 +128,7 @@ export async function neonQuery<T = any>(
 ): Promise<NeonQueryResult<T>> {
   const { token, params, timeout } = options;
 
-  const response = await fetch(NEON_REST_ENDPOINT, {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}${DB_API_ENDPOINT}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -143,7 +145,7 @@ export async function neonQuery<T = any>(
     const errorData = await response.json().catch(() => ({}));
     throw new Error(
       errorData.message ||
-      `Neon API error: ${response.status} ${response.statusText}`
+      `Database API error: ${response.status} ${response.statusText}`
     );
   }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe-server';
+import Stripe from 'stripe';
 
 /**
  * GET /api/stripe/session/[sessionId]
@@ -49,12 +50,12 @@ export async function GET(
     }
 
     // Extract subscription details
-    const subscription = session.subscription as any;
-    const customer = session.customer as any;
+    const subscription = session.subscription as Stripe.Subscription;
+    const customer = session.customer as Stripe.Customer;
     const lineItems = session.line_items?.data || [];
     const firstItem = lineItems[0];
     const price = firstItem?.price;
-    const product = price?.product as any;
+    const product = price?.product as Stripe.Product;
 
     // Format session data for frontend
     const sessionData = {
@@ -83,15 +84,15 @@ export async function GET(
       billingInterval: price?.recurring?.interval === 'month' ? 'monthly' : 'annual',
 
       // Billing dates
-      currentPeriodStart: subscription?.current_period_start
-        ? new Date(subscription.current_period_start * 1000).toLocaleDateString('en-US', {
+      currentPeriodStart: (subscription as any)?.current_period_start
+        ? new Date((subscription as any).current_period_start * 1000).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
           })
         : null,
-      currentPeriodEnd: subscription?.current_period_end
-        ? new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', {
+      currentPeriodEnd: (subscription as any)?.current_period_end
+        ? new Date((subscription as any).current_period_end * 1000).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -117,27 +118,28 @@ export async function GET(
 
     return NextResponse.json(sessionData);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Error retrieving session:', error);
 
     // Handle specific Stripe errors
-    if (error.type === 'StripeInvalidRequestError') {
+    if (error instanceof Error) {
+      if (error.message.includes('No such checkout session')) {
+        return NextResponse.json(
+          { error: 'Session not found', details: error.message },
+          { status: 404 }
+        );
+      }
+
+      // Generic error with message
       return NextResponse.json(
-        { error: 'Session not found', details: error.message },
-        { status: 404 }
+        { error: 'Failed to retrieve session', details: error.message },
+        { status: 500 }
       );
     }
 
-    if (error.type === 'StripeAPIError') {
-      return NextResponse.json(
-        { error: 'Stripe API error', details: error.message },
-        { status: 502 }
-      );
-    }
-
-    // Generic error
+    // Unknown error type
     return NextResponse.json(
-      { error: 'Failed to retrieve session', details: error.message },
+      { error: 'Failed to retrieve session', details: 'Unknown error occurred' },
       { status: 500 }
     );
   }
