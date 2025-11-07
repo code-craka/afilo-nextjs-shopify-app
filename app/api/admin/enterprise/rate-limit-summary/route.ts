@@ -37,9 +37,9 @@ export async function GET(request: NextRequest) {
     const blockedIdentifiers = await RateLimiterService.getBlockedIdentifiers();
 
     const summary = {
-      totalRequests: analytics.totalRequests,
-      blockedRequests: analytics.blockedRequests,
-      blockRate: analytics.blockRate,
+      totalRequests: analytics.total_requests,
+      blockedRequests: analytics.blocked_requests,
+      blockRate: analytics.block_rate,
       activeBlocks: blockedIdentifiers.length,
     };
 

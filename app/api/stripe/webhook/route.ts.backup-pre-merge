@@ -1,31 +1,33 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextRequest, NextResponse } from 'next/server';
+import { stripe, STRIPE_EVENTS, formatDisplayAmount } from '@/lib/stripe-server';
+import { generateUserCredentials } from '@/lib/credentials-generator';
+import { sendCredentialsEmail, sendRenewalConfirmationEmail, sendCancellationEmail, sendPaymentFailedEmail } from '@/lib/email-service';
+import { ProductAccessService } from '@/lib/stripe/services/product-access.service';
+import { prisma } from '@/lib/prisma';
+import { neon } from '@neondatabase/serverless';
+import Stripe from 'stripe';
+
 /**
- * Enhanced Stripe Webhook Handler
+ * POST /api/stripe/webhook
  *
- * Comprehensive webhook handler combining standard payment processing
- * with enterprise monitoring, security, and audit features.
+ * Stripe Webhook Handler for ACH + Card Payments + Subscriptions
  *
- * Features:
- * - Complete payment processing (ACH, cards, subscriptions)
- * - Fraud prevention and security monitoring
- * - Enterprise audit logging and compliance
- * - Rate limiting and performance monitoring
- * - Real-time webhook analytics
- * - Automated email notifications
+ * CRITICAL: This endpoint is REQUIRED for ACH payments and subscriptions!
+ * ACH payments take 3-5 business days to clear. You must wait
+ * for the payment_intent.succeeded webhook before fulfilling orders.
  *
  * Payment Events Handled:
  * - payment_intent.succeeded: Payment confirmed (FULFILL ORDER HERE)
  * - payment_intent.processing: Payment being processed (ACH only)
  * - payment_intent.payment_failed: Payment failed
- * - payment_intent.canceled: Payment canceled
  * - review.opened: Manual fraud review required
  * - review.closed: Review completed
  * - radar.early_fraud_warning.created: Fraud detected
  * - charge.refunded: Refund issued
  * - charge.dispute.created: Customer disputed charge
- * - charge.dispute.closed: Dispute resolved
  *
- * Subscription Events Handled:
+ * Subscription Events Handled (NEW):
  * - checkout.session.completed: Send credentials after subscription payment
  * - customer.subscription.created: Log subscription creation
  * - customer.subscription.updated: Handle plan changes
@@ -36,317 +38,153 @@
  * Setup Instructions:
  * 1. Deploy this endpoint to production
  * 2. Go to Stripe Dashboard → Developers → Webhooks
- * 3. Add endpoint: https://your-domain.vercel.app/api/stripe/webhook
- * 4. Select all events listed above
- * 5. Copy webhook signing secret to .env as STRIPE_WEBHOOK_SECRET
+ * 3. Add endpoint: https://app.afilo.io/api/stripe/webhook
+ * 4. Select events: All payment_intent.*, review.*, radar.*, charge.*, checkout.session.*, customer.subscription.*, invoice.*
+ * 5. Copy webhook signing secret to .env.local as STRIPE_WEBHOOK_SECRET
  * 6. Set RESEND_API_KEY for email delivery
  *
  * @see https://stripe.com/docs/webhooks
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { stripe, STRIPE_EVENTS, formatDisplayAmount } from '@/lib/stripe-server';
-import { generateUserCredentials } from '@/lib/credentials-generator';
-import { sendCredentialsEmail, sendRenewalConfirmationEmail, sendCancellationEmail, sendPaymentFailedEmail } from '@/lib/email-service';
-import { ProductAccessService } from '@/lib/stripe/services/product-access.service';
-import { WebhookMonitorService } from '@/lib/enterprise/webhook-monitor.service';
-import { AuditLoggerService } from '@/lib/enterprise/audit-logger.service';
-import { RateLimiterService } from '@/lib/enterprise/rate-limiter.service';
-import { prisma } from '@/lib/prisma';
-import { neon } from '@neondatabase/serverless';
-import Stripe from 'stripe';
-
 // Disable Next.js body parsing (required for signature verification)
 export const runtime = 'nodejs';
 
-/**
- * POST /api/stripe/webhook
- *
- * Enhanced Stripe Webhook Handler with Enterprise Features
- *
- * CRITICAL: This endpoint is REQUIRED for ACH payments and subscriptions!
- * ACH payments take 3-5 business days to clear. You must wait
- * for the payment_intent.succeeded webhook before fulfilling orders.
- */
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-  let webhookId: string | null = null;
+  const body = await request.text();
+  const signature = request.headers.get('stripe-signature');
 
-  try {
-    // Enterprise Rate Limiting Check
-    const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] ||
-                     request.headers.get('x-real-ip') || 'unknown';
-    const rateLimitResult = await RateLimiterService.checkLimit({
-      identifier: clientIP,
-      limit: 100,
-      windowMs: 60 * 1000 // 1 minute
-    });
-
-    if (!rateLimitResult.allowed) {
-      await AuditLoggerService.log({
-        action: 'webhook.rate_limited',
-        resource_type: 'webhook_endpoint',
-        ip_address: clientIP,
-        user_agent: request.headers.get('user-agent') || undefined,
-        metadata: {
-          endpoint: '/api/stripe/webhook',
-          resetTime: rateLimitResult.resetTime
-        },
-        severity: 'medium',
-        risk_score: 60
-      });
-
-      return NextResponse.json(
-        { error: 'Rate limit exceeded' },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': '60',
-            'X-RateLimit-Limit': '100',
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-          },
-        }
-      );
-    }
-
-    const body = await request.text();
-    const signature = request.headers.get('stripe-signature');
-
-    if (!signature) {
-      console.error('Webhook error: Missing stripe-signature header');
-
-      await AuditLoggerService.logSecurityEvent('webhook_missing_signature', {
-        endpoint: '/api/stripe/webhook',
-        userAgent: request.headers.get('user-agent'),
-      }, request);
-
-      return NextResponse.json(
-        { error: 'Missing signature' },
-        { status: 400 }
-      );
-    }
-
-    if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.error('Webhook error: STRIPE_WEBHOOK_SECRET not configured');
-      return NextResponse.json(
-        { error: 'Webhook not configured' },
-        { status: 500 }
-      );
-    }
-
-    let event: Stripe.Event;
-
-    try {
-      // Verify webhook signature (CRITICAL for security)
-      event = stripe.webhooks.constructEvent(
-        body,
-        signature,
-        process.env.STRIPE_WEBHOOK_SECRET
-      );
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error('Unknown error');
-      console.error('Webhook signature verification failed:', error.message);
-
-      await AuditLoggerService.logSecurityEvent('webhook_signature_verification_failed', {
-        endpoint: '/api/stripe/webhook',
-        error: error.message,
-        signatureHeader: signature.substring(0, 20) + '...', // Partial for debugging
-      }, request);
-
-      return NextResponse.json(
-        { error: 'Invalid signature' },
-        { status: 400 }
-      );
-    }
-
-    // Enterprise Webhook Monitoring - Log the event
-    await WebhookMonitorService.logEvent({
-      event_id: event.id,
-      event_type: event.type,
-      status: 'pending',
-      payload_size: JSON.stringify(event.data).length,
-      attempt_count: 1,
-      source: 'stripe'
-    });
-    webhookId = event.id;
-
-    console.log(`✅ Webhook received: ${event.type} (${event.id}) - Tracking: ${webhookId}`);
-
-    // Process webhook event with comprehensive error handling
-    let processingError: Error | null = null;
-
-    try {
-      await processWebhookEvent(event, request);
-
-      // Log successful payment events for enterprise audit
-      if (isPaymentEvent(event.type)) {
-        await AuditLoggerService.log({
-          action: `payment.${event.type.replace('payment_intent.', '')}`,
-          resource_type: 'payment_intent',
-          resource_id: (event.data.object as any).id,
-          clerk_user_id: (event.data.object as any).metadata?.clerk_user_id || null,
-          ip_address: clientIP,
-          user_agent: request.headers.get('user-agent') || undefined,
-          metadata: {
-            stripePaymentIntentId: (event.data.object as any).id,
-            amount: (event.data.object as any).amount,
-            currency: (event.data.object as any).currency,
-          },
-          severity: 'low',
-          risk_score: 10
-        });
-      }
-
-    } catch (error) {
-      processingError = error instanceof Error ? error : new Error('Unknown processing error');
-      console.error(`❌ Webhook processing failed for ${event.type}:`, processingError.message);
-    }
-
-    const processingTime = Date.now() - startTime;
-
-    // Update webhook monitoring status
-    await WebhookMonitorService.updateEventStatus(
-      webhookId || event.id,
-      processingError ? 'failed' : 'success',
-      processingTime,
-      undefined,
-      processingError?.message
-    );
-
-    if (processingError) {
-      // Log processing error for security monitoring
-      await AuditLoggerService.logSecurityEvent('webhook_processing_failed', {
-        eventType: event.type,
-        eventId: event.id,
-        error: processingError.message,
-        processingTime,
-      }, request);
-
-      return NextResponse.json(
-        { error: 'Webhook processing failed' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      received: true,
-      eventId: event.id,
-      processingTime,
-      webhookId,
-    });
-
-  } catch (error: unknown) {
-    const processingTime = Date.now() - startTime;
-    const err = error instanceof Error ? error : new Error('Unknown error');
-
-    console.error('❌ Webhook handler error:', err.message);
-
-    // Update webhook status if we have a webhook ID
-    if (webhookId) {
-      await WebhookMonitorService.updateWebhookStatus(webhookId, 'failed', processingTime, err.message);
-    }
-
-    // Log critical error for enterprise monitoring
-    await AuditLoggerService.logSecurityEvent('webhook_handler_error', {
-      error: err.message,
-      processingTime,
-      webhookId,
-    }, request);
-
+  if (!signature) {
+    console.error('Webhook error: Missing stripe-signature header');
     return NextResponse.json(
-      { error: 'Webhook handler failed', details: err.message, webhookId },
+      { error: 'Missing signature' },
+      { status: 400 }
+    );
+  }
+
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error('Webhook error: STRIPE_WEBHOOK_SECRET not configured');
+    return NextResponse.json(
+      { error: 'Webhook not configured' },
       { status: 500 }
     );
   }
-}
 
-/**
- * Process the actual webhook event with comprehensive event handling
- */
-async function processWebhookEvent(event: Stripe.Event, request: NextRequest): Promise<void> {
-  switch (event.type) {
-    // ========================================
-    // PAYMENT INTENT EVENTS (CRITICAL)
-    // ========================================
+  let event: Stripe.Event;
 
-    case STRIPE_EVENTS.PAYMENT_INTENT_SUCCEEDED:
-      await handlePaymentSuccess(event.data.object as Stripe.PaymentIntent, request);
-      break;
+  try {
+    // Verify webhook signature (CRITICAL for security)
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error('Unknown error');
+    console.error('Webhook signature verification failed:', error.message);
+    return NextResponse.json(
+      { error: 'Invalid signature' },
+      { status: 400 }
+    );
+  }
 
-    case STRIPE_EVENTS.PAYMENT_INTENT_PROCESSING:
-      await handlePaymentProcessing(event.data.object as Stripe.PaymentIntent, request);
-      break;
+  console.log(`✅ Webhook received: ${event.type} (${event.id})`);
 
-    case STRIPE_EVENTS.PAYMENT_INTENT_FAILED:
-      await handlePaymentFailed(event.data.object as Stripe.PaymentIntent, request);
-      break;
+  // Handle webhook events
+  try {
+    switch (event.type) {
+      // ========================================
+      // PAYMENT INTENT EVENTS (CRITICAL)
+      // ========================================
 
-    case STRIPE_EVENTS.PAYMENT_INTENT_CANCELED:
-      await handlePaymentCanceled(event.data.object as Stripe.PaymentIntent, request);
-      break;
+      case STRIPE_EVENTS.PAYMENT_INTENT_SUCCEEDED:
+        await handlePaymentSuccess(event.data.object as Stripe.PaymentIntent);
+        break;
 
-    // ========================================
-    // FRAUD PREVENTION EVENTS
-    // ========================================
+      case STRIPE_EVENTS.PAYMENT_INTENT_PROCESSING:
+        await handlePaymentProcessing(event.data.object as Stripe.PaymentIntent);
+        break;
 
-    case STRIPE_EVENTS.REVIEW_OPENED:
-      await handleManualReview(event.data.object as Stripe.Review, request);
-      break;
+      case STRIPE_EVENTS.PAYMENT_INTENT_FAILED:
+        await handlePaymentFailed(event.data.object as Stripe.PaymentIntent);
+        break;
 
-    case STRIPE_EVENTS.REVIEW_CLOSED:
-      await handleReviewClosed(event.data.object as Stripe.Review, request);
-      break;
+      case STRIPE_EVENTS.PAYMENT_INTENT_CANCELED:
+        await handlePaymentCanceled(event.data.object as Stripe.PaymentIntent);
+        break;
 
-    case STRIPE_EVENTS.EARLY_FRAUD_WARNING:
-      await handleEarlyFraudWarning(event.data.object as any, request);
-      break;
+      // ========================================
+      // FRAUD PREVENTION EVENTS
+      // ========================================
 
-    // ========================================
-    // CHARGE EVENTS (REFUNDS, DISPUTES)
-    // ========================================
+      case STRIPE_EVENTS.REVIEW_OPENED:
+        await handleManualReview(event.data.object as Stripe.Review);
+        break;
 
-    case STRIPE_EVENTS.CHARGE_REFUNDED:
-      await handleChargeRefunded(event.data.object as Stripe.Charge, request);
-      break;
+      case STRIPE_EVENTS.REVIEW_CLOSED:
+        await handleReviewClosed(event.data.object as Stripe.Review);
+        break;
 
-    case STRIPE_EVENTS.CHARGE_DISPUTED:
-      await handleDisputeCreated(event.data.object as Stripe.Dispute, request);
-      break;
+      case STRIPE_EVENTS.EARLY_FRAUD_WARNING:
+        await handleEarlyFraudWarning(event.data.object as any);
+        break;
 
-    case STRIPE_EVENTS.CHARGE_DISPUTE_CLOSED:
-      await handleDisputeClosed(event.data.object as Stripe.Dispute, request);
-      break;
+      // ========================================
+      // CHARGE EVENTS (REFUNDS, DISPUTES)
+      // ========================================
 
-    // ========================================
-    // SUBSCRIPTION EVENTS
-    // ========================================
+      case STRIPE_EVENTS.CHARGE_REFUNDED:
+        await handleChargeRefunded(event.data.object as Stripe.Charge);
+        break;
 
-    case STRIPE_EVENTS.CHECKOUT_SESSION_COMPLETED:
-      await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, request);
-      break;
+      case STRIPE_EVENTS.CHARGE_DISPUTED:
+        await handleDisputeCreated(event.data.object as Stripe.Dispute);
+        break;
 
-    case STRIPE_EVENTS.SUBSCRIPTION_CREATED:
-      await handleSubscriptionCreated(event.data.object as Stripe.Subscription, request);
-      break;
+      case STRIPE_EVENTS.CHARGE_DISPUTE_CLOSED:
+        await handleDisputeClosed(event.data.object as Stripe.Dispute);
+        break;
 
-    case STRIPE_EVENTS.SUBSCRIPTION_UPDATED:
-      await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, request);
-      break;
+      // ========================================
+      // SUBSCRIPTION EVENTS (NEW)
+      // ========================================
 
-    case STRIPE_EVENTS.SUBSCRIPTION_DELETED:
-      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription, request);
-      break;
+      case STRIPE_EVENTS.CHECKOUT_SESSION_COMPLETED:
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
 
-    case STRIPE_EVENTS.INVOICE_PAYMENT_SUCCEEDED:
-      await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice, request);
-      break;
+      case STRIPE_EVENTS.SUBSCRIPTION_CREATED:
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
+        break;
 
-    case STRIPE_EVENTS.INVOICE_PAYMENT_FAILED:
-      await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice, request);
-      break;
+      case STRIPE_EVENTS.SUBSCRIPTION_UPDATED:
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        break;
 
-    default:
-      console.log(`ℹ️  Unhandled event type: ${event.type}`);
+      case STRIPE_EVENTS.SUBSCRIPTION_DELETED:
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+
+      case STRIPE_EVENTS.INVOICE_PAYMENT_SUCCEEDED:
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
+        break;
+
+      case STRIPE_EVENTS.INVOICE_PAYMENT_FAILED:
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+        break;
+
+      default:
+        console.log(`ℹ️  Unhandled event type: ${event.type}`);
+    }
+
+    return NextResponse.json({ received: true });
+
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error('Unknown error');
+    console.error(`❌ Webhook handler error for ${event.type}:`, err);
+    return NextResponse.json(
+      { error: 'Webhook handler failed', details: err.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -355,12 +193,12 @@ async function processWebhookEvent(event: Stripe.Event, request: NextRequest): P
 // ========================================
 
 /**
- * Handle Successful Payment with Enterprise Audit Logging
+ * Handle Successful Payment
  *
  * ⚠️ CRITICAL: Only fulfill orders AFTER this webhook!
  * For ACH, this fires 3-5 business days after customer submits payment.
  */
-async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent, request: NextRequest) {
+async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
   const charge = paymentIntent.latest_charge as Stripe.Charge;
   const outcome = charge?.outcome;
   const paymentMethod = charge?.payment_method_details;
@@ -375,19 +213,6 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent, request
     risk_score: outcome?.risk_score,
     metadata: paymentIntent.metadata,
   });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.logPaymentEvent(
-    'succeeded',
-    paymentIntent.id,
-    {
-      stripePaymentIntentId: paymentIntent.id,
-      amount: paymentIntent.amount,
-      currency: paymentIntent.currency,
-      paymentMethodType: paymentMethod?.type,
-    },
-    paymentIntent.metadata?.clerk_user_id
-  );
 
   // Try receipt_email first, fallback to customer object's email if available
   let customerEmail = paymentIntent.receipt_email;
@@ -462,30 +287,17 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent, request
 }
 
 /**
- * Handle Payment Processing (ACH Only) with Monitoring
+ * Handle Payment Processing (ACH Only)
  *
  * ACH payments show "processing" status immediately after submission.
  * DO NOT fulfill orders at this stage - wait for payment_intent.succeeded.
  */
-async function handlePaymentProcessing(paymentIntent: Stripe.PaymentIntent, request: NextRequest) {
+async function handlePaymentProcessing(paymentIntent: Stripe.PaymentIntent) {
   console.log('⏳ Payment Processing (ACH):', {
     id: paymentIntent.id,
     amount: formatDisplayAmount(paymentIntent.amount),
     message: 'ACH payment will clear in 3-5 business days',
   });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.logPaymentEvent(
-    'processing',
-    paymentIntent.id,
-    {
-      stripePaymentIntentId: paymentIntent.id,
-      amount: paymentIntent.amount,
-      currency: paymentIntent.currency,
-      paymentMethodType: 'ach',
-    },
-    paymentIntent.metadata?.clerk_user_id
-  );
 
   // ✅ Update order status to processing
   try {
@@ -530,7 +342,7 @@ async function handlePaymentProcessing(paymentIntent: Stripe.PaymentIntent, requ
 }
 
 /**
- * Handle Payment Failed with Security Monitoring
+ * Handle Payment Failed
  *
  * Common reasons:
  * - Insufficient funds (ACH)
@@ -538,7 +350,7 @@ async function handlePaymentProcessing(paymentIntent: Stripe.PaymentIntent, requ
  * - Authentication failed (3DS)
  * - Invalid bank account
  */
-async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent, request: NextRequest) {
+async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
   const error = paymentIntent.last_payment_error;
 
   console.log('❌ Payment Failed:', {
@@ -548,29 +360,6 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent, request:
     error_message: error?.message,
     decline_code: error?.decline_code,
   });
-
-  // Enterprise Audit Logging with Security Monitoring
-  await AuditLoggerService.logPaymentEvent(
-    'failed',
-    paymentIntent.id,
-    {
-      stripePaymentIntentId: paymentIntent.id,
-      amount: paymentIntent.amount,
-      currency: paymentIntent.currency,
-      paymentMethodType: error?.payment_method?.type,
-    },
-    paymentIntent.metadata?.clerk_user_id
-  );
-
-  // Check for suspicious failure patterns
-  if (error?.decline_code === 'fraudulent' || error?.code === 'card_declined') {
-    await AuditLoggerService.logSecurityEvent('suspicious_payment_failure', {
-      paymentIntentId: paymentIntent.id,
-      declineCode: error.decline_code,
-      errorCode: error.code,
-      errorMessage: error.message,
-    }, request);
-  }
 
   // ✅ Handle payment failure notification
   try {
@@ -624,31 +413,15 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent, request:
 }
 
 /**
- * Handle Payment Canceled with Audit Logging
+ * Handle Payment Canceled
  *
  * Customer or system canceled the payment before completion.
  */
-async function handlePaymentCanceled(paymentIntent: Stripe.PaymentIntent, request: NextRequest) {
+async function handlePaymentCanceled(paymentIntent: Stripe.PaymentIntent) {
   console.log('🚫 Payment Canceled:', {
     id: paymentIntent.id,
     amount: formatDisplayAmount(paymentIntent.amount),
     cancellation_reason: paymentIntent.cancellation_reason,
-  });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.log({
-    action: 'payment_canceled',
-    resource_type: 'payment_intent',
-    resource_id: paymentIntent.id,
-    clerk_user_id: paymentIntent.metadata?.clerk_user_id,
-    ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
-    user_agent: request.headers.get('user-agent') || undefined,
-    metadata: {
-      amount: paymentIntent.amount,
-      currency: paymentIntent.currency,
-      cancellationReason: paymentIntent.cancellation_reason,
-    },
-    severity: 'low'
   });
 
   // ✅ Update order status to canceled
@@ -692,12 +465,12 @@ async function handlePaymentCanceled(paymentIntent: Stripe.PaymentIntent, reques
 // ========================================
 
 /**
- * Handle Manual Review Opened with Enterprise Security Logging
+ * Handle Manual Review Opened
  *
  * Stripe Radar flagged transaction for manual review.
  * DO NOT fulfill order until review is closed and approved.
  */
-async function handleManualReview(review: Stripe.Review, request: NextRequest) {
+async function handleManualReview(review: Stripe.Review) {
   console.log('🔍 Manual Review Opened:', {
     id: review.id,
     payment_intent: review.payment_intent,
@@ -748,15 +521,7 @@ async function handleManualReview(review: Stripe.Review, request: NextRequest) {
       )
     `;
 
-    // 3. Enterprise Security Event Logging
-    await AuditLoggerService.logSecurityEvent('manual_review_opened', {
-      reviewId: review.id,
-      paymentIntent: review.payment_intent,
-      reason: review.reason,
-      severity: 'high',
-    }, request);
-
-    // 4. TODO: Send alert to fraud team via email/Slack
+    // 3. TODO: Send alert to fraud team via email/Slack
     console.log('🚨 FRAUD ALERT: Manual review required - Team notified');
 
     console.log('🔍 Fraud review ticket created:', review.id);
@@ -767,11 +532,11 @@ async function handleManualReview(review: Stripe.Review, request: NextRequest) {
 }
 
 /**
- * Handle Review Closed with Comprehensive Logging
+ * Handle Review Closed
  *
  * Manual review completed. Check if approved or rejected.
  */
-async function handleReviewClosed(review: Stripe.Review, request: NextRequest) {
+async function handleReviewClosed(review: Stripe.Review) {
   const approved = review.closed_reason === 'approved';
 
   console.log('✅ Review Closed:', {
@@ -779,14 +544,6 @@ async function handleReviewClosed(review: Stripe.Review, request: NextRequest) {
     reason: review.closed_reason,
     approved,
   });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.logSecurityEvent('manual_review_closed', {
-    reviewId: review.id,
-    approved,
-    closedReason: review.closed_reason,
-    severity: approved ? 'info' : 'medium',
-  }, request);
 
   // TODO: PROCESS BASED ON OUTCOME
   // If approved: Fulfill order
@@ -804,12 +561,12 @@ async function handleReviewClosed(review: Stripe.Review, request: NextRequest) {
 }
 
 /**
- * Handle Early Fraud Warning with Critical Security Monitoring
+ * Handle Early Fraud Warning
  *
  * Bank or card network reported potential fraud.
  * HIGH PRIORITY: Investigate immediately.
  */
-async function handleEarlyFraudWarning(warning: any, request: NextRequest) {
+async function handleEarlyFraudWarning(warning: any) {
   console.log('⚠️ Early Fraud Warning:', {
     id: warning.id,
     charge: warning.charge,
@@ -863,19 +620,10 @@ async function handleEarlyFraudWarning(warning: any, request: NextRequest) {
       )
     `;
 
-    // 3. Critical Enterprise Security Event
-    await AuditLoggerService.logSecurityEvent('early_fraud_warning', {
-      warningId: warning.id,
-      chargeId: warning.charge,
-      fraudType: warning.fraud_type,
-      actionable: warning.actionable,
-      severity: 'critical',
-    }, request);
-
-    // 4. TODO: Revoke product access immediately
+    // 3. TODO: Revoke product access immediately
     // await ProductAccessService.revokeAccessByChargeId(warning.charge);
 
-    // 5. TODO: Send immediate alert to fraud team
+    // 4. TODO: Send immediate alert to fraud team
     console.log('🚨🚨 CRITICAL FRAUD WARNING - IMMEDIATE ACTION REQUIRED 🚨🚨');
     console.log('📞 Fraud team notification sent (implement email/Slack alert)');
 
@@ -897,29 +645,13 @@ async function handleEarlyFraudWarning(warning: any, request: NextRequest) {
 // ========================================
 
 /**
- * Handle Charge Refunded with Enterprise Logging
+ * Handle Charge Refunded
  */
-async function handleChargeRefunded(charge: Stripe.Charge, request: NextRequest) {
+async function handleChargeRefunded(charge: Stripe.Charge) {
   console.log('💸 Charge Refunded:', {
     id: charge.id,
     amount_refunded: formatDisplayAmount(charge.amount_refunded),
     refund_reason: 'See refunds list',
-  });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.log({
-    action: 'charge_refunded',
-    resource_type: 'charge',
-    resource_id: charge.id,
-    clerk_user_id: charge.metadata?.clerk_user_id,
-    ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
-    user_agent: request.headers.get('user-agent') || undefined,
-    metadata: {
-      amountRefunded: charge.amount_refunded,
-      originalAmount: charge.amount,
-      currency: charge.currency,
-    },
-    severity: 'medium'
   });
 
   // TODO: REVOKE ACCESS
@@ -929,9 +661,9 @@ async function handleChargeRefunded(charge: Stripe.Charge, request: NextRequest)
 }
 
 /**
- * Handle Dispute Created (Chargeback) with Critical Security Logging
+ * Handle Dispute Created (Chargeback)
  */
-async function handleDisputeCreated(dispute: Stripe.Dispute, request: NextRequest) {
+async function handleDisputeCreated(dispute: Stripe.Dispute) {
   const dueBy = dispute.evidence_details?.due_by
     ? new Date(dispute.evidence_details.due_by * 1000).toISOString()
     : 'Not set';
@@ -944,15 +676,6 @@ async function handleDisputeCreated(dispute: Stripe.Dispute, request: NextReques
     evidence_due_by: dueBy,
   });
 
-  // Critical Enterprise Security Event
-  await AuditLoggerService.logSecurityEvent('dispute_created', {
-    disputeId: dispute.id,
-    amount: dispute.amount,
-    reason: dispute.reason,
-    evidenceDueBy: dueBy,
-    severity: 'high',
-  }, request);
-
   // TODO: RESPOND TO DISPUTE
   // 1. Notify team immediately
   // 2. Gather evidence (invoices, communication logs)
@@ -961,9 +684,9 @@ async function handleDisputeCreated(dispute: Stripe.Dispute, request: NextReques
 }
 
 /**
- * Handle Dispute Closed with Resolution Logging
+ * Handle Dispute Closed
  */
-async function handleDisputeClosed(dispute: Stripe.Dispute, request: NextRequest) {
+async function handleDisputeClosed(dispute: Stripe.Dispute) {
   const won = dispute.status === 'won';
 
   console.log('✅ Dispute Closed:', {
@@ -972,25 +695,17 @@ async function handleDisputeClosed(dispute: Stripe.Dispute, request: NextRequest
     won,
   });
 
-  // Enterprise Audit Logging
-  await AuditLoggerService.logSecurityEvent('dispute_closed', {
-    disputeId: dispute.id,
-    status: dispute.status,
-    won,
-    severity: won ? 'info' : 'medium',
-  }, request);
-
   // TODO: FINAL ACTIONS
   // If won: Restore access if revoked
   // If lost: Permanent revocation, update records
 }
 
 // ========================================
-// SUBSCRIPTION HANDLERS
+// SUBSCRIPTION HANDLERS (NEW)
 // ========================================
 
 /**
- * Handle Checkout Session Completed with Enterprise Monitoring
+ * Handle Checkout Session Completed
  *
  * ✅ CRITICAL: This is where we grant product access!
  * Fires immediately after customer completes payment.
@@ -998,7 +713,7 @@ async function handleDisputeClosed(dispute: Stripe.Dispute, request: NextRequest
  * For one-time purchases: grant product access
  * For digital products: grant immediate access
  */
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, request: NextRequest) {
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   console.log('🎉 Checkout Session Completed:', {
     id: session.id,
     subscription: session.subscription,
@@ -1006,23 +721,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     customer_email: session.customer_details?.email,
     amount_total: formatDisplayAmount(session.amount_total || 0),
     mode: session.mode,
-  });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.log({
-    action: 'checkout_completed',
-    resource_type: 'checkout_session',
-    resource_id: session.id,
-    clerk_user_id: session.client_reference_id || session.customer_details?.email || undefined,
-    ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
-    user_agent: request.headers.get('user-agent') || undefined,
-    metadata: {
-      amount: session.amount_total,
-      currency: session.currency,
-      customerEmail: session.customer_details?.email,
-      mode: session.mode,
-    },
-    severity: 'low'
   });
 
   try {
@@ -1155,33 +853,18 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 }
 
 /**
- * Handle Subscription Created with Enterprise Customer Detection
+ * Handle Subscription Created
  *
  * Fires when subscription is created (same time as checkout.session.completed).
  * Mark enterprise customers to grant free access to all marketplace products.
  */
-async function handleSubscriptionCreated(subscription: Stripe.Subscription, request: NextRequest) {
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log('📝 Subscription Created:', {
     id: subscription.id,
     customer: subscription.customer,
     status: subscription.status,
     current_period_end: (subscription as any).current_period_end ? new Date((subscription as any).current_period_end * 1000).toISOString() : null,
     cancel_at_period_end: (subscription as any).cancel_at_period_end,
-  });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.log({
-    action: 'subscription_created',
-    resource_type: 'subscription',
-    resource_id: subscription.id,
-    clerk_user_id: subscription.metadata?.clerk_user_id,
-    ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
-    user_agent: request.headers.get('user-agent') || undefined,
-    metadata: {
-      customerId: subscription.customer,
-      status: subscription.status,
-    },
-    severity: 'low'
   });
 
   try {
@@ -1229,31 +912,16 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription, requ
 }
 
 /**
- * Handle Subscription Updated with Change Tracking
+ * Handle Subscription Updated
  *
  * Fires when customer upgrades/downgrades plan or updates payment method.
  */
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription, request: NextRequest) {
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('🔄 Subscription Updated:', {
     id: subscription.id,
     customer: subscription.customer,
     status: subscription.status,
     cancel_at_period_end: subscription.cancel_at_period_end,
-  });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.log({
-    action: 'subscription_updated',
-    resource_type: 'subscription',
-    resource_id: subscription.id,
-    clerk_user_id: subscription.metadata?.clerk_user_id,
-    ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
-    user_agent: request.headers.get('user-agent') || undefined,
-    metadata: {
-      status: subscription.status,
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-    },
-    severity: 'low'
   });
 
   // TODO: UPDATE DATABASE
@@ -1271,35 +939,19 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription, requ
 }
 
 /**
- * Handle Subscription Deleted with Enterprise Access Revocation
+ * Handle Subscription Deleted
  *
  * Fires when subscription is canceled (either immediately or at period end).
  * Revoke enterprise access (but preserve purchased/coupon access).
  * Send cancellation email.
  */
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription, request: NextRequest) {
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log('🚫 Subscription Deleted:', {
     id: subscription.id,
     customer: subscription.customer,
     canceled_at: subscription.canceled_at
       ? new Date(subscription.canceled_at * 1000).toISOString()
       : null,
-  });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.log({
-    action: 'subscription_deleted',
-    resource_type: 'subscription',
-    resource_id: subscription.id,
-    clerk_user_id: subscription.metadata?.clerk_user_id,
-    ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
-    user_agent: request.headers.get('user-agent') || undefined,
-    metadata: {
-      customerId: (subscription as any).customer,
-      canceledAt: (subscription as any).canceled_at,
-      currentPeriodEnd: (subscription as any).current_period_end,
-    },
-    severity: 'medium'
   });
 
   try {
@@ -1366,34 +1018,18 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, requ
 }
 
 /**
- * Handle Invoice Payment Succeeded with Renewal Tracking
+ * Handle Invoice Payment Succeeded
  *
  * Fires when recurring payment succeeds (monthly/annual renewal).
  * Send renewal confirmation email.
  */
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, request: NextRequest) {
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log('✅ Invoice Payment Succeeded:', {
     id: invoice.id,
     subscription: (invoice as any).subscription,
     customer: invoice.customer,
     amount_paid: formatDisplayAmount(invoice.amount_paid),
     billing_reason: invoice.billing_reason,
-  });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.log({
-    action: 'invoice_payment_succeeded',
-    resource_type: 'invoice',
-    resource_id: invoice.id,
-    clerk_user_id: invoice.customer_email || undefined,
-    ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
-    user_agent: request.headers.get('user-agent') || undefined,
-    metadata: {
-      subscription: (invoice as any).subscription,
-      amountPaid: invoice.amount_paid,
-      billingReason: invoice.billing_reason,
-    },
-    severity: 'low'
   });
 
   // Skip the first invoice (handled by checkout.session.completed)
@@ -1438,34 +1074,18 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, request: N
 }
 
 /**
- * Handle Invoice Payment Failed with Enterprise Alerting
+ * Handle Invoice Payment Failed
  *
  * Fires when recurring payment fails (card declined, insufficient funds).
  * Send payment failure notification with retry instructions.
  */
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, request: NextRequest) {
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   console.log('❌ Invoice Payment Failed:', {
     id: invoice.id,
     subscription: (invoice as any).subscription,
     customer: invoice.customer,
     amount_due: formatDisplayAmount(invoice.amount_due),
     attempt_count: invoice.attempt_count,
-  });
-
-  // Enterprise Audit Logging
-  await AuditLoggerService.log({
-    action: 'invoice_payment_failed',
-    resource_type: 'invoice',
-    resource_id: invoice.id,
-    clerk_user_id: invoice.customer_email || undefined,
-    ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
-    user_agent: request.headers.get('user-agent') || undefined,
-    metadata: {
-      subscription: (invoice as any).subscription,
-      amountDue: invoice.amount_due,
-      attemptCount: invoice.attempt_count,
-    },
-    severity: 'medium'
   });
 
   try {
@@ -1510,40 +1130,16 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, request: Next
 }
 
 /**
- * Check if event type is payment-related for audit logging
- */
-function isPaymentEvent(eventType: string): boolean {
-  return eventType.startsWith('payment_intent.') ||
-         eventType.startsWith('charge.') ||
-         eventType.startsWith('invoice.');
-}
-
-/**
  * GET /api/stripe/webhook
  *
- * Enhanced webhook health check with enterprise monitoring status
+ * Returns webhook configuration and health check.
  */
 export async function GET() {
-  const healthStatus = await WebhookMonitorService.getHealthStatus();
-
   return NextResponse.json({
-    name: 'Enhanced Stripe Webhook Handler',
-    version: '4.0',
-    description: 'Enterprise webhook handler with comprehensive payment processing, fraud prevention, and monitoring',
+    name: 'Stripe Webhook Handler',
+    version: '3.0',
+    description: 'Handles ACH + Card payments, fraud prevention, and subscriptions with automated credential delivery',
     status: process.env.STRIPE_WEBHOOK_SECRET ? 'configured' : 'not_configured',
-    monitoring: {
-      webhookHealth: healthStatus,
-      features: [
-        'Complete payment processing (ACH + Cards)',
-        'Subscription management with credentials',
-        'Fraud prevention and security monitoring',
-        'Enterprise audit logging',
-        'Rate limiting protection',
-        'Real-time performance analytics',
-        'Automated email notifications',
-        'Security compliance tracking',
-      ],
-    },
     events_handled: [
       // Payment Events
       'payment_intent.succeeded',
@@ -1558,7 +1154,7 @@ export async function GET() {
       'charge.refunded',
       'charge.dispute.created',
       'charge.dispute.closed',
-      // Subscriptions
+      // Subscriptions (NEW)
       'checkout.session.completed',
       'customer.subscription.created',
       'customer.subscription.updated',
@@ -1569,31 +1165,17 @@ export async function GET() {
     setup_instructions: {
       step1: 'Deploy this endpoint to production',
       step2: 'Go to Stripe Dashboard → Developers → Webhooks',
-      step3: 'Add endpoint: https://your-domain.vercel.app/api/stripe/webhook',
+      step3: 'Add endpoint: https://app.afilo.io/api/stripe/webhook',
       step4: 'Select all payment_intent.*, review.*, radar.*, charge.*, checkout.session.*, customer.subscription.*, invoice.* events',
-      step5: 'Copy webhook signing secret to .env as STRIPE_WEBHOOK_SECRET',
+      step5: 'Copy webhook signing secret to .env.local as STRIPE_WEBHOOK_SECRET',
       step6: 'Set RESEND_API_KEY for email delivery',
     },
-    enterprise_features: {
-      webhook_monitoring: true,
-      audit_logging: true,
-      security_events: true,
-      rate_limiting: true,
-      performance_analytics: true,
-      fraud_detection: true,
-      compliance_tracking: true,
-    },
-    lastHourStats: {
-      events: 0, // Will be populated by actual metrics
-      successRate: 100,
-      averageProcessingTime: 0,
-      failedWebhooks: 0,
-    },
-    systemHealth: {
-      status: healthStatus.status,
-      checks: healthStatus.checks,
-      uptime: healthStatus.uptime,
-      lastEventProcessed: healthStatus.last_event_processed,
+    features: {
+      automated_credential_delivery: true,
+      subscription_management: true,
+      email_notifications: true,
+      no_trial_periods: true,
+      immediate_paid_access: true,
     },
   });
 }

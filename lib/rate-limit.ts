@@ -129,6 +129,19 @@ export const standardBillingRateLimit = new Ratelimit({
 });
 
 /**
+ * Stripe Connect Transfer Rate Limiter
+ *
+ * For financial transfer operations: 10 transfers per minute
+ * Strict financial security to prevent abuse while allowing legitimate operations
+ */
+export const transferRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, '1 m'),
+  analytics: true,
+  prefix: '@afilo/transfer',
+});
+
+/**
  * PHASE 5: Chat Bot Rate Limiters
  *
  * Tiered rate limiting based on subscription status

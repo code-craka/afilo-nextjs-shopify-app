@@ -21,6 +21,8 @@ import {
   Users,
   Shield,
   Bot,
+  Building2,
+  DollarSign,
 } from 'lucide-react';
 
 /**
@@ -90,6 +92,15 @@ const navItems: NavItem[] = [
   },
 ];
 
+const merchantNavItems: NavItem[] = [
+  {
+    label: 'Merchant Dashboard',
+    href: '/dashboard/merchant',
+    icon: Building2,
+    badge: 'NEW',
+  },
+];
+
 const adminNavItems: NavItem[] = [
   {
     label: 'User Management',
@@ -97,6 +108,13 @@ const adminNavItems: NavItem[] = [
     icon: Users,
     adminOnly: true,
     badge: 'ADMIN',
+  },
+  {
+    label: 'Connect Marketplace',
+    href: '/dashboard/admin/connect',
+    icon: Building2,
+    adminOnly: true,
+    badge: 'NEW',
   },
   {
     label: 'Cart Recovery',
@@ -144,7 +162,16 @@ export default function Sidebar() {
   }, [user, isLoaded]);
 
   const isAdmin = userRole === 'admin' || userRole === 'owner';
-  const allNavItems = isAdmin ? [...navItems, ...adminNavItems] : navItems;
+  const isMerchant = userRole === 'merchant' || isAdmin;
+
+  // Build navigation items based on roles
+  let allNavItems = [...navItems];
+  if (isMerchant) {
+    allNavItems = [...allNavItems, ...merchantNavItems];
+  }
+  if (isAdmin) {
+    allNavItems = [...allNavItems, ...adminNavItems];
+  }
 
   return (
     <>

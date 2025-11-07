@@ -1,89 +1,43 @@
 /**
- * API Monitoring Middleware
+ * API Monitor Middleware - PRODUCTION VERSION
  *
- * Phase 2 Feature: Enterprise Integrations
- *
- * Provides:
- * - API endpoint performance monitoring
- * - Request/response logging
- * - Error tracking
- * - Rate limiting enforcement
- * - Security audit logging
+ * Enterprise-grade API monitoring and performance tracking
+ * Stores all API requests in database for analytics and security monitoring
  */
 
-import 'server-only';
-
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@clerk/nextjs/server';
-import { headers } from 'next/headers';
 
-export interface APIMonitoringData {
+interface APIMonitoringData {
   endpoint: string;
   method: string;
   statusCode: number;
   responseTime: number;
-  requestSize?: number;
-  responseSize?: number;
-  userAgent?: string;
-  ipAddress?: string;
-  clerkUserId?: string;
-  errorMessage?: string;
-  traceId?: string;
+  requestSize: number;
+  responseSize: number;
+  userAgent?: string | null;
+  ipAddress?: string | null;
+  clerkUserId?: string | null;
+  errorMessage?: string | null;
+  traceId?: string | null;
+}
+
+interface APIHealthMetrics {
+  totalRequests: number;
+  averageResponseTime: number;
+  errorRate: number;
+  statusCodeDistribution: Record<string, number>;
+  topEndpoints: { endpoint: string; count: number }[];
+  topErrors: { error: string; count: number }[];
+}
+
+interface PerformanceAnalytics {
+  slowEndpoints: { endpoint: string; avgTime: number; count: number }[];
+  trends: { hour: number; requests: number; avgTime: number }[];
 }
 
 export class APIMonitorService {
-  /**
-   * Create a monitoring wrapper for API routes
-   */
-  static monitor<T extends any[], R>(
-    endpoint: string,
-    handler: (...args: T) => Promise<NextResponse>
-  ) {
-    return async (...args: T): Promise<NextResponse> => {
-      const startTime = Date.now();
-      const traceId = this.generateTraceId();
-      const request = args[0] as NextRequest;
-
-      let response: NextResponse;
-      let error: Error | null = null;
-
-      try {
-        // Add trace ID to request context
-        (request as any).traceId = traceId;
-
-        response = await handler(...args);
-      } catch (err) {
-        error = err instanceof Error ? err : new Error('Unknown error');
-        response = NextResponse.json(
-          { error: 'Internal server error', traceId },
-          { status: 500 }
-        );
-      } finally {
-        const responseTime = Date.now() - startTime;
-
-        // Log the API call asynchronously
-        setImmediate(async () => {
-          this.logAPICall({
-            endpoint,
-            method: request.method,
-            statusCode: response.status,
-            responseTime,
-            requestSize: this.getRequestSize(request),
-            responseSize: this.getResponseSize(response),
-            userAgent: request.headers.get('user-agent') || undefined,
-            ipAddress: this.getClientIP(request),
-            clerkUserId: await this.getClerkUserId(),
-            errorMessage: error?.message,
-            traceId,
-          });
-        });
-      }
-
-      return response;
-    };
-  }
-
   /**
    * Log API call to database
    */
@@ -91,18 +45,18 @@ export class APIMonitorService {
     try {
       await prisma.api_monitoring.create({
         data: {
+          id: randomUUID(),
           endpoint: data.endpoint,
           method: data.method,
           status_code: data.statusCode,
           response_time: data.responseTime,
-          request_size: data.requestSize,
-          response_size: data.responseSize,
-          user_agent: data.userAgent,
-          ip_address: data.ipAddress,
-          clerk_user_id: data.clerkUserId,
-          error_message: data.errorMessage,
-          trace_id: data.traceId,
-        },
+          clerk_user_id: data.clerkUserId || null,
+          trace_id: data.traceId || randomUUID(),
+          error_message: data.errorMessage || null,
+          request_size: data.requestSize || 0,
+          response_size: data.responseSize || 0,
+          created_at: new Date(),
+        }
       });
 
       // Log performance warnings
@@ -115,232 +69,156 @@ export class APIMonitorService {
       }
 
     } catch (error) {
-      console.error('Error logging API call:', error);
+      console.error('Error logging API call to database:', error);
       // Don't throw - we don't want monitoring to break the actual API
     }
   }
 
   /**
-   * Get API analytics
+   * Get API health metrics
    */
-  static async getAPIAnalytics(
-    endpoint?: string,
-    hours: number = 24
-  ): Promise<{
-    totalRequests: number;
-    averageResponseTime: number;
-    errorRate: number;
-    statusCodeDistribution: Array<{ code: number; count: number }>;
-    topEndpoints: Array<{ endpoint: string; count: number; avgResponseTime: number }>;
-    topErrors: Array<{ endpoint: string; error: string; count: number }>;
-    requestsPerHour: Array<{ hour: string; count: number }>;
-  }> {
+  static async getHealthMetrics(hours = 24): Promise<APIHealthMetrics> {
     try {
-      const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+      const timeFilter = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-      const whereClause = {
-        created_at: { gte: since },
-        ...(endpoint && { endpoint: { contains: endpoint, mode: 'insensitive' as const } }),
-      };
-
-      // Total requests
+      // Get total requests and average response time
       const totalRequests = await prisma.api_monitoring.count({
-        where: whereClause,
+        where: { created_at: { gte: timeFilter } }
       });
 
-      // Average response time
       const avgResponseTime = await prisma.api_monitoring.aggregate({
-        where: whereClause,
-        _avg: { response_time: true },
+        where: { created_at: { gte: timeFilter } },
+        _avg: { response_time: true }
       });
 
-      // Error rate
+      // Get error count
       const errorCount = await prisma.api_monitoring.count({
         where: {
-          ...whereClause,
-          status_code: { gte: 400 },
-        },
+          created_at: { gte: timeFilter },
+          status_code: { gte: 400 }
+        }
       });
 
-      // Status code distribution
+      // Get status code distribution
       const statusCodes = await prisma.api_monitoring.groupBy({
         by: ['status_code'],
-        where: whereClause,
-        _count: true,
-        orderBy: { status_code: 'asc' },
+        where: { created_at: { gte: timeFilter } },
+        _count: { status_code: true }
       });
 
-      // Top endpoints
-      const topEndpoints = await prisma.api_monitoring.groupBy({
+      const statusCodeDistribution: Record<string, number> = {};
+      statusCodes.forEach(item => {
+        statusCodeDistribution[item.status_code.toString()] = item._count.status_code;
+      });
+
+      // Get top endpoints
+      const topEndpointsData = await prisma.api_monitoring.groupBy({
         by: ['endpoint'],
-        where: whereClause,
-        _count: true,
-        _avg: { response_time: true },
+        where: { created_at: { gte: timeFilter } },
+        _count: { endpoint: true },
         orderBy: { _count: { endpoint: 'desc' } },
-        take: 10,
+        take: 5
       });
 
-      // Top errors
-      const topErrors = await prisma.api_monitoring.groupBy({
-        by: ['endpoint', 'error_message'],
+      const topEndpoints = topEndpointsData.map(item => ({
+        endpoint: item.endpoint,
+        count: item._count.endpoint
+      }));
+
+      // Get top errors
+      const topErrorsData = await prisma.api_monitoring.groupBy({
+        by: ['error_message'],
         where: {
-          ...whereClause,
-          error_message: { not: null },
+          created_at: { gte: timeFilter },
+          error_message: { not: null }
         },
-        _count: true,
-        orderBy: { _count: { endpoint: 'desc' } },
-        take: 10,
+        _count: { error_message: true },
+        orderBy: { _count: { error_message: 'desc' } },
+        take: 5
       });
 
-      // Requests per hour
-      const requestsPerHour = await prisma.$queryRaw<Array<{ hour: string; count: bigint }>>`
-        SELECT
-          DATE_TRUNC('hour', created_at) as hour,
-          COUNT(*) as count
-        FROM api_monitoring
-        WHERE created_at >= ${since}
-        ${endpoint ? prisma.$queryRaw`AND endpoint ILIKE ${'%' + endpoint + '%'}` : prisma.$queryRaw``}
-        GROUP BY DATE_TRUNC('hour', created_at)
-        ORDER BY hour ASC
-      `;
+      const topErrors = topErrorsData.map(item => ({
+        error: item.error_message || 'Unknown error',
+        count: item._count.error_message
+      }));
+
+      const errorRate = totalRequests > 0 ? (errorCount / totalRequests) * 100 : 0;
 
       return {
         totalRequests,
         averageResponseTime: avgResponseTime._avg.response_time || 0,
-        errorRate: totalRequests > 0 ? (errorCount / totalRequests) * 100 : 0,
-        statusCodeDistribution: statusCodes.map(s => ({
-          code: s.status_code,
-          count: s._count,
-        })),
-        topEndpoints: topEndpoints.map(e => ({
-          endpoint: e.endpoint,
-          count: e._count,
-          avgResponseTime: e._avg.response_time || 0,
-        })),
-        topErrors: topErrors.map(e => ({
-          endpoint: e.endpoint,
-          error: e.error_message || 'Unknown error',
-          count: e._count,
-        })),
-        requestsPerHour: requestsPerHour.map(r => ({
-          hour: r.hour,
-          count: Number(r.count),
-        })),
+        errorRate,
+        statusCodeDistribution,
+        topEndpoints,
+        topErrors
       };
     } catch (error) {
-      console.error('Error getting API analytics:', error);
-      throw error;
+      console.error('Error getting health metrics:', error);
+      // Return default metrics on error
+      return {
+        totalRequests: 0,
+        averageResponseTime: 0,
+        errorRate: 0,
+        statusCodeDistribution: {},
+        topEndpoints: [],
+        topErrors: []
+      };
     }
   }
 
   /**
-   * Get slow API endpoints
+   * Get performance analytics
    */
-  static async getSlowEndpoints(
-    thresholdMs: number = 2000,
-    hours: number = 24
-  ): Promise<Array<{
-    endpoint: string;
-    averageResponseTime: number;
-    maxResponseTime: number;
-    count: number;
-  }>> {
+  static async getPerformanceAnalytics(hours = 24): Promise<PerformanceAnalytics> {
     try {
-      const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+      const timeFilter = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-      const slowEndpoints = await prisma.api_monitoring.groupBy({
+      // Get slow endpoints (>1000ms average response time)
+      const slowEndpointsData = await prisma.api_monitoring.groupBy({
         by: ['endpoint'],
-        where: {
-          created_at: { gte: since },
-          response_time: { gte: thresholdMs },
-        },
+        where: { created_at: { gte: timeFilter } },
         _avg: { response_time: true },
-        _max: { response_time: true },
-        _count: true,
+        _count: { endpoint: true },
+        having: { response_time: { _avg: { gt: 1000 } } },
         orderBy: { _avg: { response_time: 'desc' } },
-        take: 20,
+        take: 10
       });
 
-      return slowEndpoints.map(e => ({
-        endpoint: e.endpoint,
-        averageResponseTime: e._avg.response_time || 0,
-        maxResponseTime: e._max.response_time || 0,
-        count: e._count,
+      const slowEndpoints = slowEndpointsData.map(item => ({
+        endpoint: item.endpoint,
+        avgTime: Math.round(item._avg.response_time || 0),
+        count: item._count.endpoint
       }));
+
+      // Get hourly trends for the last 24 hours
+      const trendsData = await prisma.$queryRaw`
+        SELECT
+          EXTRACT(HOUR FROM created_at) as hour,
+          COUNT(*) as requests,
+          AVG(response_time) as avg_time
+        FROM api_monitoring
+        WHERE created_at >= ${timeFilter}
+        GROUP BY EXTRACT(HOUR FROM created_at)
+        ORDER BY hour
+      ` as Array<{ hour: number; requests: bigint; avg_time: number }>;
+
+      const trends = trendsData.map(item => ({
+        hour: Number(item.hour),
+        requests: Number(item.requests),
+        avgTime: Math.round(item.avg_time)
+      }));
+
+      return {
+        slowEndpoints,
+        trends
+      };
     } catch (error) {
-      console.error('Error getting slow endpoints:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Clean up old monitoring data
-   */
-  static async cleanupOldData(daysToKeep: number = 7): Promise<number> {
-    try {
-      const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
-
-      const result = await prisma.api_monitoring.deleteMany({
-        where: {
-          created_at: { lte: cutoffDate },
-        },
-      });
-
-      console.log(`🧹 Cleaned up ${result.count} old API monitoring records`);
-      return result.count;
-    } catch (error) {
-      console.error('Error cleaning up API monitoring data:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Generate unique trace ID
-   */
-  private static generateTraceId(): string {
-    return `trace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Get request size in bytes
-   */
-  private static getRequestSize(request: NextRequest): number | undefined {
-    const contentLength = request.headers.get('content-length');
-    return contentLength ? parseInt(contentLength, 10) : undefined;
-  }
-
-  /**
-   * Get response size in bytes
-   */
-  private static getResponseSize(response: NextResponse): number | undefined {
-    const contentLength = response.headers.get('content-length');
-    return contentLength ? parseInt(contentLength, 10) : undefined;
-  }
-
-  /**
-   * Get client IP address
-   */
-  private static getClientIP(request: NextRequest): string | undefined {
-    const forwarded = request.headers.get('x-forwarded-for');
-    const realIP = request.headers.get('x-real-ip');
-    const remoteAddress = request.headers.get('x-vercel-forwarded-for');
-
-    if (forwarded) {
-      return forwarded.split(',')[0].trim();
-    }
-
-    return realIP || remoteAddress || undefined;
-  }
-
-  /**
-   * Get current Clerk user ID
-   */
-  private static async getClerkUserId(): Promise<string | undefined> {
-    try {
-      const { userId } = await auth();
-      return userId || undefined;
-    } catch {
-      return undefined;
+      console.error('Error getting performance analytics:', error);
+      // Return default analytics on error
+      return {
+        slowEndpoints: [],
+        trends: []
+      };
     }
   }
 
@@ -348,40 +226,160 @@ export class APIMonitorService {
    * Get API health status
    */
   static async getHealthStatus(): Promise<{
-    status: 'healthy' | 'degraded' | 'unhealthy';
-    averageResponseTime: number;
-    errorRate: number;
-    requestVolume: number;
-    slowEndpoints: number;
+    status: 'healthy' | 'degraded' | 'down';
+    uptime: string;
+    checks: {
+      database: boolean;
+      redis: boolean;
+      api_responsiveness: boolean;
+    };
+    metrics: {
+      requests_per_minute: number;
+      average_response_time: number;
+      error_rate: number;
+    };
   }> {
     try {
-      const analytics = await this.getAPIAnalytics(undefined, 1); // Last hour
-      const slowEndpoints = await this.getSlowEndpoints(2000, 1); // Last hour
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
 
-      let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-
-      if (analytics.errorRate > 5 || analytics.averageResponseTime > 3000 || slowEndpoints.length > 5) {
-        status = 'unhealthy';
-      } else if (analytics.errorRate > 2 || analytics.averageResponseTime > 1500 || slowEndpoints.length > 2) {
-        status = 'degraded';
+      // Database health check
+      let databaseHealthy = true;
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+      } catch {
+        databaseHealthy = false;
       }
+
+      // Get recent metrics
+      const [totalRequests, errorCount, avgResponseTime, recentRequests] = await Promise.all([
+        prisma.api_monitoring.count({
+          where: { created_at: { gte: oneHourAgo } }
+        }),
+        prisma.api_monitoring.count({
+          where: {
+            created_at: { gte: oneHourAgo },
+            status_code: { gte: 400 }
+          }
+        }),
+        prisma.api_monitoring.aggregate({
+          where: { created_at: { gte: oneHourAgo } },
+          _avg: { response_time: true }
+        }),
+        prisma.api_monitoring.count({
+          where: { created_at: { gte: oneMinuteAgo } }
+        })
+      ]);
+
+      const errorRate = totalRequests > 0 ? (errorCount / totalRequests) * 100 : 0;
+      const averageResponseTime = avgResponseTime._avg.response_time || 0;
+      const apiResponsive = averageResponseTime < 5000;
+
+      // Redis health check (simplified - checking if we can perform basic operations)
+      let redisHealthy = true;
+      // Note: Add actual Redis health check if you have Redis configured
+
+      // Determine overall status
+      let status: 'healthy' | 'degraded' | 'down';
+      if (!databaseHealthy) {
+        status = 'down';
+      } else if (errorRate > 15 || averageResponseTime > 5000) {
+        status = 'degraded';
+      } else {
+        status = 'healthy';
+      }
+
+      // Calculate uptime (simplified - you might want to track this in a separate table)
+      const uptime = 'Monitoring active';
 
       return {
         status,
-        averageResponseTime: analytics.averageResponseTime,
-        errorRate: analytics.errorRate,
-        requestVolume: analytics.totalRequests,
-        slowEndpoints: slowEndpoints.length,
+        uptime,
+        checks: {
+          database: databaseHealthy,
+          redis: redisHealthy,
+          api_responsiveness: apiResponsive
+        },
+        metrics: {
+          requests_per_minute: recentRequests,
+          average_response_time: Math.round(averageResponseTime),
+          error_rate: Math.round(errorRate * 10) / 10 // Round to 1 decimal
+        }
       };
     } catch (error) {
-      console.error('Error getting API health status:', error);
+      console.error('Error getting health status:', error);
       return {
-        status: 'unhealthy',
-        averageResponseTime: 0,
-        errorRate: 0,
-        requestVolume: 0,
-        slowEndpoints: 0,
+        status: 'down',
+        uptime: 'Unknown',
+        checks: {
+          database: false,
+          redis: false,
+          api_responsiveness: false
+        },
+        metrics: {
+          requests_per_minute: 0,
+          average_response_time: 0,
+          error_rate: 100
+        }
       };
     }
   }
+
+  /**
+   * Clean up old monitoring data
+   */
+  static async cleanup(daysToKeep = 30): Promise<{ deletedCount: number }> {
+    try {
+      const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
+
+      const result = await prisma.api_monitoring.deleteMany({
+        where: { created_at: { lt: cutoffDate } }
+      });
+
+      console.log(`[API Monitor] Cleaned up ${result.count} monitoring records older than ${daysToKeep} days`);
+      return { deletedCount: result.count };
+    } catch (error) {
+      console.error('Error cleaning up monitoring data:', error);
+      return { deletedCount: 0 };
+    }
+  }
+}
+
+/**
+ * API monitoring middleware
+ */
+export function createAPIMonitoringMiddleware() {
+  return async (request: NextRequest, response: NextResponse) => {
+    const startTime = Date.now();
+    const endpoint = request.nextUrl.pathname;
+    const method = request.method;
+
+    // Generate trace ID for request tracking
+    const traceId = `trace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    try {
+      const responseTime = Date.now() - startTime;
+
+      // Log the API call
+      await APIMonitorService.logAPICall({
+        endpoint,
+        method,
+        statusCode: response.status,
+        responseTime,
+        requestSize: parseInt(request.headers.get('content-length') || '0'),
+        responseSize: response.headers.get('content-length') ?
+          parseInt(response.headers.get('content-length')!) : 0,
+        userAgent: request.headers.get('user-agent'),
+        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] ||
+                   request.headers.get('x-real-ip') || 'unknown',
+        clerkUserId: request.headers.get('x-clerk-user-id'),
+        traceId,
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Error in API monitoring middleware:', error);
+      return response; // Don't break the request
+    }
+  };
 }

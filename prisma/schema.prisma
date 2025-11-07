@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  // Note: driverAdapters is now stable in Prisma 6.18+, no longer needs previewFeatures
 }
 
 datasource db {
@@ -259,6 +258,7 @@ model user_activity_log {
 }
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// UPDATED: Added 'merchant' role for Stripe Connect marketplace vendors
 model user_profiles {
   id                 Int                  @id @default(autoincrement())
   clerk_user_id      String               @unique @db.VarChar(255)
@@ -315,8 +315,8 @@ model chat_conversations {
   created_at      DateTime        @default(now()) @db.Timestamptz(6)
   updated_at      DateTime        @default(now()) @db.Timestamptz(6)
   last_message_at DateTime        @default(now()) @db.Timestamptz(6)
-  chat_messages   chat_messages[]
   bot_analytics   bot_analytics[]
+  chat_messages   chat_messages[]
 
   @@index([clerk_user_id], map: "idx_chat_conversations_user")
   @@index([status], map: "idx_chat_conversations_status")
@@ -325,13 +325,13 @@ model chat_conversations {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model chat_messages {
-  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  conversation_id  String             @db.Uuid
-  role             String             @db.VarChar(20)
-  content          String             @db.Text
-  metadata         Json?              @default("{}")
-  created_at       DateTime           @default(now()) @db.Timestamptz(6)
-  conversation     chat_conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversation_id String             @db.Uuid
+  role            String             @db.VarChar(20)
+  content         String
+  metadata        Json?              @default("{}")
+  created_at      DateTime           @default(now()) @db.Timestamptz(6)
+  conversation    chat_conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([conversation_id], map: "idx_chat_messages_conversation")
   @@index([created_at], map: "idx_chat_messages_created_at")
@@ -339,16 +339,16 @@ model chat_messages {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model knowledge_base {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  url             String    @unique @db.Text
-  title           String?   @db.VarChar(500)
-  content         String    @db.Text
-  content_type    String?   @db.VarChar(50)
-  embedding       String?   @db.Text // Will be vector(1536) after migration
-  searchable_text String?   @db.Text // Will be tsvector after migration
-  metadata        Json?     @default("{}")
-  created_at      DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  url             String   @unique
+  title           String?  @db.VarChar(500)
+  content         String
+  content_type    String?  @db.VarChar(50)
+  embedding       String?
+  searchable_text String?
+  metadata        Json?    @default("{}")
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([content_type], map: "idx_knowledge_base_content_type")
   @@index([created_at], map: "idx_knowledge_base_created_at")
@@ -370,46 +370,46 @@ model bot_analytics {
 
 /// Cart Recovery System Models - Phase 2 Feature
 model cart_recovery_campaigns {
-  id                   String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                 String                     @db.VarChar(255)
-  description          String?
-  is_active            Boolean                    @default(true)
-  trigger_delay_hours  Int                        @default(24)
-  email_template       String
-  subject_line         String                     @db.VarChar(255)
-  discount_percent     Decimal                    @default(0) @db.Decimal(5, 2)
-  discount_code        String?                    @db.VarChar(50)
-  total_sent           Int                        @default(0)
-  total_opened         Int                        @default(0)
-  total_clicked        Int                        @default(0)
-  total_converted      Int                        @default(0)
-  total_revenue        Decimal                    @default(0) @db.Decimal(10, 2)
-  created_at           DateTime                   @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime                   @default(now()) @db.Timestamptz(6)
-  email_logs           cart_recovery_email_logs[]
+  id                  String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String                     @db.VarChar(255)
+  description         String?
+  is_active           Boolean                    @default(true)
+  trigger_delay_hours Int                        @default(24)
+  email_template      String
+  subject_line        String                     @db.VarChar(255)
+  discount_percent    Decimal                    @default(0) @db.Decimal(5, 2)
+  discount_code       String?                    @db.VarChar(50)
+  total_sent          Int                        @default(0)
+  total_opened        Int                        @default(0)
+  total_clicked       Int                        @default(0)
+  total_converted     Int                        @default(0)
+  total_revenue       Decimal                    @default(0) @db.Decimal(10, 2)
+  created_at          DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime                   @default(now()) @db.Timestamptz(6)
+  email_logs          cart_recovery_email_logs[]
 }
 
 model cart_recovery_sessions {
-  id                        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cart_session_id           String                     @db.VarChar(255)
-  clerk_user_id             String                     @db.VarChar(255)
-  user_email                String                     @db.VarChar(255)
-  user_name                 String?                    @db.VarChar(255)
-  total_items               Int                        @default(0)
-  total_value               Decimal                    @default(0) @db.Decimal(10, 2)
-  cart_data                 Json?
-  created_at                DateTime                   @default(now()) @db.Timestamptz(6)
-  abandoned_at              DateTime?                  @db.Timestamptz(6)
-  last_activity             DateTime                   @default(now()) @db.Timestamptz(6)
-  status                    String                     @default("active") @db.VarChar(50)
-  recovery_emails_sent      Int                        @default(0)
-  last_email_sent_at        DateTime?                  @db.Timestamptz(6)
-  recovered_at              DateTime?                  @db.Timestamptz(6)
-  email_opened              Boolean                    @default(false)
-  email_clicked             Boolean                    @default(false)
-  recovery_discount_used    Boolean                    @default(false)
-  recovery_revenue          Decimal                    @default(0) @db.Decimal(10, 2)
-  email_logs                cart_recovery_email_logs[]
+  id                     String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cart_session_id        String                     @db.VarChar(255)
+  clerk_user_id          String                     @db.VarChar(255)
+  user_email             String                     @db.VarChar(255)
+  user_name              String?                    @db.VarChar(255)
+  total_items            Int                        @default(0)
+  total_value            Decimal                    @default(0) @db.Decimal(10, 2)
+  cart_data              Json?
+  created_at             DateTime                   @default(now()) @db.Timestamptz(6)
+  abandoned_at           DateTime?                  @db.Timestamptz(6)
+  last_activity          DateTime                   @default(now()) @db.Timestamptz(6)
+  status                 String                     @default("active") @db.VarChar(50)
+  recovery_emails_sent   Int                        @default(0)
+  last_email_sent_at     DateTime?                  @db.Timestamptz(6)
+  recovered_at           DateTime?                  @db.Timestamptz(6)
+  email_opened           Boolean                    @default(false)
+  email_clicked          Boolean                    @default(false)
+  recovery_discount_used Boolean                    @default(false)
+  recovery_revenue       Decimal                    @default(0) @db.Decimal(10, 2)
+  email_logs             cart_recovery_email_logs[]
 
   @@unique([cart_session_id, clerk_user_id])
   @@index([clerk_user_id], map: "idx_cart_recovery_sessions_user")
@@ -419,23 +419,23 @@ model cart_recovery_sessions {
 }
 
 model cart_recovery_email_logs {
-  id                  String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  recovery_session_id String                   @db.Uuid
-  campaign_id         String                   @db.Uuid
-  recipient_email     String                   @db.VarChar(255)
-  subject_line        String                   @db.VarChar(255)
+  id                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recovery_session_id String                  @db.Uuid
+  campaign_id         String                  @db.Uuid
+  recipient_email     String                  @db.VarChar(255)
+  subject_line        String                  @db.VarChar(255)
   email_content       String?
-  discount_code       String?                  @db.VarChar(50)
-  sent_at             DateTime                 @default(now()) @db.Timestamptz(6)
-  opened_at           DateTime?                @db.Timestamptz(6)
-  clicked_at          DateTime?                @db.Timestamptz(6)
-  converted_at        DateTime?                @db.Timestamptz(6)
-  delivery_status     String                   @default("sent") @db.VarChar(50)
+  discount_code       String?                 @db.VarChar(50)
+  sent_at             DateTime                @default(now()) @db.Timestamptz(6)
+  opened_at           DateTime?               @db.Timestamptz(6)
+  clicked_at          DateTime?               @db.Timestamptz(6)
+  converted_at        DateTime?               @db.Timestamptz(6)
+  delivery_status     String                  @default("sent") @db.VarChar(50)
   error_message       String?
-  cart_value_at_send  Decimal?                 @db.Decimal(10, 2)
-  recovery_revenue    Decimal                  @default(0) @db.Decimal(10, 2)
-  session             cart_recovery_sessions   @relation(fields: [recovery_session_id], references: [id], onDelete: Cascade)
-  campaign            cart_recovery_campaigns  @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+  cart_value_at_send  Decimal?                @db.Decimal(10, 2)
+  recovery_revenue    Decimal                 @default(0) @db.Decimal(10, 2)
+  campaign            cart_recovery_campaigns @relation(fields: [campaign_id], references: [id], onDelete: Cascade)
+  session             cart_recovery_sessions  @relation(fields: [recovery_session_id], references: [id], onDelete: Cascade)
 
   @@index([recovery_session_id], map: "idx_cart_recovery_email_logs_session")
   @@index([campaign_id], map: "idx_cart_recovery_email_logs_campaign")
@@ -444,147 +444,179 @@ model cart_recovery_email_logs {
 }
 
 model cart_recovery_analytics {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  date              DateTime  @unique @db.Date
-  carts_abandoned   Int       @default(0)
-  carts_recovered   Int       @default(0)
-  emails_sent       Int       @default(0)
-  emails_opened     Int       @default(0)
-  emails_clicked    Int       @default(0)
-  potential_revenue Decimal   @default(0) @db.Decimal(10, 2)
-  recovered_revenue Decimal   @default(0) @db.Decimal(10, 2)
-  recovery_rate     Decimal   @default(0) @db.Decimal(5, 2)
-  open_rate         Decimal   @default(0) @db.Decimal(5, 2)
-  click_rate        Decimal   @default(0) @db.Decimal(5, 2)
-  conversion_rate   Decimal   @default(0) @db.Decimal(5, 2)
-  created_at        DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime  @default(now()) @db.Timestamptz(6)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date              DateTime @unique @db.Date
+  carts_abandoned   Int      @default(0)
+  carts_recovered   Int      @default(0)
+  emails_sent       Int      @default(0)
+  emails_opened     Int      @default(0)
+  emails_clicked    Int      @default(0)
+  potential_revenue Decimal  @default(0) @db.Decimal(10, 2)
+  recovered_revenue Decimal  @default(0) @db.Decimal(10, 2)
+  recovery_rate     Decimal  @default(0) @db.Decimal(5, 2)
+  open_rate         Decimal  @default(0) @db.Decimal(5, 2)
+  click_rate        Decimal  @default(0) @db.Decimal(5, 2)
+  conversion_rate   Decimal  @default(0) @db.Decimal(5, 2)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([date], map: "idx_cart_recovery_analytics_date")
 }
 
-// ========================================
-// ENTERPRISE INTEGRATIONS (Phase 2)
-// ========================================
+/// Stripe Connect accounts for marketplace vendors/merchants
+/// This table tracks all Connected accounts (Standard, Express, Custom)
+model stripe_connect_accounts {
+  id                    String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  clerk_user_id         String                     @db.VarChar(255)
+  stripe_account_id     String                     @unique @db.VarChar(255)
+  account_type          String                     @db.VarChar(50)
+  business_type         String?                    @db.VarChar(50)
+  country               String?                    @db.VarChar(2)
+  default_currency      String                     @default("USD") @db.VarChar(3)
+  email                 String?                    @db.VarChar(255)
+  business_name         String?                    @db.VarChar(255)
+  capabilities          Json?                      @default("{}")
+  requirements          Json?                      @default("{}")
+  charges_enabled       Boolean                    @default(false)
+  payouts_enabled       Boolean                    @default(false)
+  details_submitted     Boolean                    @default(false)
+  onboarding_status     String                     @default("pending") @db.VarChar(50)
+  onboarding_link       String?
+  onboarding_expires_at DateTime?                  @db.Timestamptz(6)
+  metadata              Json?                      @default("{}")
+  created_at            DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                   @default(now()) @db.Timestamptz(6)
+  account_sessions      connect_account_sessions[]
+  marketplace_transfers marketplace_transfers[]
 
-/// Webhook events log for monitoring and debugging
+  @@index([clerk_user_id], map: "idx_connect_accounts_clerk_user")
+  @@index([stripe_account_id], map: "idx_connect_accounts_stripe_id")
+  @@index([onboarding_status], map: "idx_connect_accounts_status")
+  @@index([charges_enabled, payouts_enabled], map: "idx_connect_accounts_capabilities")
+  @@index([created_at(sort: Desc)], map: "idx_connect_accounts_created")
+}
+
+/// Marketplace transfers to Connected accounts
+/// Tracks all platform-to-merchant fund transfers
+model marketplace_transfers {
+  id                     String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  stripe_transfer_id     String                  @unique @db.VarChar(255)
+  destination_account_id String                  @db.Uuid
+  stripe_destination_id  String                  @db.VarChar(255)
+  source_transaction     String?                 @db.VarChar(255)
+  amount                 Decimal                 @db.Decimal(10, 2)
+  currency               String                  @default("USD") @db.VarChar(3)
+  application_fee_amount Decimal?                @db.Decimal(10, 2)
+  transfer_group         String?                 @db.VarChar(255)
+  description            String?
+  status                 String                  @default("pending") @db.VarChar(50)
+  failure_code           String?                 @db.VarChar(100)
+  failure_message        String?
+  metadata               Json?                   @default("{}")
+  created_at             DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                @default(now()) @db.Timestamptz(6)
+  destination_account    stripe_connect_accounts @relation(fields: [destination_account_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([destination_account_id], map: "idx_transfers_destination")
+  @@index([stripe_transfer_id], map: "idx_transfers_stripe_id")
+  @@index([status], map: "idx_transfers_status")
+  @@index([created_at(sort: Desc)], map: "idx_transfers_created")
+  @@index([source_transaction], map: "idx_transfers_source")
+}
+
+/// Connect Account Sessions for embedded components
+/// Tracks component sessions for security and analytics
+model connect_account_sessions {
+  id                String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  account_id        String                  @db.Uuid
+  stripe_account_id String                  @db.VarChar(255)
+  client_secret     String                  @unique
+  components        String[]                @default([])
+  expires_at        DateTime                @db.Timestamptz(6)
+  created_at        DateTime                @default(now()) @db.Timestamptz(6)
+  account           stripe_connect_accounts @relation(fields: [account_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([account_id], map: "idx_sessions_account")
+  @@index([stripe_account_id], map: "idx_sessions_stripe_account")
+  @@index([expires_at], map: "idx_sessions_expires")
+  @@index([created_at(sort: Desc)], map: "idx_sessions_created")
+}
+
+/// Enterprise API Monitoring - Track all API requests for performance and security
+model api_monitoring {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  endpoint      String   @db.VarChar(500)
+  method        String   @db.VarChar(10)
+  status_code   Int
+  response_time Int
+  clerk_user_id String?  @db.VarChar(255)
+  trace_id      String   @db.Uuid
+  error_message String?
+  request_size  Int?     @default(0)
+  response_size Int?     @default(0)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([endpoint], map: "idx_api_monitoring_endpoint")
+  @@index([clerk_user_id], map: "idx_api_monitoring_user")
+  @@index([status_code], map: "idx_api_monitoring_status")
+  @@index([created_at(sort: Desc)], map: "idx_api_monitoring_created")
+}
+
+/// Enterprise Audit Logging - Comprehensive security and compliance audit trail
+model audit_logs {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  action        String   @db.VarChar(100)
+  resource      String   @db.VarChar(100)
+  resource_id   String?  @db.VarChar(255)
+  clerk_user_id String   @db.VarChar(255)
+  details       Json?    @default("{}")
+  risk_score    Int?     @default(0)
+  ip_address    String?  @db.VarChar(45)
+  user_agent    String?
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([action], map: "idx_audit_logs_action")
+  @@index([resource], map: "idx_audit_logs_resource")
+  @@index([clerk_user_id], map: "idx_audit_logs_user")
+  @@index([risk_score], map: "idx_audit_logs_risk_score")
+  @@index([created_at(sort: Desc)], map: "idx_audit_logs_created")
+}
+
+/// Enterprise Webhook Event Tracking - Monitor all incoming webhooks
 model webhook_events {
-  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  source          String            @default("stripe") // stripe, github, slack, etc.
-  event_type      String            // payment_intent.succeeded, push, etc.
-  event_id        String?           // External event ID
-  payload         Json              // Raw webhook payload
-  headers         Json?             // Request headers for debugging
-  status          String            @default("received") // received, processing, completed, failed
-  processing_time Int?              // Milliseconds to process
-  error_message   String?           // Error details if processing failed
-  retry_count     Int               @default(0)
-  processed_at    DateTime?         @db.Timestamptz(6)
-  created_at      DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  source          String    @db.VarChar(50)
+  event_type      String    @db.VarChar(100)
+  event_id        String    @unique @db.VarChar(255)
+  payload         Json?     @default("{}")
+  status          String    @default("pending") @db.VarChar(50)
+  processing_time Int?
+  error_message   String?
+  retry_count     Int       @default(0)
+  processed_at    DateTime? @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
 
   @@index([source], map: "idx_webhook_events_source")
   @@index([event_type], map: "idx_webhook_events_type")
   @@index([status], map: "idx_webhook_events_status")
-  @@index([created_at], map: "idx_webhook_events_created")
+  @@index([created_at(sort: Desc)], map: "idx_webhook_events_created")
 }
 
-/// API endpoint monitoring and performance tracking
-model api_monitoring {
-  id                String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  endpoint          String            // /api/stripe/webhook, /api/billing/*, etc.
-  method            String            // GET, POST, PUT, DELETE
-  status_code       Int               // 200, 404, 500, etc.
-  response_time     Int               // Milliseconds
-  request_size      Int?              // Bytes
-  response_size     Int?              // Bytes
-  user_agent        String?           // Client information
-  ip_address        String?           // Request IP (anonymized)
-  clerk_user_id     String?           // User making request
-  error_message     String?           // Error details for failed requests
-  trace_id          String?           // Unique request identifier
-  created_at        DateTime          @default(now()) @db.Timestamptz(6)
-
-  @@index([endpoint], map: "idx_api_monitoring_endpoint")
-  @@index([status_code], map: "idx_api_monitoring_status")
-  @@index([created_at], map: "idx_api_monitoring_created")
-  @@index([clerk_user_id], map: "idx_api_monitoring_user")
-}
-
-/// Rate limiting tracking and enforcement
+/// Enterprise Rate Limiting - Track and enforce API rate limits
 model rate_limit_tracking {
-  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  identifier      String            // IP address, user ID, API key
-  identifier_type String            @default("ip") // ip, user, api_key
-  endpoint        String            // Specific endpoint or * for global
-  current_count   Int               @default(1)
-  limit_count     Int               // Maximum allowed requests
-  window_start    DateTime          @db.Timestamptz(6)
-  window_end      DateTime          @db.Timestamptz(6)
-  blocked_until   DateTime?         @db.Timestamptz(6) // If temporarily blocked
-  created_at      DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  id              String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  identifier      String    @db.VarChar(255)
+  identifier_type String    @db.VarChar(50)
+  endpoint        String    @db.VarChar(500)
+  request_count   Int       @default(0)
+  window_start    DateTime  @db.Timestamptz(6)
+  blocked         Boolean   @default(false)
+  blocked_until   DateTime? @db.Timestamptz(6)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
 
-  @@unique([identifier, endpoint, window_start], map: "unique_rate_limit_window")
   @@index([identifier], map: "idx_rate_limit_identifier")
   @@index([endpoint], map: "idx_rate_limit_endpoint")
-  @@index([window_end], map: "idx_rate_limit_window_end")
-}
-
-/// System audit logs for security and compliance
-model audit_logs {
-  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  action          String            // login, payment, admin_action, data_export, etc.
-  resource        String?           // user_profile, subscription, product, etc.
-  resource_id     String?           // ID of affected resource
-  clerk_user_id   String?           // User performing action
-  admin_user_id   String?           // Admin performing action (for admin actions)
-  ip_address      String?           // Source IP address
-  user_agent      String?           // Browser/client info
-  details         Json?             // Additional context and metadata
-  risk_score      Int?              @default(0) // 0-100, calculated risk level
-  flagged         Boolean           @default(false) // Requires review
-  reviewed_by     String?           // Admin who reviewed flagged action
-  reviewed_at     DateTime?         @db.Timestamptz(6)
-  created_at      DateTime          @default(now()) @db.Timestamptz(6)
-
-  @@index([action], map: "idx_audit_logs_action")
-  @@index([clerk_user_id], map: "idx_audit_logs_user")
-  @@index([admin_user_id], map: "idx_audit_logs_admin")
-  @@index([flagged], map: "idx_audit_logs_flagged")
-  @@index([created_at], map: "idx_audit_logs_created")
-  @@index([risk_score], map: "idx_audit_logs_risk")
-}
-
-/// Enterprise webhook configurations and management
-model webhook_configurations {
-  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name            String            // Human readable name
-  url             String            // Webhook endpoint URL
-  secret          String?           // Webhook signature secret
-  events          String[]          // Array of event types to send
-  is_active       Boolean           @default(true)
-  retry_policy    Json?             // Retry configuration
-  last_success    DateTime?         @db.Timestamptz(6)
-  last_failure    DateTime?         @db.Timestamptz(6)
-  failure_count   Int               @default(0)
-  created_by      String            // Admin user ID who created
-  created_at      DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
-
-  @@index([is_active], map: "idx_webhook_configs_active")
-  @@index([created_by], map: "idx_webhook_configs_creator")
-}
-
-/// System performance metrics and health monitoring
-model system_metrics {
-  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  metric_name     String            // cpu_usage, memory_usage, db_connections, etc.
-  metric_value    Float             // Numeric value
-  metric_unit     String            @default("count") // percent, bytes, count, ms
-  tags            Json?             // Additional metadata/labels
-  recorded_at     DateTime          @default(now()) @db.Timestamptz(6)
-
-  @@index([metric_name], map: "idx_system_metrics_name")
-  @@index([recorded_at], map: "idx_system_metrics_time")
+  @@index([window_start], map: "idx_rate_limit_window")
+  @@index([blocked], map: "idx_rate_limit_blocked")
 }

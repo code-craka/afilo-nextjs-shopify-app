@@ -6,6 +6,8 @@
  * Fixes 43+ "error is of type 'unknown'" TypeScript errors across the codebase.
  */
 
+import { NextResponse } from 'next/server';
+
 /**
  * Custom API Error class for structured error responses
  */
@@ -141,7 +143,7 @@ export function formatError(error: unknown): {
 export function createErrorResponse(error: unknown) {
   const formatted = formatError(error);
 
-  return Response.json(
+  return NextResponse.json(
     {
       success: false,
       error: {

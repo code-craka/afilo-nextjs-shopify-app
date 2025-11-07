@@ -1,415 +1,526 @@
 /**
- * Webhook Monitoring Service
+ * Webhook Monitor Service - PRODUCTION VERSION
  *
- * Phase 2 Feature: Enterprise Integrations
- *
- * Provides:
- * - Webhook event logging and tracking
- * - Performance monitoring
- * - Error tracking and retry logic
- * - Real-time analytics
+ * Enterprise webhook monitoring and analytics
+ * Stores webhook events in database for monitoring and retry logic
  */
 
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { NextRequest } from 'next/server';
 
 export interface WebhookEvent {
-  source: string;
-  eventType: string;
-  eventId?: string;
-  payload: any;
-  headers?: Record<string, string>;
+  event_id: string;
+  event_type: string;
+  status: 'pending' | 'success' | 'failed' | 'retrying';
+  payload_size: number;
+  response_time?: number;
+  response_status?: number;
+  error_message?: string;
+  attempt_count: number;
+  source: 'stripe' | 'clerk' | 'custom';
+  processed_at?: Date;
+  created_at: Date;
 }
 
-export interface WebhookProcessingResult {
-  success: boolean;
-  processingTime: number;
-  errorMessage?: string;
-  retryCount?: number;
+export interface WebhookHealthMetrics {
+  total_events: number;
+  success_rate: number;
+  average_response_time: number;
+  failed_events: number;
+  events_by_type: Record<string, number>;
+  recent_failures: WebhookEvent[];
+}
+
+export interface WebhookPerformanceAnalytics {
+  response_time_trends: { hour: number; avg_time: number; event_count: number }[];
+  failure_patterns: { type: string; failures: number; success_rate: number }[];
+  source_distribution: Record<string, number>;
 }
 
 export class WebhookMonitorService {
   /**
-   * Log incoming webhook event
+   * Log webhook event
    */
-  static async logWebhookEvent(
-    event: WebhookEvent,
-    request?: NextRequest
-  ): Promise<string> {
+  static async logEvent(event: Omit<WebhookEvent, 'created_at'>): Promise<void> {
     try {
-      const headers = request ? this.extractHeaders(request) : event.headers;
-
-      const webhookLog = await prisma.webhook_events.create({
+      await prisma.webhook_events.create({
         data: {
+          id: randomUUID(),
           source: event.source,
-          event_type: event.eventType,
-          event_id: event.eventId,
-          payload: event.payload,
-          headers: headers || {},
-          status: 'received',
-        },
+          event_type: event.event_type,
+          event_id: event.event_id,
+          payload: {
+            payload_size: event.payload_size,
+            attempt_count: event.attempt_count
+          },
+          status: event.status,
+          processing_time: event.response_time || null,
+          error_message: event.error_message || null,
+          retry_count: Math.max(0, event.attempt_count - 1),
+          processed_at: event.processed_at || null,
+          created_at: new Date(),
+        }
       });
 
-      console.log(`📥 Webhook logged: ${event.source}.${event.eventType} (${webhookLog.id})`);
-      return webhookLog.id;
+      // Log failures to console as well
+      if (event.status === 'failed') {
+        console.error('🚨 Webhook failure:', {
+          id: event.event_id,
+          type: event.event_type,
+          error: event.error_message,
+          attempt: event.attempt_count
+        });
+      }
     } catch (error) {
-      console.error('Error logging webhook event:', error);
-      throw error;
+      console.error('Error logging webhook event to database:', error);
+      // Log to console as fallback
+      console.log('[Webhook Monitor] Fallback log:', {
+        event_id: event.event_id,
+        event_type: event.event_type,
+        status: event.status,
+        source: event.source
+      });
     }
   }
 
   /**
-   * Update webhook processing status
+   * Update event status
    */
-  static async updateWebhookStatus(
-    webhookId: string,
-    result: WebhookProcessingResult
+  static async updateEventStatus(
+    eventId: string,
+    status: 'success' | 'failed' | 'retrying',
+    responseTime?: number,
+    responseStatus?: number,
+    errorMessage?: string
   ): Promise<void> {
     try {
-      await prisma.webhook_events.update({
-        where: { id: webhookId },
-        data: {
-          status: result.success ? 'completed' : 'failed',
-          processing_time: result.processingTime,
-          error_message: result.errorMessage,
-          retry_count: result.retryCount || 0,
-          processed_at: new Date(),
-          updated_at: new Date(),
-        },
+      const updateData: any = {
+        status: status === 'success' ? 'processed' : status,
+        processed_at: new Date(),
+      };
+
+      if (responseTime) updateData.processing_time = responseTime;
+      if (errorMessage) updateData.error_message = errorMessage;
+      if (status === 'retrying') {
+        // Increment retry count
+        updateData.retry_count = {
+          increment: 1
+        };
+      }
+
+      await prisma.webhook_events.updateMany({
+        where: { event_id: eventId },
+        data: updateData
       });
 
-      const statusIcon = result.success ? '✅' : '❌';
-      console.log(`${statusIcon} Webhook ${webhookId} ${result.success ? 'completed' : 'failed'} in ${result.processingTime}ms`);
+      console.log(`[Webhook Monitor] Updated event ${eventId} status to ${status}`);
     } catch (error) {
-      console.error('Error updating webhook status:', error);
+      console.error('Error updating webhook event status:', error);
     }
   }
 
   /**
-   * Get webhook analytics
+   * Get webhook health metrics
    */
-  static async getWebhookAnalytics(
-    source?: string,
-    hours: number = 24
-  ): Promise<{
-    totalEvents: number;
-    successRate: number;
-    averageProcessingTime: number;
-    errorRate: number;
-    topEventTypes: Array<{ eventType: string; count: number }>;
-    recentErrors: Array<{ eventType: string; errorMessage: string; createdAt: Date }>;
-  }> {
+  static async getHealthMetrics(hours = 24): Promise<WebhookHealthMetrics> {
     try {
-      const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+      const timeFilter = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-      const whereClause = {
-        created_at: { gte: since },
-        ...(source && { source }),
+      const [totalEvents, failedEvents, avgProcessingTime, eventsByTypeData, recentFailuresData] = await Promise.all([
+        // Total events count
+        prisma.webhook_events.count({
+          where: { created_at: { gte: timeFilter } }
+        }),
+
+        // Failed events count
+        prisma.webhook_events.count({
+          where: {
+            created_at: { gte: timeFilter },
+            status: 'failed'
+          }
+        }),
+
+        // Average processing time
+        prisma.webhook_events.aggregate({
+          where: {
+            created_at: { gte: timeFilter },
+            processing_time: { not: null }
+          },
+          _avg: { processing_time: true }
+        }),
+
+        // Events by type
+        prisma.webhook_events.groupBy({
+          by: ['event_type'],
+          where: { created_at: { gte: timeFilter } },
+          _count: { event_type: true },
+          orderBy: { _count: { event_type: 'desc' } },
+          take: 10
+        }),
+
+        // Recent failures
+        prisma.webhook_events.findMany({
+          where: {
+            created_at: { gte: timeFilter },
+            status: 'failed'
+          },
+          orderBy: { created_at: 'desc' },
+          take: 10
+        })
+      ]);
+
+      const successRate = totalEvents > 0 ? ((totalEvents - failedEvents) / totalEvents) * 100 : 100;
+
+      const eventsByType: Record<string, number> = {};
+      eventsByTypeData.forEach(item => {
+        eventsByType[item.event_type] = item._count.event_type;
+      });
+
+      const recentFailures: WebhookEvent[] = recentFailuresData.map(event => ({
+        event_id: event.event_id,
+        event_type: event.event_type,
+        status: event.status as 'pending' | 'success' | 'failed' | 'retrying',
+        payload_size: ((event.payload as any)?.payload_size) || 0,
+        response_time: event.processing_time || undefined,
+        error_message: event.error_message || undefined,
+        attempt_count: ((event.payload as any)?.attempt_count) || 1,
+        source: event.source as 'stripe' | 'clerk' | 'custom',
+        processed_at: event.processed_at || undefined,
+        created_at: event.created_at
+      }));
+
+      return {
+        total_events: totalEvents,
+        success_rate: Math.round(successRate * 10) / 10,
+        average_response_time: Math.round(avgProcessingTime._avg.processing_time || 0),
+        failed_events: failedEvents,
+        events_by_type: eventsByType,
+        recent_failures: recentFailures
       };
+    } catch (error) {
+      console.error('Error getting webhook health metrics:', error);
+      return {
+        total_events: 0,
+        success_rate: 0,
+        average_response_time: 0,
+        failed_events: 0,
+        events_by_type: {},
+        recent_failures: []
+      };
+    }
+  }
 
-      // Total events
-      const totalEvents = await prisma.webhook_events.count({
-        where: whereClause,
-      });
+  /**
+   * Get performance analytics
+   */
+  static async getPerformanceAnalytics(hours = 24): Promise<WebhookPerformanceAnalytics> {
+    try {
+      const timeFilter = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-      // Success/failure counts
-      const statusCounts = await prisma.webhook_events.groupBy({
-        by: ['status'],
-        where: whereClause,
-        _count: true,
-      });
+      const [trendsData, failurePatternsData, sourceDistData] = await Promise.all([
+        // Hourly response time trends
+        prisma.$queryRaw`
+          SELECT
+            EXTRACT(HOUR FROM created_at) as hour,
+            AVG(processing_time) as avg_time,
+            COUNT(*) as event_count
+          FROM webhook_events
+          WHERE created_at >= ${timeFilter} AND processing_time IS NOT NULL
+          GROUP BY EXTRACT(HOUR FROM created_at)
+          ORDER BY hour
+        ` as unknown as { hour: number; avg_time: number; event_count: bigint }[],
 
-      const completedCount = statusCounts.find(s => s.status === 'completed')?._count || 0;
-      const failedCount = statusCounts.find(s => s.status === 'failed')?._count || 0;
+        // Failure patterns by type
+        prisma.$queryRaw`
+          SELECT
+            event_type as type,
+            SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failures,
+            COUNT(*) as total,
+            ROUND(
+              (COUNT(*) - SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)) * 100.0 / COUNT(*),
+              1
+            ) as success_rate
+          FROM webhook_events
+          WHERE created_at >= ${timeFilter}
+          GROUP BY event_type
+          HAVING COUNT(*) > 5
+          ORDER BY failures DESC
+        ` as unknown as { type: string; failures: bigint; total: bigint; success_rate: number }[],
 
-      // Average processing time
-      const avgProcessingTime = await prisma.webhook_events.aggregate({
-        where: {
-          ...whereClause,
-          processing_time: { not: null },
-        },
-        _avg: { processing_time: true },
-      });
+        // Source distribution
+        prisma.webhook_events.groupBy({
+          by: ['source'],
+          where: { created_at: { gte: timeFilter } },
+          _count: { source: true }
+        })
+      ]);
 
-      // Top event types
-      const topEventTypes = await prisma.webhook_events.groupBy({
-        by: ['event_type'],
-        where: whereClause,
-        _count: true,
-        orderBy: { _count: { event_type: 'desc' } },
-        take: 10,
-      });
+      const responseTimeTrends = trendsData.map(item => ({
+        hour: Number(item.hour),
+        avg_time: Math.round(item.avg_time),
+        event_count: Number(item.event_count)
+      }));
 
-      // Recent errors
-      const recentErrors = await prisma.webhook_events.findMany({
-        where: {
-          ...whereClause,
-          status: 'failed',
-        },
-        select: {
-          event_type: true,
-          error_message: true,
-          created_at: true,
-        },
-        orderBy: { created_at: 'desc' },
-        take: 10,
+      const failurePatterns = failurePatternsData.map(item => ({
+        type: item.type,
+        failures: Number(item.failures),
+        success_rate: item.success_rate
+      }));
+
+      const sourceDistribution: Record<string, number> = {};
+      sourceDistData.forEach(item => {
+        sourceDistribution[item.source] = item._count.source;
       });
 
       return {
-        totalEvents,
-        successRate: totalEvents > 0 ? (completedCount / totalEvents) * 100 : 0,
-        averageProcessingTime: avgProcessingTime._avg.processing_time || 0,
-        errorRate: totalEvents > 0 ? (failedCount / totalEvents) * 100 : 0,
-        topEventTypes: topEventTypes.map(t => ({
-          eventType: t.event_type,
-          count: t._count,
-        })),
-        recentErrors: recentErrors.map(e => ({
-          eventType: e.event_type,
-          errorMessage: e.error_message || 'Unknown error',
-          createdAt: e.created_at,
-        })),
+        response_time_trends: responseTimeTrends,
+        failure_patterns: failurePatterns,
+        source_distribution: sourceDistribution
       };
     } catch (error) {
-      console.error('Error getting webhook analytics:', error);
-      throw error;
+      console.error('Error getting webhook performance analytics:', error);
+      return {
+        response_time_trends: [],
+        failure_patterns: [],
+        source_distribution: {}
+      };
     }
   }
 
   /**
-   * Get failed webhooks for retry
+   * Get failed events for retry
    */
-  static async getFailedWebhooks(
-    maxRetryCount: number = 3,
-    olderThanMinutes: number = 5
-  ): Promise<Array<{
-    id: string;
-    source: string;
-    eventType: string;
-    payload: any;
-    retryCount: number;
-    errorMessage: string | null;
-  }>> {
+  static async getFailedEvents(limit = 50): Promise<WebhookEvent[]> {
     try {
-      const retryThreshold = new Date(Date.now() - olderThanMinutes * 60 * 1000);
-
-      const failedWebhooks = await prisma.webhook_events.findMany({
+      const failedEvents = await prisma.webhook_events.findMany({
         where: {
           status: 'failed',
-          retry_count: { lt: maxRetryCount },
-          created_at: { lte: retryThreshold },
-        },
-        select: {
-          id: true,
-          source: true,
-          event_type: true,
-          payload: true,
-          retry_count: true,
-          error_message: true,
+          retry_count: { lt: 3 } // Only retry up to 3 times
         },
         orderBy: { created_at: 'asc' },
-        take: 50, // Limit to prevent overwhelming
+        take: limit
       });
 
-      return failedWebhooks.map(w => ({
-        id: w.id,
-        source: w.source,
-        eventType: w.event_type,
-        payload: w.payload,
-        retryCount: w.retry_count,
-        errorMessage: w.error_message,
+      return failedEvents.map(event => ({
+        event_id: event.event_id,
+        event_type: event.event_type,
+        status: 'failed',
+        payload_size: ((event.payload as any)?.payload_size) || 0,
+        response_time: event.processing_time || undefined,
+        error_message: event.error_message || undefined,
+        attempt_count: event.retry_count + 1,
+        source: event.source as 'stripe' | 'clerk' | 'custom',
+        processed_at: event.processed_at || undefined,
+        created_at: event.created_at
       }));
     } catch (error) {
-      console.error('Error getting failed webhooks:', error);
+      console.error('Error getting failed events:', error);
       return [];
     }
   }
 
   /**
-   * Mark webhook for retry
+   * Retry failed event
    */
-  static async markForRetry(webhookId: string): Promise<void> {
+  static async retryEvent(eventId: string): Promise<void> {
     try {
-      await prisma.webhook_events.update({
-        where: { id: webhookId },
+      await prisma.webhook_events.updateMany({
+        where: { event_id: eventId },
         data: {
-          status: 'processing',
+          status: 'pending',
           retry_count: { increment: 1 },
-          updated_at: new Date(),
-        },
+          processed_at: null
+        }
       });
 
-      console.log(`🔄 Webhook ${webhookId} marked for retry`);
+      console.log(`[Webhook Monitor] Marked event ${eventId} for retry`);
     } catch (error) {
-      console.error('Error marking webhook for retry:', error);
+      console.error(`Error retrying event ${eventId}:`, error);
     }
   }
 
   /**
-   * Clean up old webhook logs
+   * Get events by type
    */
-  static async cleanupOldLogs(daysToKeep: number = 30): Promise<number> {
+  static async getEventsByType(
+    eventType: string,
+    hours = 24,
+    limit = 100
+  ): Promise<WebhookEvent[]> {
+    try {
+      const timeFilter = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+      const events = await prisma.webhook_events.findMany({
+        where: {
+          event_type: eventType,
+          created_at: { gte: timeFilter }
+        },
+        orderBy: { created_at: 'desc' },
+        take: limit
+      });
+
+      return events.map(event => ({
+        event_id: event.event_id,
+        event_type: event.event_type,
+        status: event.status as 'pending' | 'success' | 'failed' | 'retrying',
+        payload_size: ((event.payload as any)?.payload_size) || 0,
+        response_time: event.processing_time || undefined,
+        error_message: event.error_message || undefined,
+        attempt_count: ((event.payload as any)?.attempt_count) || 1,
+        source: event.source as 'stripe' | 'clerk' | 'custom',
+        processed_at: event.processed_at || undefined,
+        created_at: event.created_at
+      }));
+    } catch (error) {
+      console.error('Error getting events by type:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Clean up old webhook events
+   */
+  static async cleanup(daysToKeep = 30): Promise<{ deletedCount: number }> {
     try {
       const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
 
       const result = await prisma.webhook_events.deleteMany({
-        where: {
-          created_at: { lte: cutoffDate },
-          status: { in: ['completed', 'failed'] }, // Keep processing webhooks
-        },
+        where: { created_at: { lt: cutoffDate } }
       });
 
-      console.log(`🧹 Cleaned up ${result.count} old webhook logs`);
-      return result.count;
+      console.log(`[Webhook Monitor] Cleaned up ${result.count} webhook events older than ${daysToKeep} days`);
+      return { deletedCount: result.count };
     } catch (error) {
-      console.error('Error cleaning up webhook logs:', error);
-      return 0;
+      console.error('Error cleaning up webhook events:', error);
+      return { deletedCount: 0 };
     }
   }
 
   /**
-   * Get webhook event details
-   */
-  static async getWebhookDetails(webhookId: string) {
-    try {
-      return await prisma.webhook_events.findUnique({
-        where: { id: webhookId },
-      });
-    } catch (error) {
-      console.error('Error getting webhook details:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Search webhook events
-   */
-  static async searchWebhooks({
-    source,
-    eventType,
-    status,
-    since,
-    until,
-    limit = 50,
-    offset = 0,
-  }: {
-    source?: string;
-    eventType?: string;
-    status?: string;
-    since?: Date;
-    until?: Date;
-    limit?: number;
-    offset?: number;
-  }) {
-    try {
-      const where: any = {};
-
-      if (source) where.source = source;
-      if (eventType) where.event_type = { contains: eventType, mode: 'insensitive' };
-      if (status) where.status = status;
-      if (since || until) {
-        where.created_at = {};
-        if (since) where.created_at.gte = since;
-        if (until) where.created_at.lte = until;
-      }
-
-      const [webhooks, total] = await Promise.all([
-        prisma.webhook_events.findMany({
-          where,
-          orderBy: { created_at: 'desc' },
-          take: limit,
-          skip: offset,
-          select: {
-            id: true,
-            source: true,
-            event_type: true,
-            event_id: true,
-            status: true,
-            processing_time: true,
-            error_message: true,
-            retry_count: true,
-            created_at: true,
-            processed_at: true,
-          },
-        }),
-        prisma.webhook_events.count({ where }),
-      ]);
-
-      return {
-        webhooks,
-        total,
-        hasMore: offset + webhooks.length < total,
-      };
-    } catch (error) {
-      console.error('Error searching webhooks:', error);
-      return { webhooks: [], total: 0, hasMore: false };
-    }
-  }
-
-  /**
-   * Extract relevant headers from request
-   */
-  private static extractHeaders(request: NextRequest): Record<string, string> {
-    const relevantHeaders = [
-      'user-agent',
-      'stripe-signature',
-      'x-github-delivery',
-      'x-slack-signature',
-      'content-type',
-      'x-forwarded-for',
-      'x-real-ip',
-    ];
-
-    const headers: Record<string, string> = {};
-
-    relevantHeaders.forEach(header => {
-      const value = request.headers.get(header);
-      if (value) {
-        headers[header] = value;
-      }
-    });
-
-    return headers;
-  }
-
-  /**
-   * Get webhook health status
+   * Get webhook health status (alias for getSystemHealth)
    */
   static async getHealthStatus(): Promise<{
-    status: 'healthy' | 'degraded' | 'unhealthy';
-    lastHourEvents: number;
-    successRate: number;
-    averageProcessingTime: number;
-    failedWebhooks: number;
+    status: 'healthy' | 'degraded' | 'down';
+    checks: {
+      database_connection: boolean;
+      event_processing: boolean;
+      retry_queue: boolean;
+    };
+    uptime: string;
+    last_event_processed: Date | null;
+  }> {
+    return this.getSystemHealth();
+  }
+
+  /**
+   * Get webhook system health status
+   */
+  static async getSystemHealth(): Promise<{
+    status: 'healthy' | 'degraded' | 'down';
+    checks: {
+      database_connection: boolean;
+      event_processing: boolean;
+      retry_queue: boolean;
+    };
+    uptime: string;
+    last_event_processed: Date | null;
   }> {
     try {
-      const analytics = await this.getWebhookAnalytics(undefined, 1); // Last hour
-      const failedWebhooks = await this.getFailedWebhooks();
+      // Check database connection
+      let databaseConnection = true;
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+      } catch {
+        databaseConnection = false;
+      }
 
-      let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+      // Check if events are being processed (last 5 minutes)
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const recentProcessedCount = await prisma.webhook_events.count({
+        where: {
+          processed_at: { gte: fiveMinutesAgo },
+          status: { in: ['processed', 'failed'] }
+        }
+      });
+      const eventProcessing = recentProcessedCount > 0 || databaseConnection;
 
-      if (analytics.errorRate > 10 || failedWebhooks.length > 10) {
-        status = 'unhealthy';
-      } else if (analytics.errorRate > 5 || analytics.averageProcessingTime > 5000) {
+      // Check retry queue health (failed events not stuck for too long)
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const stuckFailedEvents = await prisma.webhook_events.count({
+        where: {
+          status: 'failed',
+          created_at: { lt: oneHourAgo },
+          retry_count: { gte: 3 }
+        }
+      });
+      const retryQueueHealthy = stuckFailedEvents < 10; // Threshold
+
+      // Get last processed event
+      const lastProcessedEvent = await prisma.webhook_events.findFirst({
+        where: { processed_at: { not: null } },
+        orderBy: { processed_at: 'desc' },
+        select: { processed_at: true }
+      });
+
+      // Determine overall status
+      let status: 'healthy' | 'degraded' | 'down';
+      if (!databaseConnection) {
+        status = 'down';
+      } else if (!eventProcessing || !retryQueueHealthy) {
         status = 'degraded';
+      } else {
+        status = 'healthy';
       }
 
       return {
         status,
-        lastHourEvents: analytics.totalEvents,
-        successRate: analytics.successRate,
-        averageProcessingTime: analytics.averageProcessingTime,
-        failedWebhooks: failedWebhooks.length,
+        checks: {
+          database_connection: databaseConnection,
+          event_processing: eventProcessing,
+          retry_queue: retryQueueHealthy
+        },
+        uptime: 'Monitoring active', // Simplified - you might track this separately
+        last_event_processed: lastProcessedEvent?.processed_at || null
       };
     } catch (error) {
-      console.error('Error getting webhook health status:', error);
+      console.error('Error getting webhook system health:', error);
       return {
-        status: 'unhealthy',
-        lastHourEvents: 0,
-        successRate: 0,
-        averageProcessingTime: 0,
-        failedWebhooks: 0,
+        status: 'down',
+        checks: {
+          database_connection: false,
+          event_processing: false,
+          retry_queue: false
+        },
+        uptime: 'Unknown',
+        last_event_processed: null
       };
     }
+  }
+
+  // Legacy method aliases for backward compatibility
+  static async logWebhookEvent(
+    eventId: string,
+    eventType: string,
+    source: 'stripe' | 'clerk' | 'custom',
+    payload: any,
+    status: 'pending' | 'success' | 'failed' = 'pending'
+  ): Promise<void> {
+    await this.logEvent({
+      event_id: eventId,
+      event_type: eventType,
+      status,
+      payload_size: JSON.stringify(payload || {}).length,
+      attempt_count: 1,
+      source
+    });
+  }
+
+  static async updateWebhookStatus(
+    eventId: string,
+    status: 'success' | 'failed',
+    responseTime?: number,
+    errorMessage?: string
+  ): Promise<void> {
+    await this.updateEventStatus(eventId, status, responseTime, undefined, errorMessage);
   }
 }

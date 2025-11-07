@@ -47,6 +47,9 @@ dependencies:
   '@react-pdf/renderer':
     specifier: ^4.3.1
     version: 4.3.1(react@19.1.0)
+  '@stripe/connect-js':
+    specifier: ^3.3.31
+    version: 3.3.31
   '@stripe/react-stripe-js':
     specifier: ^5.2.0
     version: 5.2.0(@stripe/stripe-js@8.1.0)(react-dom@19.1.0)(react@19.1.0)
@@ -95,6 +98,9 @@ dependencies:
   next:
     specifier: 16.0.1
     version: 16.0.1(react-dom@19.1.0)(react@19.1.0)
+  next-themes:
+    specifier: ^0.4.6
+    version: 0.4.6(react-dom@19.1.0)(react@19.1.0)
   node-fetch:
     specifier: ^3.3.2
     version: 3.3.2
@@ -2451,6 +2457,10 @@ packages:
 
   /@standard-schema/utils@0.3.0:
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
+    dev: false
+
+  /@stripe/connect-js@3.3.31:
+    resolution: {integrity: sha512-vjsZbatveSMoceOKZHt4eImmlBQla112OV9+enxcZUC1dGziTl2J2E3iH3n01yx9nu9ziesMJnSh/Y2d62TA/Q==}
     dev: false
 
   /@stripe/react-stripe-js@5.2.0(@stripe/stripe-js@8.1.0)(react-dom@19.1.0)(react@19.1.0):
@@ -5957,6 +5967,16 @@ packages:
   /natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
     dev: true
+
+  /next-themes@0.4.6(react-dom@19.1.0)(react@19.1.0):
+    resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
+    peerDependencies:
+      react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
+    dependencies:
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
+    dev: false
 
   /next@16.0.1(react-dom@19.1.0)(react@19.1.0):
     resolution: {integrity: sha512-e9RLSssZwd35p7/vOa+hoDFggUZIUbZhIUSLZuETCwrCVvxOs87NamoUzT+vbcNAL8Ld9GobBnWOA6SbV/arOw==}

@@ -81,6 +81,16 @@
 - **📝 Audit Logging**: Complete security event trail for compliance
 - **🚀 Performance**: Optimized cart validation with batch product fetching
 
+### 🏪 Stripe Connect Marketplace (November 2025)
+- **🏢 Multi-Vendor Platform**: Complete Stripe Connect embedded components integration
+- **💼 Merchant Onboarding**: Express & Standard account types with embedded flows
+- **💰 Automated Transfers**: Admin-controlled payouts with platform fees (2-10%)
+- **📊 Account Management**: Embedded dashboard for payments, payouts, and documents
+- **🔒 Role-Based Access**: Merchant and admin roles with granular permissions
+- **📈 Real-Time Analytics**: Account status, transfer volume, and marketplace metrics
+- **🎨 Seamless UX**: TailwindCSS v4 themed components matching brand identity
+- **⚡ Production Ready**: 8 API routes, 11 components, 5 pages with full documentation
+
 ## 💎 Premium Pricing
 
 ### Professional Plan ($499-$2,499/month)
@@ -115,33 +125,44 @@ graph TD
     B --> E[Payment Processing]
     B --> F[Subscription Management]
     B --> G[Invoice Generation]
+    B --> H[Connect Marketplace]
 
-    C --> H[Product Catalog]
-    C --> I[Cart Storage]
-    C --> J[User Profiles]
-    C --> K[Order History]
+    C --> I[Product Catalog]
+    C --> J[Cart Storage]
+    C --> K[User Profiles]
+    C --> L[Order History]
+    C --> M[Connect Accounts]
+    C --> N[Marketplace Transfers]
 
-    D --> L[Google OAuth]
-    D --> M[Session Management]
+    D --> O[Google OAuth]
+    D --> P[Session Management]
+    D --> Q[Role-Based Access]
 
     subgraph "Enterprise Features"
-        N[Premium Pricing Display]
-        O[Subscription Dashboard]
-        P[Analytics & Monitoring]
-        Q[Billing Portal]
-        R[License Management]
-        S[Volume Discounts]
+        R[Premium Pricing Display]
+        S[Subscription Dashboard]
+        T[Analytics & Monitoring]
+        U[Billing Portal]
+        V[License Management]
+        W[Volume Discounts]
+    end
+
+    subgraph "Marketplace Features"
+        X[Merchant Onboarding]
+        Y[Account Management]
+        Z[Transfer Management]
+        AA[Admin Dashboard]
     end
 
     subgraph "Deployment"
-        T[Vercel Edge]
-        U[Neon Serverless DB]
-        V[Custom Domains]
+        AB[Vercel Edge]
+        AC[Neon Serverless DB]
+        AD[Custom Domains]
     end
 
-    A --> T
-    C --> U
-    T --> V
+    A --> AB
+    C --> AC
+    AB --> AD
 ```
 
 ### Core Enterprise Components
@@ -151,6 +172,9 @@ graph TD
 - **EnterpriseQuoteBuilder**: Custom quote system with ROI projections
 - **Digital Cart System**: Advanced licensing and team management
 - **Usage Analytics**: Real-time monitoring and billing integration
+- **Connect Marketplace**: Multi-vendor platform with merchant accounts (NEW)
+- **Transfer Management**: Automated payouts with platform fees (NEW)
+- **Merchant Dashboard**: Embedded Stripe components for account management (NEW)
 
 ## 🚀 Quick Start
 
@@ -224,6 +248,9 @@ afilo-nextjs-shopify-app/
 ├── 📁 app/                          # Next.js App Router
 │   ├── 📄 page.tsx                  # Premium homepage
 │   ├── 📁 dashboard/                # User & admin dashboards
+│   │   ├── 📁 merchant/             # Merchant marketplace pages (NEW)
+│   │   └── 📁 admin/
+│   │       └── 📁 connect/          # Connect admin pages (NEW)
 │   ├── 📁 enterprise/               # Enterprise portal
 │   ├── 📁 products/                 # Product catalog
 │   ├── 📁 checkout/                 # Checkout flow
@@ -232,6 +259,7 @@ afilo-nextjs-shopify-app/
 │       ├── 📁 products/             # Product management
 │       ├── 📁 cart/                 # Cart operations
 │       ├── 📁 stripe/               # Stripe integration
+│       │   └── 📁 connect/          # Connect marketplace API (NEW)
 │       ├── 📁 billing/              # Billing & subscriptions
 │       └── 📁 webhooks/             # Webhook handlers
 ├── 📁 components/                   # Enterprise components
@@ -239,6 +267,9 @@ afilo-nextjs-shopify-app/
 │   ├── 📄 SubscriptionManager.tsx   # Subscription management
 │   ├── 📄 ProductGrid.tsx           # Enhanced product display
 │   ├── 📄 DigitalCartWidget.tsx     # Advanced cart system
+│   ├── 📁 merchant/                 # Merchant components (NEW)
+│   ├── 📁 admin/                    # Admin components (NEW)
+│   ├── 📁 providers/                # Context providers (NEW)
 │   ├── 📁 dashboard/                # Dashboard components
 │   ├── 📁 billing/                  # Billing components
 │   └── 📁 ui/                       # ShadCN UI components
@@ -246,6 +277,10 @@ afilo-nextjs-shopify-app/
 │   ├── 📄 prisma.ts                 # Prisma client (Neon)
 │   ├── 📄 stripe-server.ts          # Stripe server client
 │   ├── 📄 stripe-products.ts        # Product sync
+│   ├── 📁 stripe/                   # Stripe utilities
+│   │   ├── 📄 connect-server.ts     # Connect server utilities (NEW)
+│   │   ├── 📄 connect-client.ts     # Connect client utilities (NEW)
+│   │   └── 📁 services/             # Connect services (NEW)
 │   ├── 📁 analytics/                # Analytics services
 │   ├── 📁 billing/                  # Billing utilities
 │   └── 📄 utils.ts                  # Utility functions

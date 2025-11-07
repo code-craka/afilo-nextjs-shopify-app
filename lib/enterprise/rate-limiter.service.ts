@@ -1,294 +1,504 @@
 /**
- * Rate Limiting Service
+ * Rate Limiting Service - PRODUCTION VERSION
  *
- * Phase 2 Feature: Enterprise Integrations
- *
- * Provides:
- * - Configurable rate limiting per endpoint
- * - IP-based and user-based rate limiting
- * - Sliding window implementation
- * - Rate limit analytics and monitoring
- * - Automatic cleanup of expired windows
+ * Enterprise rate limiting with analytics and enforcement
+ * Uses sliding window algorithm with database persistence
  */
 
-import { NextRequest } from 'next/server';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@clerk/nextjs/server';
 
 export interface RateLimitConfig {
-  windowSizeMinutes: number;
-  maxRequests: number;
-  identifier?: string; // Override automatic identifier
-  identifierType?: 'ip' | 'user' | 'api_key';
+  identifier: string;
+  limit: number;
+  windowMs: number;
+  skipOnError?: boolean;
+  keyGenerator?: (req: any) => string;
 }
 
-export interface RateLimitResult {
-  allowed: boolean;
-  limit: number;
-  current: number;
-  remaining: number;
-  resetTime: Date;
-  retryAfter?: number; // Seconds until next request allowed
+export interface RateLimitStats {
+  identifier: string;
+  requests: number;
+  blocks: number;
+  window_start: Date;
+  window_end: Date;
+}
+
+export interface RateLimitSummary {
+  total_requests: number;
+  total_blocks: number;
+  block_rate: number;
+  top_blocked_ips: { ip: string; blocks: number }[];
+  hourly_stats: { hour: number; requests: number; blocks: number }[];
 }
 
 export class RateLimiterService {
   /**
-   * Default rate limit configurations for different endpoints
+   * Check rate limit for identifier using sliding window algorithm
    */
-  private static readonly DEFAULT_CONFIGS: Record<string, RateLimitConfig> = {
-    // Public APIs - more restrictive
-    '/api/stripe/webhook': { windowSizeMinutes: 1, maxRequests: 100 },
-    '/api/contact': { windowSizeMinutes: 15, maxRequests: 5 },
-    '/api/auth/*': { windowSizeMinutes: 15, maxRequests: 20 },
-
-    // Admin APIs - moderate limits
-    '/api/admin/*': { windowSizeMinutes: 1, maxRequests: 50 },
-    '/api/billing/*': { windowSizeMinutes: 1, maxRequests: 30 },
-
-    // Chat APIs - moderate limits
-    '/api/chat/*': { windowSizeMinutes: 1, maxRequests: 20 },
-
-    // Default fallback
-    '*': { windowSizeMinutes: 1, maxRequests: 60 },
-  };
-
-  /**
-   * Check rate limit for request
-   */
-  static async checkRateLimit(
-    request: NextRequest,
-    endpoint: string,
-    config?: RateLimitConfig
-  ): Promise<RateLimitResult> {
+  static async checkLimit(config: RateLimitConfig): Promise<{
+    allowed: boolean;
+    remaining: number;
+    resetTime: Date;
+  }> {
     try {
-      const finalConfig = config || this.getConfigForEndpoint(endpoint);
-      const identifier = await this.getIdentifier(request, finalConfig);
-      const identifierType = finalConfig.identifierType || this.detectIdentifierType(identifier);
+      const now = new Date();
+      const windowStart = new Date(now.getTime() - config.windowMs);
 
-      const windowStart = this.getWindowStart(finalConfig.windowSizeMinutes);
-      const windowEnd = new Date(windowStart.getTime() + finalConfig.windowSizeMinutes * 60 * 1000);
-
-      // Get or create rate limit record
-      const rateLimitRecord = await prisma.rate_limit_tracking.upsert({
+      // Clean up old windows and get current count
+      await prisma.rate_limit_tracking.deleteMany({
         where: {
-          identifier_endpoint_window_start: {
-            identifier,
-            endpoint,
-            window_start: windowStart,
-          },
-        },
-        update: {
-          current_count: { increment: 1 },
-          updated_at: new Date(),
-        },
-        create: {
-          identifier,
-          identifier_type: identifierType,
-          endpoint,
-          current_count: 1,
-          limit_count: finalConfig.maxRequests,
-          window_start: windowStart,
-          window_end: windowEnd,
-        },
+          identifier: config.identifier,
+          window_start: { lt: windowStart }
+        }
       });
 
-      const allowed = rateLimitRecord.current_count <= finalConfig.maxRequests;
-      const remaining = Math.max(0, finalConfig.maxRequests - rateLimitRecord.current_count);
+      // Find or create current tracking record
+      let currentWindow = await prisma.rate_limit_tracking.findFirst({
+        where: {
+          identifier: config.identifier,
+          endpoint: 'default',
+          window_start: { gte: windowStart }
+        },
+        orderBy: { window_start: 'desc' }
+      });
 
-      // Calculate retry after if blocked
-      let retryAfter: number | undefined;
-      if (!allowed) {
-        const now = new Date();
-        const windowEndTime = rateLimitRecord.window_end.getTime();
-        retryAfter = Math.ceil((windowEndTime - now.getTime()) / 1000);
+      if (!currentWindow) {
+        currentWindow = await prisma.rate_limit_tracking.create({
+          data: {
+            id: randomUUID(),
+            identifier: config.identifier,
+            identifier_type: config.identifier.includes('@') ? 'user' : 'ip',
+            endpoint: 'default',
+            request_count: 0,
+            window_start: now,
+            blocked: false,
+            created_at: now,
+            updated_at: now
+          }
+        });
+      }
 
-        // Update blocked_until timestamp
+      // Check if currently blocked
+      if (currentWindow.blocked && currentWindow.blocked_until && currentWindow.blocked_until > now) {
+        return {
+          allowed: false,
+          remaining: 0,
+          resetTime: currentWindow.blocked_until
+        };
+      }
+
+      // Clear block if expired
+      if (currentWindow.blocked && (!currentWindow.blocked_until || currentWindow.blocked_until <= now)) {
         await prisma.rate_limit_tracking.update({
-          where: { id: rateLimitRecord.id },
-          data: { blocked_until: new Date(now.getTime() + retryAfter * 1000) },
+          where: { id: currentWindow.id },
+          data: {
+            blocked: false,
+            blocked_until: null,
+            request_count: 0,
+            window_start: now
+          }
+        });
+        currentWindow.request_count = 0;
+        currentWindow.blocked = false;
+      }
+
+      const allowed = currentWindow.request_count < config.limit;
+      const remaining = Math.max(0, config.limit - currentWindow.request_count - 1);
+
+      // If allowed, increment counter
+      if (allowed) {
+        await prisma.rate_limit_tracking.update({
+          where: { id: currentWindow.id },
+          data: {
+            request_count: { increment: 1 },
+            updated_at: now
+          }
+        });
+      } else {
+        // Block the identifier for window duration
+        await prisma.rate_limit_tracking.update({
+          where: { id: currentWindow.id },
+          data: {
+            blocked: true,
+            blocked_until: new Date(now.getTime() + config.windowMs),
+            updated_at: now
+          }
         });
       }
 
       return {
         allowed,
-        limit: finalConfig.maxRequests,
-        current: rateLimitRecord.current_count,
         remaining,
-        resetTime: rateLimitRecord.window_end,
-        retryAfter,
+        resetTime: new Date(currentWindow.window_start.getTime() + config.windowMs)
       };
-
     } catch (error) {
       console.error('Error checking rate limit:', error);
-      // Fail open - allow request if rate limiting fails
+      // On error, allow the request if skipOnError is true
       return {
-        allowed: true,
-        limit: 0,
-        current: 0,
-        remaining: 0,
-        resetTime: new Date(),
+        allowed: config.skipOnError !== false,
+        remaining: config.limit,
+        resetTime: new Date(Date.now() + config.windowMs)
       };
+    }
+  }
+
+  /**
+   * Record rate limit attempt (for analytics)
+   */
+  static async recordAttempt(
+    identifier: string,
+    allowed: boolean,
+    ipAddress?: string,
+    endpoint?: string
+  ): Promise<void> {
+    try {
+      const now = new Date();
+      const windowStart = new Date(now.getTime() - (now.getTime() % (60 * 60 * 1000))); // Hour boundary
+
+      // This method is mainly for recording analytics data
+      // The actual rate limiting is handled in checkLimit
+
+      await prisma.rate_limit_tracking.create({
+        data: {
+          id: randomUUID(),
+          identifier,
+          identifier_type: identifier.includes('@') ? 'user' : 'ip',
+          endpoint: endpoint || 'default',
+          request_count: 1,
+          window_start: windowStart,
+          blocked: !allowed,
+          blocked_until: allowed ? null : new Date(now.getTime() + 60 * 60 * 1000), // 1 hour block
+          created_at: now,
+          updated_at: now
+        }
+      });
+
+      if (!allowed) {
+        console.warn(`🚨 Rate limit block: ${identifier} on ${endpoint || 'default'}`);
+      }
+    } catch (error) {
+      console.error('Error recording rate limit attempt:', error);
+    }
+  }
+
+  /**
+   * Get rate limit statistics
+   */
+  static async getStats(identifier?: string, hours = 24): Promise<RateLimitStats[]> {
+    try {
+      const timeFilter = new Date(Date.now() - hours * 60 * 60 * 1000);
+      const where: any = { created_at: { gte: timeFilter } };
+      if (identifier) where.identifier = identifier;
+
+      const statsData = await prisma.rate_limit_tracking.findMany({
+        where,
+        select: {
+          identifier: true,
+          request_count: true,
+          blocked: true,
+          window_start: true,
+          created_at: true
+        },
+        orderBy: { created_at: 'desc' },
+        take: 100
+      });
+
+      // Group by identifier and window
+      const grouped = new Map<string, RateLimitStats>();
+
+      statsData.forEach(record => {
+        const key = `${record.identifier}_${record.window_start.getTime()}`;
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            identifier: record.identifier,
+            requests: 0,
+            blocks: 0,
+            window_start: record.window_start,
+            window_end: new Date(record.window_start.getTime() + 60 * 60 * 1000) // 1 hour window
+          });
+        }
+
+        const stats = grouped.get(key)!;
+        stats.requests += record.request_count;
+        if (record.blocked) stats.blocks += 1;
+      });
+
+      return Array.from(grouped.values()).sort(
+        (a, b) => b.window_start.getTime() - a.window_start.getTime()
+      );
+    } catch (error) {
+      console.error('Error getting rate limit stats:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get rate limiting summary
+   */
+  static async getSummary(hours = 24): Promise<RateLimitSummary> {
+    try {
+      const timeFilter = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+      const [totalRequests, totalBlocks, topBlockedData, hourlyStatsData] = await Promise.all([
+        // Total requests
+        prisma.rate_limit_tracking.aggregate({
+          where: { created_at: { gte: timeFilter } },
+          _sum: { request_count: true }
+        }),
+
+        // Total blocks
+        prisma.rate_limit_tracking.count({
+          where: {
+            created_at: { gte: timeFilter },
+            blocked: true
+          }
+        }),
+
+        // Top blocked IPs/identifiers
+        prisma.rate_limit_tracking.groupBy({
+          by: ['identifier'],
+          where: {
+            created_at: { gte: timeFilter },
+            blocked: true,
+            identifier_type: 'ip'
+          },
+          _count: { identifier: true },
+          orderBy: { _count: { identifier: 'desc' } },
+          take: 10
+        }),
+
+        // Hourly stats
+        prisma.$queryRaw`
+          SELECT
+            EXTRACT(HOUR FROM created_at) as hour,
+            SUM(request_count) as requests,
+            COUNT(CASE WHEN blocked = true THEN 1 END) as blocks
+          FROM rate_limit_tracking
+          WHERE created_at >= ${timeFilter}
+          GROUP BY EXTRACT(HOUR FROM created_at)
+          ORDER BY hour
+        ` as unknown as { hour: number; requests: bigint; blocks: bigint }[]
+      ]);
+
+      const totalRequestsSum = totalRequests._sum.request_count || 0;
+      const blockRate = totalRequestsSum > 0 ? (totalBlocks / totalRequestsSum) * 100 : 0;
+
+      const topBlockedIps = topBlockedData.map(item => ({
+        ip: item.identifier,
+        blocks: item._count.identifier
+      }));
+
+      const hourlyStats = hourlyStatsData.map(item => ({
+        hour: Number(item.hour),
+        requests: Number(item.requests),
+        blocks: Number(item.blocks)
+      }));
+
+      return {
+        total_requests: totalRequestsSum,
+        total_blocks: totalBlocks,
+        block_rate: Math.round(blockRate * 10) / 10,
+        top_blocked_ips: topBlockedIps,
+        hourly_stats: hourlyStats
+      };
+    } catch (error) {
+      console.error('Error getting rate limit summary:', error);
+      return {
+        total_requests: 0,
+        total_blocks: 0,
+        block_rate: 0,
+        top_blocked_ips: [],
+        hourly_stats: []
+      };
+    }
+  }
+
+  /**
+   * Clear rate limit for identifier
+   */
+  static async clearLimit(identifier: string): Promise<void> {
+    try {
+      await prisma.rate_limit_tracking.updateMany({
+        where: { identifier },
+        data: {
+          blocked: false,
+          blocked_until: null,
+          request_count: 0
+        }
+      });
+
+      console.log(`[Rate Limiter] Cleared limits for ${identifier}`);
+    } catch (error) {
+      console.error('Error clearing rate limit:', error);
+    }
+  }
+
+  /**
+   * Get blocked IPs
+   */
+  static async getBlockedIPs(hours = 24): Promise<{
+    ip: string;
+    blocks: number;
+    first_blocked: Date;
+    last_blocked: Date;
+  }[]> {
+    try {
+      const timeFilter = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+      const blockedIPs = await prisma.$queryRaw`
+        SELECT
+          identifier as ip,
+          COUNT(*) as blocks,
+          MIN(created_at) as first_blocked,
+          MAX(created_at) as last_blocked
+        FROM rate_limit_tracking
+        WHERE created_at >= ${timeFilter}
+          AND blocked = true
+          AND identifier_type = 'ip'
+        GROUP BY identifier
+        ORDER BY blocks DESC
+      ` as Array<{
+        ip: string;
+        blocks: bigint;
+        first_blocked: Date;
+        last_blocked: Date;
+      }>;
+
+      return blockedIPs.map(item => ({
+        ip: item.ip,
+        blocks: Number(item.blocks),
+        first_blocked: item.first_blocked,
+        last_blocked: item.last_blocked
+      }));
+    } catch (error) {
+      console.error('Error getting blocked IPs:', error);
+      return [];
     }
   }
 
   /**
    * Get rate limit analytics
    */
-  static async getRateLimitAnalytics(
-    hours: number = 24
-  ): Promise<{
-    totalRequests: number;
-    blockedRequests: number;
-    blockRate: number;
-    topBlockedEndpoints: Array<{ endpoint: string; blocks: number }>;
-    topBlockedIPs: Array<{ ip: string; blocks: number }>;
-    rateLimitTrends: Array<{ hour: string; requests: number; blocks: number }>;
+  static async getRateLimitAnalytics(hours = 24): Promise<{
+    total_requests: number;
+    blocked_requests: number;
+    block_rate: number;
+    top_endpoints: { endpoint: string; blocks: number }[];
+    hourly_trends: { hour: number; requests: number; blocks: number }[];
   }> {
     try {
-      const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+      const timeFilter = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-      // Total requests and blocks
-      const totalRequests = await prisma.rate_limit_tracking.aggregate({
-        where: { created_at: { gte: since } },
-        _sum: { current_count: true },
-      });
+      const [totalRequests, blockedRequests, topEndpointsData, hourlyTrendsData] = await Promise.all([
+        // Total requests
+        prisma.rate_limit_tracking.aggregate({
+          where: { created_at: { gte: timeFilter } },
+          _sum: { request_count: true }
+        }),
 
-      const blockedRequests = await prisma.rate_limit_tracking.aggregate({
-        where: {
-          created_at: { gte: since },
-          blocked_until: { not: null },
-        },
-        _sum: { current_count: true },
-      });
+        // Blocked requests
+        prisma.rate_limit_tracking.count({
+          where: {
+            created_at: { gte: timeFilter },
+            blocked: true
+          }
+        }),
 
-      const totalCount = totalRequests._sum.current_count || 0;
-      const blockedCount = blockedRequests._sum.current_count || 0;
+        // Top blocked endpoints
+        prisma.rate_limit_tracking.groupBy({
+          by: ['endpoint'],
+          where: {
+            created_at: { gte: timeFilter },
+            blocked: true
+          },
+          _count: { endpoint: true },
+          orderBy: { _count: { endpoint: 'desc' } },
+          take: 10
+        }),
 
-      // Top blocked endpoints
-      const topBlockedEndpoints = await prisma.rate_limit_tracking.groupBy({
-        by: ['endpoint'],
-        where: {
-          created_at: { gte: since },
-          blocked_until: { not: null },
-        },
-        _sum: { current_count: true },
-        orderBy: { _sum: { current_count: 'desc' } },
-        take: 10,
-      });
+        // Hourly trends
+        prisma.$queryRaw`
+          SELECT
+            EXTRACT(HOUR FROM created_at) as hour,
+            SUM(request_count) as requests,
+            COUNT(CASE WHEN blocked = true THEN 1 END) as blocks
+          FROM rate_limit_tracking
+          WHERE created_at >= ${timeFilter}
+          GROUP BY EXTRACT(HOUR FROM created_at)
+          ORDER BY hour
+        ` as unknown as { hour: number; requests: bigint; blocks: bigint }[]
+      ]);
 
-      // Top blocked IPs
-      const topBlockedIPs = await prisma.rate_limit_tracking.groupBy({
-        by: ['identifier'],
-        where: {
-          created_at: { gte: since },
-          identifier_type: 'ip',
-          blocked_until: { not: null },
-        },
-        _sum: { current_count: true },
-        orderBy: { _sum: { current_count: 'desc' } },
-        take: 10,
-      });
-
-      // Rate limit trends
-      const trends = await prisma.$queryRaw<Array<{
-        hour: string;
-        requests: bigint;
-        blocks: bigint;
-      }>>`
-        SELECT
-          DATE_TRUNC('hour', created_at) as hour,
-          SUM(current_count) as requests,
-          SUM(CASE WHEN blocked_until IS NOT NULL THEN current_count ELSE 0 END) as blocks
-        FROM rate_limit_tracking
-        WHERE created_at >= ${since}
-        GROUP BY DATE_TRUNC('hour', created_at)
-        ORDER BY hour ASC
-      `;
+      const totalRequestsSum = totalRequests._sum.request_count || 0;
+      const blockRate = totalRequestsSum > 0 ? (blockedRequests / totalRequestsSum) * 100 : 0;
 
       return {
-        totalRequests: totalCount,
-        blockedRequests: blockedCount,
-        blockRate: totalCount > 0 ? (blockedCount / totalCount) * 100 : 0,
-        topBlockedEndpoints: topBlockedEndpoints.map(e => ({
-          endpoint: e.endpoint,
-          blocks: e._sum.current_count || 0,
+        total_requests: totalRequestsSum,
+        blocked_requests: blockedRequests,
+        block_rate: Math.round(blockRate * 10) / 10,
+        top_endpoints: topEndpointsData.map(item => ({
+          endpoint: item.endpoint,
+          blocks: item._count.endpoint
         })),
-        topBlockedIPs: topBlockedIPs.map(ip => ({
-          ip: ip.identifier,
-          blocks: ip._sum.current_count || 0,
-        })),
-        rateLimitTrends: trends.map(t => ({
-          hour: t.hour,
-          requests: Number(t.requests),
-          blocks: Number(t.blocks),
-        })),
+        hourly_trends: hourlyTrendsData.map(item => ({
+          hour: Number(item.hour),
+          requests: Number(item.requests),
+          blocks: Number(item.blocks)
+        }))
       };
     } catch (error) {
       console.error('Error getting rate limit analytics:', error);
-      throw error;
+      return {
+        total_requests: 0,
+        blocked_requests: 0,
+        block_rate: 0,
+        top_endpoints: [],
+        hourly_trends: []
+      };
     }
   }
 
   /**
-   * Clean up expired rate limit windows
+   * Get blocked identifiers
    */
-  static async cleanupExpiredWindows(): Promise<number> {
-    try {
-      const now = new Date();
-
-      const result = await prisma.rate_limit_tracking.deleteMany({
-        where: {
-          window_end: { lte: now },
-        },
-      });
-
-      if (result.count > 0) {
-        console.log(`🧹 Cleaned up ${result.count} expired rate limit windows`);
-      }
-
-      return result.count;
-    } catch (error) {
-      console.error('Error cleaning up rate limit windows:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Get currently blocked IPs/users
-   */
-  static async getBlockedIdentifiers(): Promise<Array<{
+  static async getBlockedIdentifiers(): Promise<{
     identifier: string;
-    identifierType: string;
-    endpoint: string;
-    blockedUntil: Date;
-    currentCount: number;
-    limitCount: number;
-  }>> {
+    blocks: number;
+    last_blocked: Date;
+    reason: string;
+  }[]> {
     try {
-      const now = new Date();
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-      const blocked = await prisma.rate_limit_tracking.findMany({
-        where: {
-          blocked_until: { gt: now },
-        },
-        select: {
-          identifier: true,
-          identifier_type: true,
-          endpoint: true,
-          blocked_until: true,
-          current_count: true,
-          limit_count: true,
-        },
-        orderBy: { blocked_until: 'desc' },
-      });
+      const blockedIdentifiers = await prisma.$queryRaw`
+        SELECT
+          identifier,
+          COUNT(*) as blocks,
+          MAX(created_at) as last_blocked,
+          CASE
+            WHEN identifier_type = 'ip' THEN 'Excessive API requests'
+            WHEN identifier_type = 'user' THEN 'Failed authentication attempts'
+            ELSE 'Rate limit exceeded'
+          END as reason
+        FROM rate_limit_tracking
+        WHERE blocked = true
+          AND (blocked_until IS NULL OR blocked_until > ${new Date()})
+        GROUP BY identifier, identifier_type
+        ORDER BY blocks DESC, last_blocked DESC
+        LIMIT 20
+      ` as Array<{
+        identifier: string;
+        blocks: bigint;
+        last_blocked: Date;
+        reason: string;
+      }>;
 
-      return blocked.map(b => ({
-        identifier: b.identifier,
-        identifierType: b.identifier_type,
-        endpoint: b.endpoint,
-        blockedUntil: b.blocked_until!,
-        currentCount: b.current_count,
-        limitCount: b.limit_count,
+      return blockedIdentifiers.map(item => ({
+        identifier: item.identifier,
+        blocks: Number(item.blocks),
+        last_blocked: item.last_blocked,
+        reason: item.reason
       }));
     } catch (error) {
       console.error('Error getting blocked identifiers:', error);
@@ -297,151 +507,21 @@ export class RateLimiterService {
   }
 
   /**
-   * Manually unblock an identifier
+   * Cleanup old rate limit records
    */
-  static async unblockIdentifier(
-    identifier: string,
-    endpoint: string
-  ): Promise<boolean> {
+  static async cleanup(daysToKeep = 7): Promise<{ deletedCount: number }> {
     try {
-      const result = await prisma.rate_limit_tracking.updateMany({
-        where: {
-          identifier,
-          endpoint,
-          blocked_until: { not: null },
-        },
-        data: {
-          blocked_until: null,
-          updated_at: new Date(),
-        },
+      const cutoffDate = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000);
+
+      const result = await prisma.rate_limit_tracking.deleteMany({
+        where: { created_at: { lt: cutoffDate } }
       });
 
-      const unblocked = result.count > 0;
-      if (unblocked) {
-        console.log(`✅ Unblocked identifier: ${identifier} for endpoint: ${endpoint}`);
-      }
-
-      return unblocked;
+      console.log(`[Rate Limiter] Cleaned up ${result.count} rate limit records older than ${daysToKeep} days`);
+      return { deletedCount: result.count };
     } catch (error) {
-      console.error('Error unblocking identifier:', error);
-      return false;
+      console.error('Error cleaning up rate limit records:', error);
+      return { deletedCount: 0 };
     }
-  }
-
-  /**
-   * Get configuration for specific endpoint
-   */
-  private static getConfigForEndpoint(endpoint: string): RateLimitConfig {
-    // Direct match
-    if (this.DEFAULT_CONFIGS[endpoint]) {
-      return this.DEFAULT_CONFIGS[endpoint];
-    }
-
-    // Pattern match
-    for (const [pattern, config] of Object.entries(this.DEFAULT_CONFIGS)) {
-      if (pattern.includes('*')) {
-        const regex = new RegExp(pattern.replace('*', '.*'));
-        if (regex.test(endpoint)) {
-          return config;
-        }
-      }
-    }
-
-    // Default fallback
-    return this.DEFAULT_CONFIGS['*'];
-  }
-
-  /**
-   * Get identifier for rate limiting
-   */
-  private static async getIdentifier(request: NextRequest, config: RateLimitConfig): Promise<string> {
-    if (config.identifier) {
-      return config.identifier;
-    }
-
-    // Try to get user ID first
-    try {
-      const { userId } = await auth();
-      if (userId) {
-        return userId;
-      }
-    } catch {
-      // Not authenticated, fall back to IP
-    }
-
-    // API key from headers
-    const apiKey = request.headers.get('x-api-key');
-    if (apiKey) {
-      return apiKey;
-    }
-
-    // Fall back to IP address
-    return this.getClientIP(request) || 'unknown';
-  }
-
-  /**
-   * Detect identifier type
-   */
-  private static detectIdentifierType(identifier: string): 'ip' | 'user' | 'api_key' {
-    if (identifier.startsWith('user_')) {
-      return 'user';
-    }
-
-    if (identifier.includes('.') || identifier.includes(':')) {
-      return 'ip';
-    }
-
-    if (identifier.startsWith('ak_') || identifier.length > 20) {
-      return 'api_key';
-    }
-
-    return 'ip';
-  }
-
-  /**
-   * Get window start time (rounded to minute)
-   */
-  private static getWindowStart(windowSizeMinutes: number): Date {
-    const now = new Date();
-    const windowSizeMs = windowSizeMinutes * 60 * 1000;
-
-    // Round down to the nearest window boundary
-    const windowStart = new Date(Math.floor(now.getTime() / windowSizeMs) * windowSizeMs);
-
-    return windowStart;
-  }
-
-  /**
-   * Get client IP address
-   */
-  private static getClientIP(request: NextRequest): string | null {
-    const forwarded = request.headers.get('x-forwarded-for');
-    const realIP = request.headers.get('x-real-ip');
-    const remoteAddress = request.headers.get('x-vercel-forwarded-for');
-
-    if (forwarded) {
-      return forwarded.split(',')[0].trim();
-    }
-
-    return realIP || remoteAddress || null;
-  }
-
-  /**
-   * Create custom rate limit configuration
-   */
-  static createConfig(
-    windowSizeMinutes: number,
-    maxRequests: number,
-    options?: {
-      identifier?: string;
-      identifierType?: 'ip' | 'user' | 'api_key';
-    }
-  ): RateLimitConfig {
-    return {
-      windowSizeMinutes,
-      maxRequests,
-      identifier: options?.identifier,
-      identifierType: options?.identifierType,
-    };
   }
 }

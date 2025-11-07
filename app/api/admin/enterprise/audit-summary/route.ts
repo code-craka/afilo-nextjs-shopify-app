@@ -37,9 +37,9 @@ export async function GET(request: NextRequest) {
     const flaggedEvents = await AuditLoggerService.getFlaggedEvents(10);
 
     const summary = {
-      totalEvents: analytics.totalEvents,
-      flaggedEvents: analytics.flaggedEvents,
-      averageRiskScore: analytics.averageRiskScore,
+      totalEvents: analytics.total_events,
+      flaggedEvents: analytics.high_risk_events,
+      averageRiskScore: analytics.risk_score_average,
       pendingReviews: flaggedEvents.length,
     };
 
