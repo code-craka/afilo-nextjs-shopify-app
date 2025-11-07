@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { getProducts, createProduct } from '@/lib/db/products';
 import { syncProductWithStripe } from '@/lib/stripe-products';
-import type { ProductsQueryParams } from '@/types/product';
+import type { ProductsQueryParams, ProductsResponse } from '@/types/product';
 import { productsApiRateLimit, checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { cacheManager } from '@/lib/cache-manager';
 import { requestManager } from '@/lib/request-manager';
@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
     const queryParams: ProductsQueryParams = {
       first: parseInt(searchParams.get('first') || '20'),
       offset: parseInt(searchParams.get('offset') || '0'),
+      after: searchParams.get('after') || undefined, // Cursor-based pagination
       query: searchParams.get('query') || undefined,
       productType: searchParams.get('productType') as ProductsQueryParams['productType'] || undefined,
       vendor: searchParams.get('vendor') || undefined,
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
       body: JSON.stringify(queryParams)
     });
 
-    const result = await requestManager.deduplicate(
+    const result: ProductsResponse = await requestManager.deduplicate(
       requestKey,
       async () => {
         return await getProducts(queryParams);
@@ -126,10 +127,14 @@ export async function GET(request: NextRequest) {
       products: result.products,
       total: result.total,
       hasMore: result.hasMore,
+      nextCursor: result.nextCursor,
+      pageInfo: result.pageInfo,
       pagination: {
         first: queryParams.first,
         offset: queryParams.offset,
-        nextOffset: result.hasMore ? (queryParams.offset || 0) + (queryParams.first || 20) : null,
+        after: queryParams.after,
+        nextOffset: !queryParams.after && result.hasMore ? (queryParams.offset || 0) + (queryParams.first || 20) : null,
+        nextCursor: result.nextCursor,
       },
     };
 

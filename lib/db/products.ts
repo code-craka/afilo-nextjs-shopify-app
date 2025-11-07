@@ -29,6 +29,7 @@ import {
   type LicenseType,
   type LicenseTerms,
 } from '@/lib/validations/product';
+import { ProductCache, RedisCache } from '@/lib/cache/redis-cache';
 
 // ============================================
 // Type Converters (Prisma → Domain Types)
@@ -170,6 +171,35 @@ export class ProductError extends Error {
 }
 
 // ============================================
+// Cursor Pagination Helpers
+// ============================================
+
+/**
+ * Get cursor value for pagination
+ * Fetches the sort field value for a given product ID to use in cursor-based pagination
+ */
+async function getCursorValue(productId: string, field: string): Promise<any> {
+  try {
+    const product = await prisma.products.findUnique({
+      where: { id: productId },
+      select: {
+        [field]: true,
+      },
+    });
+
+    if (!product) {
+      throw new Error(`Product with ID ${productId} not found for cursor`);
+    }
+
+    return product[field as keyof typeof product];
+  } catch (error) {
+    console.error('Failed to get cursor value:', error);
+    // Return a default value that won't break pagination
+    return field === 'base_price' ? 0 : new Date();
+  }
+}
+
+// ============================================
 // Query Functions
 // ============================================
 
@@ -188,13 +218,21 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Pro
     const {
       first = 20,
       offset = 0,
+      after, // cursor for pagination
       status = 'active',
       sortBy = 'updatedAt',
       sortOrder = 'desc',
     } = validatedParams;
 
-    // Build Prisma where clause
-    const where: Prisma.productsWhereInput = {
+    // ✅ CACHE LAYER: Check Redis cache first for listings
+    const cached = await ProductCache.getProductsList(validatedParams);
+    if (cached) {
+      console.debug('Products listing cache hit:', validatedParams);
+      return cached;
+    }
+
+    // Build base Prisma where clause
+    const baseWhere: Prisma.productsWhereInput = {
       status: status,
       ...(validatedParams.availableForSale !== undefined && {
         available_for_sale: validatedParams.availableForSale,
@@ -228,6 +266,84 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Pro
       }),
     };
 
+    // Add cursor-based pagination to where clause if using cursor
+    const where: Prisma.productsWhereInput = after ? {
+      ...baseWhere,
+      // For cursor-based pagination, we need to add a condition based on the sort field and ID
+      ...(sortBy === 'updatedAt' && sortOrder === 'desc' && {
+        OR: [
+          { updated_at: { lt: await getCursorValue(after, 'updated_at') } },
+          {
+            updated_at: await getCursorValue(after, 'updated_at'),
+            id: { lt: after }
+          }
+        ]
+      }),
+      ...(sortBy === 'updatedAt' && sortOrder === 'asc' && {
+        OR: [
+          { updated_at: { gt: await getCursorValue(after, 'updated_at') } },
+          {
+            updated_at: await getCursorValue(after, 'updated_at'),
+            id: { gt: after }
+          }
+        ]
+      }),
+      ...(sortBy === 'createdAt' && sortOrder === 'desc' && {
+        OR: [
+          { created_at: { lt: await getCursorValue(after, 'created_at') } },
+          {
+            created_at: await getCursorValue(after, 'created_at'),
+            id: { lt: after }
+          }
+        ]
+      }),
+      ...(sortBy === 'createdAt' && sortOrder === 'asc' && {
+        OR: [
+          { created_at: { gt: await getCursorValue(after, 'created_at') } },
+          {
+            created_at: await getCursorValue(after, 'created_at'),
+            id: { gt: after }
+          }
+        ]
+      }),
+      ...(sortBy === 'basePrice' && sortOrder === 'desc' && {
+        OR: [
+          { base_price: { lt: await getCursorValue(after, 'base_price') } },
+          {
+            base_price: await getCursorValue(after, 'base_price'),
+            id: { lt: after }
+          }
+        ]
+      }),
+      ...(sortBy === 'basePrice' && sortOrder === 'asc' && {
+        OR: [
+          { base_price: { gt: await getCursorValue(after, 'base_price') } },
+          {
+            base_price: await getCursorValue(after, 'base_price'),
+            id: { gt: after }
+          }
+        ]
+      }),
+      ...(sortBy === 'title' && sortOrder === 'desc' && {
+        OR: [
+          { title: { lt: await getCursorValue(after, 'title') } },
+          {
+            title: await getCursorValue(after, 'title'),
+            id: { lt: after }
+          }
+        ]
+      }),
+      ...(sortBy === 'title' && sortOrder === 'asc' && {
+        OR: [
+          { title: { gt: await getCursorValue(after, 'title') } },
+          {
+            title: await getCursorValue(after, 'title'),
+            id: { gt: after }
+          }
+        ]
+      }),
+    } : baseWhere;
+
     // Build order by clause - map camelCase to snake_case
     const sortByMap: Record<string, string> = {
       updatedAt: 'updated_at',
@@ -239,22 +355,51 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Pro
       [sortByMap[sortBy] || sortBy]: sortOrder,
     };
 
+    // For cursor-based pagination, don't use skip and adjust the query
+    const queryOptions: any = {
+      where,
+      orderBy: [orderBy, { id: sortOrder }], // Always add ID as secondary sort for consistent pagination
+      take: first + 1, // Fetch one extra to check if there are more pages
+    };
+
+    // Only add skip for offset-based pagination (when no cursor)
+    if (!after) {
+      queryOptions.skip = offset;
+    }
+
     // Execute queries in parallel
-    const [total, products] = await Promise.all([
-      prisma.products.count({ where }),
-      prisma.products.findMany({
-        where,
-        orderBy,
-        take: first,
-        skip: offset,
-      }),
+    const [total, rawProducts] = await Promise.all([
+      // For cursor pagination, total count is expensive and often not needed
+      after ? Promise.resolve(0) : prisma.products.count({ where: baseWhere }),
+      prisma.products.findMany(queryOptions),
     ]);
 
-    return {
+    // Check if there are more results by seeing if we got the extra item
+    const hasMore = rawProducts.length > first;
+    const products = hasMore ? rawProducts.slice(0, first) : rawProducts;
+
+    // Calculate next cursor and page info
+    const nextCursor = hasMore && products.length > 0 ? products[products.length - 1].id : undefined;
+    const startCursor = products.length > 0 ? products[0].id : undefined;
+    const endCursor = products.length > 0 ? products[products.length - 1].id : undefined;
+
+    const result = {
       products: products.map(toDomainProduct),
-      total,
-      hasMore: offset + first < total,
+      total: after ? 0 : total, // Don't compute total for cursor pagination
+      hasMore,
+      nextCursor,
+      pageInfo: {
+        hasNextPage: hasMore,
+        hasPreviousPage: !!after, // If we have a cursor, there might be previous pages
+        startCursor,
+        endCursor,
+      },
     };
+
+    // ✅ CACHE: Store in Redis for future requests
+    await ProductCache.cacheProductsList(validatedParams, result);
+
+    return result;
   } catch (error) {
     console.error('Failed to get products:', error);
     throw new ProductError('Failed to fetch products', 'DATABASE_ERROR', error);
@@ -266,11 +411,17 @@ export async function getProducts(params: ProductsQueryParams = {}): Promise<Pro
  */
 export async function getProductByHandle(handle: string): Promise<Product | null> {
   try {
-    const product = await prisma.products.findFirst({
-      where: {
-        handle,
-        status: 'active'
-      },
+    // ✅ CACHE LAYER: Check Redis cache first
+    const cached = await ProductCache.getProduct(handle);
+    if (cached) {
+      console.debug('Product cache hit:', handle);
+      return cached;
+    }
+
+    // ✅ PERFORMANCE FIX: Use findUnique instead of findFirst for unique field
+    // This leverages the unique index on handle for much faster lookup
+    const product = await prisma.products.findUnique({
+      where: { handle },
       include: {
         product_variants: {
           where: { available_for_sale: true },
@@ -279,7 +430,17 @@ export async function getProductByHandle(handle: string): Promise<Product | null
       },
     });
 
-    return product ? toDomainProduct(product) : null;
+    // Check if product is active after fetching (still faster than compound where)
+    if (!product || product.status !== 'active') {
+      return null;
+    }
+
+    const domainProduct = toDomainProduct(product);
+
+    // ✅ CACHE: Store in Redis for future requests
+    await ProductCache.cacheProduct(handle, domainProduct);
+
+    return domainProduct;
   } catch (error) {
     console.error('Failed to get product by handle:', error);
     throw new ProductError('Failed to fetch product', 'DATABASE_ERROR', error);
@@ -486,5 +647,85 @@ export async function createProductVariant(
   } catch (error) {
     console.error('Failed to create product variant:', error);
     throw new ProductError('Failed to create product variant', 'DATABASE_ERROR', error);
+  }
+}
+
+/**
+ * Get related products based on similar tags, product type, and tech stack
+ * Excludes the current product from results
+ */
+export async function getRelatedProducts(handle: string, limit: number = 4): Promise<Product[]> {
+  try {
+    // ✅ CACHE LAYER: Check Redis cache first
+    const cached = await ProductCache.getRelatedProducts(handle);
+    if (cached) {
+      console.debug('Related products cache hit:', handle);
+      return cached;
+    }
+
+    // First get the current product to find similar ones
+    const currentProduct = await prisma.products.findFirst({
+      where: {
+        handle,
+        status: 'active',
+      },
+      select: {
+        id: true,
+        product_type: true,
+        tags: true,
+        tech_stack: true,
+      },
+    });
+
+    if (!currentProduct) {
+      return [];
+    }
+
+    // Find related products using similar criteria with weighted scoring
+    const relatedProducts = await prisma.products.findMany({
+      where: {
+        id: { not: currentProduct.id }, // Exclude current product
+        status: 'active',
+        available_for_sale: true,
+        OR: [
+          // Same product type (highest priority)
+          { product_type: currentProduct.product_type },
+          // Overlapping tags
+          {
+            tags: {
+              hasSome: currentProduct.tags,
+            },
+          },
+          // Overlapping tech stack
+          {
+            tech_stack: {
+              hasSome: currentProduct.tech_stack,
+            },
+          },
+        ],
+      },
+      include: {
+        product_variants: {
+          where: { available_for_sale: true },
+          orderBy: { position: 'asc' },
+        },
+      },
+      orderBy: [
+        { featured: 'desc' }, // Featured products first
+        { updated_at: 'desc' }, // Then by most recently updated
+      ],
+      take: limit,
+    });
+
+    const domainProducts = relatedProducts.map(toDomainProduct);
+
+    // ✅ CACHE: Store in Redis for future requests
+    await ProductCache.cacheRelatedProducts(handle, domainProducts);
+
+    return domainProducts;
+  } catch (error) {
+    console.error('Failed to get related products:', error);
+    // Don't throw - return empty array for graceful degradation
+    return [];
   }
 }

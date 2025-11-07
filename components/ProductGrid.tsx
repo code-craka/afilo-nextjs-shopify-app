@@ -696,7 +696,7 @@ export default function ProductGrid({
   }), [searchQuery, sortBy, sortOrder, productsPerPage, cursor]);
 
   // Fetch products using TanStack Query for automatic caching
-  const fetchProducts = async (): Promise<Product[]> => {
+  const fetchProducts = async (): Promise<{ products: Product[], hasMore: boolean, nextCursor?: string }> => {
     const urlParams = new URLSearchParams({
       first: String(queryParams.first),
       ...(queryParams.after && { after: queryParams.after }),
@@ -712,8 +712,12 @@ export default function ProductGrid({
       throw new Error(errorData.message || 'Failed to fetch products from API');
     }
 
-    const { products: newProducts } = await response.json();
-    return newProducts;
+    const data = await response.json();
+    return {
+      products: data.products,
+      hasMore: data.hasMore,
+      nextCursor: data.nextCursor,
+    };
   };
 
   // Use TanStack Query for data fetching with automatic caching
@@ -735,11 +739,19 @@ export default function ProductGrid({
   // Sync query results to local state
   useEffect(() => {
     if (fetchedProducts) {
-      setProducts(fetchedProducts);
-      setHasMore(fetchedProducts.length === productsPerPage);
+      if (cursor) {
+        // This is a "load more" operation - append to existing products
+        setProducts(prevProducts => [...prevProducts, ...fetchedProducts.products]);
+      } else {
+        // This is a fresh fetch - replace products
+        setProducts(fetchedProducts.products);
+      }
+
+      setHasMore(fetchedProducts.hasMore);
       setError(null);
+      setLoadingMore(false); // Stop loading more state
     }
-  }, [fetchedProducts, productsPerPage]);
+  }, [fetchedProducts, cursor]);
 
   // Handle query errors
   useEffect(() => {
@@ -759,14 +771,14 @@ export default function ProductGrid({
   }, [queryLoading]);
 
   // Load more products
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore || !fetchedProducts?.nextCursor) return;
 
-    // Set cursor to the last product's cursor
-    if (products.length > 0) {
-      setCursor(products[products.length - 1].id);
-    }
-  }, [loadingMore, hasMore, products]);
+    setLoadingMore(true);
+    // Set cursor to the next cursor from the last response
+    // This will trigger a new query via useQuery
+    setCursor(fetchedProducts.nextCursor);
+  }, [loadingMore, hasMore, fetchedProducts?.nextCursor]);
 
   // Handle initial products
   useEffect(() => {
@@ -779,8 +791,15 @@ export default function ProductGrid({
   // Retry function
   const retry = () => {
     setCursor(null);
+    setProducts([]);
     refetch();
   };
+
+  // Reset cursor and products when search/sort parameters change
+  useEffect(() => {
+    setCursor(null);
+    setProducts([]);
+  }, [searchQuery, sortBy, sortOrder]);
 
   // Loading state
   if (loading && products.length === 0) {

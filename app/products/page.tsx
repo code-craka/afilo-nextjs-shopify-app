@@ -1,178 +1,131 @@
-'use client';
-
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { Metadata } from 'next';
+import { Suspense } from 'react';
+import { getProducts } from '@/lib/db/products';
+import { ProductCache } from '@/lib/cache/redis-cache';
 import Navigation from '@/components/Navigation';
-import ProductGrid from '@/components/ProductGrid';
-import { useDigitalCart } from '@/hooks/useDigitalCart';
-import type { Product } from '@/types/product';
+import ProductsPageClient from '@/components/ProductsPageClient';
+import ProductGridSkeleton from '@/components/ProductGridSkeleton';
 
-export default function ProductsPage() {
-  const { addProductToCart } = useDigitalCart();
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'title' | 'price' | 'createdAt' | 'updatedAt'>('updatedAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+// Cache the page for 5 minutes with ISR
+export const revalidate = 300;
 
-  // Handle product click (navigate to product page)
-  const handleProductClick = (product: Product) => {
-    router.push(`/products/${product.handle}`);
+export const metadata: Metadata = {
+  title: 'Digital Products | Afilo - Premium AI Tools & Software',
+  description: 'Discover cutting-edge AI tools, premium templates, and digital software solutions. Browse our collection of high-quality digital products for developers and businesses.',
+  keywords: 'digital products, AI tools, software, templates, scripts, plugins, enterprise solutions, developer tools',
+  openGraph: {
+    title: 'Digital Products | Afilo',
+    description: 'Discover cutting-edge AI tools and premium software solutions',
+    type: 'website',
+    url: 'https://app.afilo.io/products',
+    siteName: 'Afilo',
+    images: [
+      {
+        url: '/og-products.png',
+        width: 1200,
+        height: 630,
+        alt: 'Afilo Digital Products',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Digital Products | Afilo',
+    description: 'Discover cutting-edge AI tools and premium software solutions',
+    images: ['/og-products.png'],
+    creator: '@afilo_enterprise',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: 'https://app.afilo.io/products',
+  },
+};
+
+interface ProductsPageProps {
+  searchParams?: Promise<{
+    search?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    page?: string;
+  }>;
+}
+
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+  // Extract search parameters
+  const params = await searchParams;
+  const searchQuery = params?.search || '';
+  const urlSortBy = (params?.sortBy as 'title' | 'price' | 'createdAt' | 'updatedAt') || 'updatedAt';
+  const sortOrder = (params?.sortOrder as 'asc' | 'desc') || 'desc';
+  const page = parseInt(params?.page || '1', 10);
+  const productsPerPage = 16;
+
+  // Map URL sortBy to database schema field names
+  const sortByMapping = {
+    'title': 'title',
+    'price': 'basePrice', // URL uses "price" but DB schema uses "basePrice"
+    'createdAt': 'createdAt',
+    'updatedAt': 'updatedAt',
+  } as const;
+
+  const sortBy = sortByMapping[urlSortBy];
+
+  // Create filters object for caching
+  const filters = {
+    query: searchQuery || undefined,
+    sortBy,
+    sortOrder,
+    first: productsPerPage,
+    offset: (page - 1) * productsPerPage,
+    status: 'active' as const,
+    availableForSale: true,
   };
 
-  // Handle add to cart
-  const handleAddToCart = async (product: Product, variantId: string) => {
-    console.log('Adding to digital cart:', { product: product.title, variantId });
-    
-    // Use the digital cart system
-    const result = await addProductToCart(product, { 
-      variantId,
-      licenseType: 'Personal', // Default license type
-      quantity: 1 
-    });
-    
-    if (result.success) {
-      console.log('✅ Product added to digital cart successfully!');
-    } else {
-      console.error('❌ Failed to add to cart:', result.error);
+  // Try to get cached data first
+  let initialProducts;
+  try {
+    const cachedResult = await ProductCache.getProductsList(filters);
+    if (cachedResult) {
+      initialProducts = Array.isArray(cachedResult) ? cachedResult : cachedResult.products;
     }
-  };
+  } catch (error) {
+    console.warn('Failed to get cached products:', error);
+  }
+
+  // If not cached, fetch from database
+  if (!initialProducts) {
+    try {
+      const result = await getProducts(filters);
+      initialProducts = result.products;
+
+      // Cache the results using ProductCache method
+      try {
+        await ProductCache.cacheProductsList(filters, result.products, 300); // 5 minutes
+      } catch (error) {
+        console.warn('Failed to cache products:', error);
+      }
+    } catch (error) {
+      console.error('Failed to fetch initial products:', error);
+      initialProducts = [];
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Premium Navigation */}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <Navigation />
 
-      {/* Premium Header Section */}
-      <div className="relative bg-gradient-to-br from-slate-950 via-blue-950 to-purple-950 pt-32 pb-20 overflow-hidden">
-        {/* Gradient Orbs Background */}
-        <div className="absolute inset-0">
-          <motion.div
-            className="absolute top-0 left-0 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"
-            animate={{ scale: [1, 1.2, 1], x: [0, 50, 0] }}
-            transition={{ duration: 8, repeat: Infinity }}
-          />
-          <motion.div
-            className="absolute bottom-0 right-0 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl"
-            animate={{ scale: [1.2, 1, 1.2], x: [0, -50, 0] }}
-            transition={{ duration: 10, repeat: Infinity }}
-          />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center"
-          >
-            <div className="inline-flex items-center gap-2 backdrop-blur-xl bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-6">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-white font-semibold text-sm">ALL PRODUCTS</span>
-            </div>
-
-            <h1 className="text-5xl md:text-7xl font-black text-white mb-6">
-              Explore Our{' '}
-              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                Digital Products
-              </span>
-            </h1>
-            <p className="text-xl md:text-2xl text-white/80 max-w-3xl mx-auto font-light">
-              Discover cutting-edge AI tools and premium software solutions
-            </p>
-          </motion.div>
-
-          {/* Premium Search and Sort Controls */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mt-12 max-w-4xl mx-auto"
-          >
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Premium Search */}
-              <div className="relative flex-1">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-4 backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl leading-5 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 font-medium transition-all"
-                />
-              </div>
-
-              {/* Premium Sort Controls */}
-              <div className="flex items-center gap-3">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'title' | 'price' | 'createdAt' | 'updatedAt')}
-                  aria-label="Sort products by"
-                  className="block pl-4 pr-10 py-4 backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="updatedAt" className="bg-gray-900">Latest</option>
-                  <option value="title" className="bg-gray-900">Name</option>
-                  <option value="price" className="bg-gray-900">Price</option>
-                  <option value="createdAt" className="bg-gray-900">Newest</option>
-                </select>
-
-                <motion.button
-                  onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`p-4 backdrop-blur-xl rounded-2xl border transition-all ${
-                    sortOrder === 'asc'
-                      ? 'bg-blue-500/30 border-blue-400/50'
-                      : 'bg-white/10 border-white/20 hover:bg-white/20'
-                  }`}
-                  title={`Sort ${sortOrder === 'asc' ? 'ascending' : 'descending'}`}
-                >
-                  <svg
-                    className={`h-5 w-5 text-white transition-transform duration-300 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                  </svg>
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <ProductGrid
-          searchQuery={searchQuery}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          onProductClick={handleProductClick}
-          onAddToCart={handleAddToCart}
-          productsPerPage={16}
-          showLoadMore={true}
-          className="w-full"
+      <Suspense fallback={<ProductGridSkeleton />}>
+        <ProductsPageClient
+          initialProducts={initialProducts || []}
+          initialSearchQuery={searchQuery}
+          initialSortBy={urlSortBy}
+          initialSortOrder={sortOrder}
+          initialPage={page}
+          productsPerPage={productsPerPage}
         />
-      </div>
-
-      {/* Premium Footer */}
-      <footer className="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 border-t border-white/10 mt-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <h3 className="text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
-              Afilo
-            </h3>
-            <p className="text-white/60 text-sm">
-              © 2025 Afilo. All rights reserved. Powered by Next.js & Stripe.
-            </p>
-          </div>
-        </div>
-      </footer>
+      </Suspense>
     </div>
   );
 }

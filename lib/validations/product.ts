@@ -246,6 +246,7 @@ export type UpdateProductInput = z.infer<typeof UpdateProductSchema>;
 export const ProductsQueryParamsSchema = z.object({
   first: z.number().int().positive().max(100).optional(),
   offset: z.number().int().nonnegative().optional(),
+  after: z.string().optional(), // Cursor-based pagination: ID of the last item from previous page
   query: z.string().optional(),
   productType: ProductTypeSchema.optional(),
   vendor: z.string().optional(),
@@ -295,6 +296,13 @@ export interface ProductsResponse {
   products: Product[];
   total: number;
   hasMore: boolean;
+  nextCursor?: string; // ID of the last product, used for cursor-based pagination
+  pageInfo?: {
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    startCursor?: string;
+    endCursor?: string;
+  };
 }
 
 // ============================================
