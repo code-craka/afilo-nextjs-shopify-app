@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { SubscriptionCheckout } from '@/components/stripe/SubscriptionCheckout';
-import { Check, X } from 'lucide-react';
+import { Check, X, CheckCircle } from 'lucide-react';
 
 /**
  * Enterprise Subscription Plans
@@ -173,6 +174,18 @@ export default function PricingPage() {
               </Badge>
             </button>
           </div>
+
+          {/* 14-Day Money-Back Guarantee Banner */}
+          <Alert className="mt-8 mb-4 border-green-500 bg-green-50 max-w-3xl mx-auto">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <AlertTitle className="text-green-900 font-semibold">14-Day Money-Back Guarantee</AlertTitle>
+            <AlertDescription className="text-green-800">
+              Try Afilo risk-free. New customers can request a full refund within 14 days of initial subscription.{' '}
+              <a href="/legal/refund-policy" className="underline font-medium hover:text-green-900">
+                View full policy
+              </a>
+            </AlertDescription>
+          </Alert>
         </div>
 
         {/* Pricing cards */}
@@ -273,7 +286,7 @@ export default function PricingPage() {
           <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <Check className="h-5 w-5 text-green-500" />
-              <span>No credit card for trial</span>
+              <span>14-day money-back guarantee</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="h-5 w-5 text-green-500" />

@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Refund & Return Policy | Afilo Enterprise',
-  description: '30-Day Money-Back Guarantee - Clear refund terms for enterprise subscriptions',
+  description: '14-Day Money-Back Guarantee - Clear refund terms for enterprise subscriptions',
 };
 
 export default function RefundPolicyPage() {
@@ -27,20 +27,20 @@ export default function RefundPolicyPage() {
           <p><strong>Afilo provides digital software-as-a-service (SaaS) subscriptions. No physical goods are sold or shipped.</strong></p>
           <p>
             Our services are delivered entirely digitally, with instant access upon payment. All subscriptions include
-            our <strong>30-day money-back guarantee</strong> as outlined below.
+            our <strong>14-day money-back guarantee</strong> as outlined below.
           </p>
         </div>
       </section>
 
-      {/* 30-Day Money-Back Guarantee */}
+      {/* 14-Day Money-Back Guarantee */}
       <section className="bg-green-50 border-2 border-green-600 rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
           <span className="text-3xl">✅</span>
-          2. 30-Day Money-Back Guarantee
+          2. 14-Day Money-Back Guarantee
         </h2>
         <div className="space-y-4 text-gray-700">
           <p className="text-lg font-semibold">
-            If you are not satisfied with Afilo for any reason within the first 30 days of your initial paid subscription,
+            If you are not satisfied with Afilo for any reason within the first 14 days of your initial paid subscription,
             you may request a full refund—no questions asked.
           </p>
 
@@ -60,8 +60,8 @@ export default function RefundPolicyPage() {
 
           <div className="bg-white rounded-lg p-4 mt-4 border border-green-300">
             <p className="text-sm text-gray-800">
-              <strong>Important:</strong> The 30-day guarantee applies to your <strong>initial subscription purchase only</strong>.
-              Subscription renewals after 30 days are not eligible for refunds, but you can cancel at any time to prevent future charges.
+              <strong>Important:</strong> The 14-day guarantee applies to your <strong>initial subscription purchase only</strong>.
+              Subscription renewals after 14 days are not eligible for refunds, but you can cancel at any time to prevent future charges.
             </p>
           </div>
         </div>
@@ -100,10 +100,10 @@ export default function RefundPolicyPage() {
 
       {/* Free Trial Policy */}
       <section>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">4. No Free Trials—30-Day Money-Back Instead</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">4. No Free Trials—14-Day Money-Back Instead</h2>
         <div className="space-y-4 text-gray-700">
           <p>
-            <strong>Afilo does not offer free trials.</strong> Instead, we provide a <strong>30-day money-back guarantee</strong>
+            <strong>Afilo does not offer free trials.</strong> Instead, we provide a <strong>14-day money-back guarantee</strong>
             on all new subscriptions, giving you risk-free access to the full platform with all premium features.
           </p>
 
@@ -111,7 +111,7 @@ export default function RefundPolicyPage() {
             <p className="text-sm text-blue-900">
               <strong>Why No Free Trials?</strong> Enterprise software requires serious commitment. Our pay-first model
               ensures you get dedicated onboarding, priority support, and immediate access to all features. Protected by
-              our 30-day money-back guarantee, you can evaluate risk-free with full enterprise resources.
+              our 14-day money-back guarantee, you can evaluate risk-free with full enterprise resources.
             </p>
           </div>
         </div>
@@ -133,14 +133,14 @@ export default function RefundPolicyPage() {
           <ul className="list-disc pl-6 space-y-2">
             <li><strong>Effective Date:</strong> Cancellation takes effect at the <strong>end of your current billing period</strong></li>
             <li><strong>Access Retention:</strong> You retain full access until the period ends</li>
-            <li><strong>No Pro-Rata Refunds:</strong> No refunds for unused time in current billing cycle (except 30-day guarantee)</li>
+            <li><strong>No Pro-Rata Refunds:</strong> No refunds for unused time in current billing cycle (except 14-day guarantee)</li>
             <li><strong>Data Export:</strong> Export your data before cancellation (available for 90 days post-cancellation)</li>
           </ul>
 
           <h3 className="text-xl font-semibold text-gray-900 mt-4">Annual Subscriptions:</h3>
           <p>
             Annual subscriptions can be cancelled, but <strong>no refund is provided for unused months</strong> (except
-            within the first 30 days under our satisfaction guarantee). You retain access until the end of the annual term.
+            within the first 14 days under our satisfaction guarantee). You retain access until the end of the annual term.
           </p>
         </div>
       </section>
@@ -206,7 +206,7 @@ export default function RefundPolicyPage() {
 
           <h3 className="text-xl font-semibold text-gray-900 mt-4">Claim Process:</h3>
           <ul className="list-disc pl-6 space-y-2">
-            <li>Submit claim to <a href="mailto:support@techsci.io" className="text-blue-600 hover:underline">support@techsci.io</a> within <strong>30 days of outage</strong></li>
+            <li>Submit claim to <a href="mailto:support@techsci.io" className="text-blue-600 hover:underline">support@techsci.io</a> within <strong>14 days of outage</strong></li>
             <li>Include dates/times of service disruption and impact description</li>
             <li>We will investigate and respond within 10 business days</li>
             <li><strong>Maximum credit:</strong> Total SLA credits in one billing period cannot exceed one month's subscription fee</li>

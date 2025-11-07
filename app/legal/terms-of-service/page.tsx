@@ -180,7 +180,7 @@ export default function TermsOfServicePage() {
           <h3 className="text-xl font-semibold text-gray-900 mt-4">Refund Policy:</h3>
           <p>
             See our <Link href="/legal/refund-policy" className="text-blue-600 hover:underline">Refund & Return Policy</Link> for complete refund terms,
-            including our 30-day satisfaction guarantee for new customers.
+            including our 14-day satisfaction guarantee for new customers.
           </p>
         </div>
       </section>
@@ -631,7 +631,7 @@ export default function TermsOfServicePage() {
             <strong>Your Options:</strong> If you do not agree to updated Terms, you may:
           </p>
           <ul className="list-disc pl-6 space-y-1">
-            <li>Cancel your subscription within 30 days of notification (no penalty)</li>
+            <li>Cancel your subscription within 14 days of notification (see 14-day guarantee in Refund Policy)</li>
             <li>Continue using the Service under the new Terms (acceptance via continued use)</li>
           </ul>
 
@@ -652,7 +652,7 @@ export default function TermsOfServicePage() {
           </p>
           <ul className="list-disc pl-6 space-y-1">
             <li>Cancellation effective at end of current billing period</li>
-            <li>No pro-rata refunds for mid-cycle cancellations (except 30-day guarantee)</li>
+            <li>No pro-rata refunds for mid-cycle cancellations (except 14-day guarantee)</li>
             <li>Access retained until end of billing period</li>
             <li>Data export available for 90 days post-cancellation</li>
           </ul>

@@ -620,3 +620,137 @@ model rate_limit_tracking {
   @@index([window_start], map: "idx_rate_limit_window")
   @@index([blocked], map: "idx_rate_limit_blocked")
 }
+
+/// ACH Authorization System - NACHA Compliant Authorization Tracking
+/// Stores ACH authorization records for 7-year retention (NACHA requirement)
+model ach_authorizations {
+  id                      String                      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // Customer Information
+  clerk_user_id           String                      @db.VarChar(255)
+  customer_name           String                      @db.VarChar(255)
+  customer_email          String                      @db.VarChar(255)
+  customer_ip_address     String?                     @db.VarChar(45)
+  user_agent              String?
+
+  // Bank Account Information (encrypted)
+  bank_account_last4      String                      @db.VarChar(4)
+  bank_routing_number     String                      // Encrypted
+  bank_account_type       String                      @db.VarChar(20)
+  bank_name               String?                     @db.VarChar(255)
+
+  // Authorization Details
+  authorization_type      String                      @db.VarChar(20)
+  authorization_text      String
+  payment_amount          Decimal?                    @db.Decimal(10, 2)
+  recurring_frequency     String?                     @db.VarChar(20)
+  recurring_max_amount    Decimal?                    @db.Decimal(10, 2)
+
+  // Consent Capture
+  consent_method          String                      @db.VarChar(50)
+  consent_timestamp       DateTime                    @db.Timestamptz(6)
+  consent_ip_address      String                      @db.VarChar(45)
+  consent_user_agent      String
+  consent_signature_data  String?
+  consent_recording_url   String?
+
+  // Transaction Context
+  transaction_description String
+  invoice_id              String?                     @db.VarChar(255)
+  subscription_id         String?                     @db.VarChar(255)
+  stripe_payment_method_id String?                    @db.VarChar(255)
+  stripe_mandate_id       String?                     @db.VarChar(255)
+
+  // Terms Displayed
+  terms_version           String                      @db.VarChar(50)
+  refund_policy_version   String                      @db.VarChar(50)
+  tos_accepted            Boolean                     @default(false)
+  privacy_accepted        Boolean                     @default(false)
+
+  // Revocation
+  is_revoked              Boolean                     @default(false)
+  revoked_at              DateTime?                   @db.Timestamptz(6)
+  revocation_reason       String?
+
+  // Audit Trail
+  created_at              DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime                    @default(now()) @db.Timestamptz(6)
+
+  // Metadata for additional details
+  metadata                Json?                       @default("{}")
+
+  // Relations
+  evidence                ach_authorization_evidence[]
+  disputes                ach_dispute_inquiries[]
+
+  @@index([clerk_user_id], map: "idx_ach_auth_user")
+  @@index([customer_email], map: "idx_ach_auth_email")
+  @@index([stripe_payment_method_id], map: "idx_ach_auth_stripe_pm")
+  @@index([consent_timestamp], map: "idx_ach_auth_timestamp")
+  @@index([is_revoked], map: "idx_ach_auth_revoked")
+}
+
+/// ACH Authorization Evidence - Supporting documentation for dispute protection
+/// Stores proof of authorization files (screenshots, PDFs, etc.)
+model ach_authorization_evidence {
+  id                    String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  authorization_id      String              @db.Uuid
+
+  // Evidence Details
+  evidence_type         String              @db.VarChar(100)
+  evidence_description  String
+
+  // File Storage
+  file_url              String?
+  file_name             String?             @db.VarChar(500)
+  file_size             Int?
+  file_type             String?             @db.VarChar(100)
+
+  // Hash for integrity verification
+  file_hash             String?             @db.VarChar(64)
+
+  created_at            DateTime            @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  authorization         ach_authorizations  @relation(fields: [authorization_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([authorization_id], map: "idx_ach_evidence_auth")
+  @@index([evidence_type], map: "idx_ach_evidence_type")
+}
+
+/// ACH Dispute Inquiries - Track Stripe disputes and auto-submit evidence
+/// Handles automatic dispute evidence submission to Stripe
+model ach_dispute_inquiries {
+  id                    String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  authorization_id      String?             @db.Uuid
+
+  // Stripe Dispute Details
+  stripe_dispute_id     String              @unique @db.VarChar(255)
+  stripe_charge_id      String              @db.VarChar(255)
+  stripe_payment_intent_id String?          @db.VarChar(255)
+
+  // Inquiry Details
+  inquiry_reason        String              @db.VarChar(255)
+  inquiry_date          DateTime            @db.Timestamptz(6)
+  inquiry_status        String              @db.VarChar(50)
+
+  // Evidence Submission
+  evidence_submitted_at DateTime?           @db.Timestamptz(6)
+  evidence_documents    Json?               @default("[]")
+
+  // Resolution
+  resolved_at           DateTime?           @db.Timestamptz(6)
+  resolution            String?             @db.VarChar(50)
+  resolution_notes      String?
+
+  // Audit
+  created_at            DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime            @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  authorization         ach_authorizations? @relation(fields: [authorization_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([stripe_dispute_id], map: "idx_ach_dispute_stripe")
+  @@index([authorization_id], map: "idx_ach_dispute_auth")
+  @@index([inquiry_status], map: "idx_ach_dispute_status")
+}
