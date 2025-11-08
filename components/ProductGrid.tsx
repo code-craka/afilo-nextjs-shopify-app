@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
+import { Badge } from '@/components/ui/badge';
 // No longer importing from shopify lib directly on client
 import type { Product } from '@/types/product';
 
@@ -524,13 +525,13 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
                     </div>
                     {isPremiumProduct() && (
                       <div className="flex items-center gap-1">
-                        <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                        <Badge variant="popular" className="text-xs">
                           PREMIUM
-                        </span>
+                        </Badge>
                         {isEnterpriseProduct() && (
-                          <span className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                          <Badge variant="warning" className="text-xs bg-gradient-to-r from-amber-500 to-orange-600">
                             ENTERPRISE
-                          </span>
+                          </Badge>
                         )}
                       </div>
                     )}
@@ -556,13 +557,13 @@ const ProductCard = ({ product, onProductClick, onAddToCart, index }: ProductCar
                     </div>
                     {isPremiumProduct() && (
                       <div className="flex items-center gap-1">
-                        <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                        <Badge variant="popular" className="text-xs">
                           PREMIUM
-                        </span>
+                        </Badge>
                         {isEnterpriseProduct() && (
-                          <span className="bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                          <Badge variant="warning" className="text-xs bg-gradient-to-r from-amber-500 to-orange-600">
                             ENTERPRISE
-                          </span>
+                          </Badge>
                         )}
                       </div>
                     )}
