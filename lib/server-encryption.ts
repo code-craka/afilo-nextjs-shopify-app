@@ -238,12 +238,13 @@ export function maskSensitiveData(data: string, visibleChars: number = 4): strin
  * @param data - Data to wipe
  */
 export function wipeSensitiveData(data: string): void {
+  // Note: JavaScript strings are immutable, so this function is effectively a no-op
+  // In production, consider using Buffer or typed arrays for truly sensitive data
+  // that needs to be wiped from memory
   if (typeof data === 'string' && data.length > 0) {
-    // Overwrite memory (best effort - not guaranteed in JavaScript)
-    // @ts-expect-error - Intentionally modifying string (normally immutable)
-    for (let i = 0; i < data.length; i++) {
-      data[i] = '\0';
-    }
+    // Strings in JavaScript are immutable - this is a placeholder for documentation
+    // Real implementation would require Buffer.from(data) and buffer.fill(0)
+    void data; // Acknowledge the parameter
   }
 }
 

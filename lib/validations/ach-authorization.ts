@@ -33,12 +33,12 @@ export const ACHAuthorizationSchema = z.object({
     .regex(/^\d+$/, { message: 'Account number must contain only digits' }),
 
   accountType: z.enum(['checking', 'savings'], {
-    errorMap: () => ({ message: 'Account type must be either checking or savings' })
+    message: 'Account type must be either checking or savings'
   }),
 
   // Authorization Type
   authorizationType: z.enum(['one_time', 'recurring', 'both'], {
-    errorMap: () => ({ message: 'Invalid authorization type' })
+    message: 'Invalid authorization type'
   }),
 
   // For one-time payments
@@ -71,11 +71,11 @@ export const ACHAuthorizationSchema = z.object({
 
   // Consent Requirements (NACHA mandated)
   acceptedTerms: z.literal(true, {
-    errorMap: () => ({ message: 'You must accept the ACH authorization terms' })
+    message: 'You must accept the ACH authorization terms'
   }),
 
   acceptedPrivacy: z.literal(true, {
-    errorMap: () => ({ message: 'You must accept the privacy policy' })
+    message: 'You must accept the privacy policy'
   }),
 
   electronicSignature: z
@@ -127,7 +127,7 @@ export const ACHRevocationSchema = z.object({
     .max(500, { message: 'Revocation reason too long' })
     .optional(),
   confirmRevocation: z.literal(true, {
-    errorMap: () => ({ message: 'You must confirm revocation' })
+    message: 'You must confirm revocation'
   })
 });
 
@@ -139,7 +139,9 @@ export type ACHRevocationInput = z.infer<typeof ACHRevocationSchema>;
  */
 export const ACHAuthorizationServerSchema = ACHAuthorizationSchema.extend({
   // Server-captured metadata
-  ipAddress: z.string().ip().optional(),
+  ipAddress: z.string().regex(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$|^(?:[a-fA-F0-9:]+:+)+[a-fA-F0-9]+$/, {
+    message: 'Invalid IP address format'
+  }).optional(),
   userAgent: z.string().optional(),
   clerkUserId: z.string(),
   customerEmail: z.string().email(),
