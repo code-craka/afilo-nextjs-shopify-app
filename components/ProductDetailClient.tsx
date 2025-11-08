@@ -24,6 +24,11 @@ import {
   Zap,
 } from 'lucide-react';
 import { useDigitalCart } from '@/hooks/useDigitalCart';
+import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { SocialProofBadges, TrustBadges, UrgencyIndicators, TestimonialsSection } from '@/components/social-proof';
+import { MobileStickyCTA } from '@/components/MobileStickyCTA';
 import type { Product, ProductVariant } from '@/lib/validations/product';
 
 interface ProductDetailClientProps {
@@ -33,12 +38,12 @@ interface ProductDetailClientProps {
 
 export default function ProductDetailClient({ product, relatedProducts }: ProductDetailClientProps) {
   const { addProductToCart } = useDigitalCart();
+  const { toast } = useToast();
   const router = useRouter();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     product.variants?.[0] || null
   );
-  const [activeTab, setActiveTab] = useState<'description' | 'features' | 'requirements' | 'support'>('description');
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   // Format price for display
@@ -60,10 +65,17 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
     });
 
     if (result.success) {
-      // Show success message or redirect to cart
-      console.log('✅ Product added to cart successfully!');
+      toast({
+        variant: 'success',
+        title: 'Added to cart!',
+        description: `${product.title} has been added to your cart.`,
+      });
     } else {
-      console.error('❌ Failed to add to cart:', result.error);
+      toast({
+        variant: 'error',
+        title: 'Failed to add to cart',
+        description: result.error || 'An unexpected error occurred. Please try again.',
+      });
     }
   };
 
@@ -76,13 +88,22 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
           text: product.description,
           url: window.location.href,
         });
+        toast({
+          variant: 'success',
+          title: 'Shared successfully!',
+          description: 'Thank you for sharing this product.',
+        });
       } catch (error) {
-        console.log('Share cancelled');
+        // User cancelled share - do nothing
       }
     } else {
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(window.location.href);
-      // Could show toast notification here
+      toast({
+        variant: 'success',
+        title: 'Link copied!',
+        description: 'Product link has been copied to clipboard.',
+      });
     }
   };
 
@@ -182,10 +203,10 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
         {/* Product Info */}
         <div className="space-y-6">
           {/* Product Type Badge */}
-          <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full text-sm font-medium">
+          <Badge variant="info" className="inline-flex items-center gap-2">
             <Zap className="h-4 w-4" />
             {product.productType.replace('-', ' ').toUpperCase()}
-          </div>
+          </Badge>
 
           {/* Title */}
           <div>
@@ -226,9 +247,9 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
               )}
             </div>
             {discount > 0 && (
-              <span className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 px-2 py-1 rounded text-sm font-medium">
+              <Badge variant="destructive">
                 {discount}% OFF
-              </span>
+              </Badge>
             )}
           </div>
 
@@ -239,6 +260,24 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
               : product.description
             }
           </p>
+
+          {/* Social Proof & Urgency */}
+          <div className="space-y-4 border-t border-b border-gray-200 dark:border-gray-700 py-6">
+            <UrgencyIndicators
+              productId={product.id}
+              productHandle={product.handle}
+              variant="compact"
+              showStockWarning={true}
+              showCountdown={true}
+              showPopularity={true}
+            />
+
+            <SocialProofBadges
+              productId={product.id}
+              productHandle={product.handle}
+              variant="compact"
+            />
+          </div>
 
           {/* Key Features */}
           <div className="grid grid-cols-2 gap-4">
@@ -339,6 +378,9 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
             </div>
           </div>
 
+          {/* Trust Badges */}
+          <TrustBadges variant="vertical" className="mt-4" />
+
           {/* Demo & Documentation Links */}
           {(product.hasDemo || product.hasDocumentation) && (
             <div className="flex gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -371,31 +413,35 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
 
       {/* Product Details Tabs */}
       <div className="mb-16">
-        {/* Tab Headers */}
-        <div className="flex space-x-8 border-b border-gray-200 dark:border-gray-700 mb-8">
-          {[
-            { id: 'description', label: 'Description' },
-            { id: 'features', label: 'Features' },
-            { id: 'requirements', label: 'Requirements' },
-            { id: 'support', label: 'Support' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
+        <Tabs defaultValue="description" className="w-full">
+          <TabsList className="w-full justify-start border-b border-gray-200 dark:border-gray-700 bg-transparent p-0 h-auto rounded-none mb-8">
+            <TabsTrigger
+              value="description"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-none px-1 py-2"
             >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+              Description
+            </TabsTrigger>
+            <TabsTrigger
+              value="features"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-none px-1 py-2 ml-8"
+            >
+              Features
+            </TabsTrigger>
+            <TabsTrigger
+              value="requirements"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-none px-1 py-2 ml-8"
+            >
+              Requirements
+            </TabsTrigger>
+            <TabsTrigger
+              value="support"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-none px-1 py-2 ml-8"
+            >
+              Support
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Tab Content */}
-        <div className="prose dark:prose-invert max-w-none">
-          {activeTab === 'description' && (
+          <TabsContent value="description" className="prose dark:prose-invert max-w-none mt-0">
             <div>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
                 {product.description}
@@ -407,9 +453,9 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
                 />
               )}
             </div>
-          )}
+          </TabsContent>
 
-          {activeTab === 'features' && (
+          <TabsContent value="features" className="prose dark:prose-invert max-w-none mt-0">
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Key Features</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -426,20 +472,17 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
                   <h4 className="font-medium text-gray-900 dark:text-white mb-3">Tech Stack</h4>
                   <div className="flex flex-wrap gap-2">
                     {product.techStack.map((tech, index) => (
-                      <span
-                        key={index}
-                        className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm"
-                      >
+                      <Badge key={index} variant="secondary">
                         {tech}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-          )}
+          </TabsContent>
 
-          {activeTab === 'requirements' && (
+          <TabsContent value="requirements" className="prose dark:prose-invert max-w-none mt-0">
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">System Requirements</h3>
               {product.systemRequirements ? (
@@ -461,9 +504,9 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
                 </p>
               )}
             </div>
-          )}
+          </TabsContent>
 
-          {activeTab === 'support' && (
+          <TabsContent value="support" className="prose dark:prose-invert max-w-none mt-0">
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Support Information</h3>
               <div className="space-y-4">
@@ -493,8 +536,17 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Customer Testimonials */}
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-2xl p-8">
+        <TestimonialsSection
+          productId={product.id}
+          productHandle={product.handle}
+          variant="carousel"
+        />
       </div>
 
       {/* Related Products */}
@@ -544,6 +596,18 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
           </div>
         </div>
       )}
+
+      {/* Mobile Sticky CTA */}
+      <MobileStickyCTA
+        productTitle={product.title}
+        productPrice={product.basePrice}
+        comparePrice={product.compareAtPrice}
+        selectedVariant={selectedVariant}
+        onAddToCart={handleAddToCart}
+        onWishlist={() => setIsWishlisted(!isWishlisted)}
+        onShare={handleShare}
+        isWishlisted={isWishlisted}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { Providers } from "./providers";
 import "./globals.css";
 import DigitalCartWidget from "@/components/DigitalCartWidget";
 import PerformanceMonitor from "@/components/PerformanceMonitor";
-import ToastProvider from "@/components/providers/ToastProvider";
+import { Toaster } from "@/components/ui/toaster";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
@@ -131,8 +131,8 @@ export default function RootLayout({
           <ThemeProvider defaultTheme="system" storageKey="afilo-theme">
             <Providers>
               {children}
-              <ToastProvider />
             </Providers>
+            <Toaster />
             <DigitalCartWidget />
             <ChatWidget />
             {/* <PerformanceMonitor /> */}

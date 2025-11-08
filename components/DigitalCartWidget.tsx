@@ -1,9 +1,18 @@
 'use client';
 
-import React, { Suspense, type ReactNode } from 'react';
+import React, { Suspense, type ReactNode, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDigitalCart } from '@/hooks/useDigitalCart';
+import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 // Error boundary for cart widget content
 class CartWidgetErrorBoundary extends React.Component<
@@ -41,8 +50,21 @@ function CartWidgetContent() {
     adjustTeamSize
   } = useDigitalCart();
 
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
   // Don't render if no items
   if (items.length === 0) return null;
+
+  // Handle checkout with loading state
+  const handleCheckout = async () => {
+    setIsCheckingOut(true);
+    try {
+      await proceedToCheckout();
+    } finally {
+      // Reset loading state after navigation or error
+      setTimeout(() => setIsCheckingOut(false), 1000);
+    }
+  };
 
   return (
     <>
@@ -100,7 +122,7 @@ function CartWidgetContent() {
                   <button
                     type="button"
                     onClick={toggleCart}
-                    className="p-1 rounded-md hover:bg-gray-100"
+                    className="p-3 rounded-md hover:bg-gray-100"
                     aria-label="Close cart"
                     title="Close cart"
                   >
@@ -150,9 +172,9 @@ function CartWidgetContent() {
                           {item.techStack.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
                               {item.techStack.slice(0, 3).map((tech) => (
-                                <span key={tech} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                <Badge key={tech} variant="info" className="text-xs">
                                   {tech}
-                                </span>
+                                </Badge>
                               ))}
                             </div>
                           )}
@@ -165,19 +187,23 @@ function CartWidgetContent() {
                           <label htmlFor={`license-${item.id}`} className="text-sm font-medium text-gray-700">
                             License:
                           </label>
-                          <select
-                            id={`license-${item.id}`}
+                          <Select
                             value={item.licenseType}
-                            onChange={(e) => changeLicense(item.id, e.target.value as 'Personal' | 'Commercial' | 'Extended' | 'Enterprise')}
-                            className="text-sm border border-gray-300 rounded px-2 py-1"
-                            aria-label={`Select license type for ${item.title}`}
-                            title={`Select license type for ${item.title}`}
+                            onValueChange={(value) => changeLicense(item.id, value as 'Personal' | 'Commercial' | 'Extended' | 'Enterprise')}
                           >
-                            <option value="Personal">Personal</option>
-                            <option value="Commercial">Commercial</option>
-                            <option value="Extended">Extended</option>
-                            <option value="Enterprise">Enterprise</option>
-                          </select>
+                            <SelectTrigger
+                              className="w-[140px] h-8 text-sm"
+                              aria-label={`Select license type for ${item.title}`}
+                            >
+                              <SelectValue placeholder="Select license" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Personal">Personal</SelectItem>
+                              <SelectItem value="Commercial">Commercial</SelectItem>
+                              <SelectItem value="Extended">Extended</SelectItem>
+                              <SelectItem value="Enterprise">Enterprise</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
 
                         <div className="flex items-center justify-between">
@@ -186,18 +212,18 @@ function CartWidgetContent() {
                             <button
                               type="button"
                               onClick={() => adjustTeamSize(item.id, Math.max(1, item.quantity - 1))}
-                              className="w-6 h-6 bg-gray-200 rounded text-sm hover:bg-gray-300"
+                              className="w-11 h-11 bg-gray-200 rounded text-sm hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                               aria-label={`Decrease seats for ${item.title}`}
                               title="Decrease seats"
                               disabled={item.quantity <= 1}
                             >
                               -
                             </button>
-                            <span className="w-8 text-center text-sm" aria-live="polite">{item.quantity}</span>
+                            <span className="w-12 text-center text-sm font-medium" aria-live="polite">{item.quantity}</span>
                             <button
                               type="button"
                               onClick={() => adjustTeamSize(item.id, item.quantity + 1)}
-                              className="w-6 h-6 bg-gray-200 rounded text-sm hover:bg-gray-300"
+                              className="w-11 h-11 bg-gray-200 rounded text-sm hover:bg-gray-300 flex items-center justify-center"
                               aria-label={`Increase seats for ${item.title}`}
                               title="Increase seats"
                             >
@@ -281,12 +307,20 @@ function CartWidgetContent() {
                 {/* Checkout Button */}
                 <button
                   type="button"
-                  onClick={proceedToCheckout}
-                  className="w-full bg-black text-white py-3 px-4 rounded-md font-medium hover:bg-gray-800 transition-colors"
+                  onClick={handleCheckout}
+                  disabled={isCheckingOut}
+                  className="w-full bg-black text-white py-3 px-4 rounded-md font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   aria-label="Proceed to checkout"
                   title="Proceed to checkout with instant access"
                 >
-                  Proceed to Checkout • Instant Access
+                  {isCheckingOut ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    'Proceed to Checkout • Instant Access'
+                  )}
                 </button>
                 
                 <p className="text-xs text-gray-600 text-center mt-2">

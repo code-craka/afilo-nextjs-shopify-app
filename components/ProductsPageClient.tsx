@@ -5,6 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import ProductGrid from '@/components/ProductGrid';
 import { useDigitalCart } from '@/hooks/useDigitalCart';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Product } from '@/types/product';
 
 interface ProductsPageClientProps {
@@ -25,6 +33,7 @@ export default function ProductsPageClient({
   productsPerPage,
 }: ProductsPageClientProps) {
   const { addProductToCart } = useDigitalCart();
+  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -40,8 +49,6 @@ export default function ProductsPageClient({
 
   // Handle add to cart
   const handleAddToCart = async (product: Product, variantId: string) => {
-    console.log('Adding to digital cart:', { product: product.title, variantId });
-
     const result = await addProductToCart(product, {
       variantId,
       licenseType: 'Personal', // Default license type
@@ -49,9 +56,17 @@ export default function ProductsPageClient({
     });
 
     if (result.success) {
-      console.log('✅ Product added to digital cart successfully!');
+      toast({
+        variant: 'success',
+        title: 'Added to cart!',
+        description: `${product.title} has been added to your cart.`,
+      });
     } else {
-      console.error('❌ Failed to add to cart:', result.error);
+      toast({
+        variant: 'error',
+        title: 'Failed to add to cart',
+        description: result.error || 'An unexpected error occurred. Please try again.',
+      });
     }
   };
 
@@ -175,17 +190,23 @@ export default function ProductsPageClient({
 
               {/* Premium Sort Controls */}
               <div className="flex items-center gap-3">
-                <select
+                <Select
                   value={sortBy}
-                  onChange={(e) => updateFilters(undefined, e.target.value as typeof sortBy)}
-                  aria-label="Sort products by"
-                  className="block pl-4 pr-10 py-4 backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 transition-all appearance-none cursor-pointer"
+                  onValueChange={(value) => updateFilters(undefined, value as typeof sortBy)}
                 >
-                  <option value="updatedAt" className="bg-gray-900">Latest</option>
-                  <option value="title" className="bg-gray-900">Name</option>
-                  <option value="price" className="bg-gray-900">Price</option>
-                  <option value="createdAt" className="bg-gray-900">Newest</option>
-                </select>
+                  <SelectTrigger
+                    className="pl-4 pr-10 py-6 backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400/50 transition-all min-w-[140px]"
+                    aria-label="Sort products by"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="updatedAt">Latest</SelectItem>
+                    <SelectItem value="title">Name</SelectItem>
+                    <SelectItem value="price">Price</SelectItem>
+                    <SelectItem value="createdAt">Newest</SelectItem>
+                  </SelectContent>
+                </Select>
 
                 <motion.button
                   onClick={() => updateFilters(undefined, undefined, sortOrder === 'desc' ? 'asc' : 'desc')}
