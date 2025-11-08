@@ -826,3 +826,103 @@ model ach_dispute_inquiries {
   @@index([authorization_id], map: "idx_ach_dispute_auth")
   @@index([inquiry_status], map: "idx_ach_dispute_status")
 }
+
+/// Cookie Consent Management System - CCPA/PIPEDA/UK GDPR Compliant
+/// Main consent records with 12-month expiration and cross-device sync
+model cookie_consent_records {
+  id                   String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+
+  // User Identification
+  clerk_user_id        String?                   @db.VarChar(255) // NULL for anonymous users
+  session_id           String                    @db.VarChar(255) // Browser fingerprint for anonymous tracking
+
+  // Consent Preferences (Granular Categories)
+  essential_cookies    Boolean                   @default(true) // Always true (required for platform functionality)
+  analytics_cookies    Boolean                   @default(false) // Google Analytics, Vercel Analytics
+  marketing_cookies    Boolean                   @default(false) // Advertising pixels, remarketing
+  preferences_cookies  Boolean                   @default(false) // UI preferences, theme, language
+
+  // Consent Metadata
+  consent_method       String                    @db.VarChar(50) // 'explicit_accept', 'explicit_reject', 'settings_update'
+  consent_timestamp    DateTime                  @default(now()) @db.Timestamptz(6)
+  consent_version      String                    @default("1.0") @db.VarChar(50) // Policy version at time of consent
+  consent_source       String                    @default("web") @db.VarChar(20) // 'web', 'mobile_app'
+
+  // Device/Browser Context (Audit Trail)
+  ip_address           String?                   // User IP address for geographic compliance
+  user_agent           String? // Browser information
+  browser_language     String?                   @db.VarChar(10) // Accept-Language header
+  country_code         String?                   @db.VarChar(2) // ISO 3166-1 alpha-2 country code
+  region_code          String?                   @db.VarChar(10) // State/province code
+
+  // Expiration Management
+  expires_at           DateTime                  @db.Timestamptz(6) // 12 months from consent_timestamp
+  is_active            Boolean                   @default(true)
+  revoked_at           DateTime?                 @db.Timestamptz(6) // When user explicitly revoked consent
+
+  // Audit Timestamps
+  created_at           DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime                  @default(now()) @db.Timestamptz(6)
+
+  // Metadata (extensible JSON field)
+  metadata             Json?
+
+  // Relations
+  audit_logs           cookie_consent_audit_log[]
+
+  @@index([clerk_user_id], map: "idx_consent_clerk_user")
+  @@index([session_id], map: "idx_consent_session")
+  @@index([is_active, expires_at], map: "idx_consent_active_expires")
+  @@index([consent_timestamp(sort: Desc)], map: "idx_consent_timestamp")
+  @@index([country_code], map: "idx_consent_country")
+  @@index([consent_method], map: "idx_consent_method")
+  @@index([consent_version], map: "idx_consent_version")
+}
+
+/// Cookie Consent Audit Log - Compliance audit trail for all consent changes
+/// Required for legal compliance and dispute resolution
+model cookie_consent_audit_log {
+  id                 String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  consent_record_id  String                  @db.Uuid
+
+  // Audit Event Details
+  event_type         String                  @db.VarChar(50) // 'consent_given', 'consent_updated', 'consent_revoked', 'consent_expired'
+  previous_state     Json? // Before state for 'updated' events
+  new_state          Json // After state
+
+  // Change Context
+  changed_by         String                  @default("user") @db.VarChar(50) // 'user', 'system_expiration', 'admin'
+  change_reason      String? // Optional description of change
+  ip_address         String? // IP address when change occurred
+  user_agent         String? // Browser when change occurred
+
+  // Timestamp
+  created_at         DateTime                @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  consent_record     cookie_consent_records  @relation(fields: [consent_record_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([consent_record_id], map: "idx_audit_consent_record")
+  @@index([event_type], map: "idx_audit_event_type")
+  @@index([created_at(sort: Desc)], map: "idx_audit_created")
+  @@index([changed_by], map: "idx_audit_changed_by")
+}
+
+/// Cookie Policy Versions - Version control for cookie policies
+/// Tracks changes and reconsent requirements
+model cookie_policy_versions {
+  id                 Int       @id @default(autoincrement())
+  version            String    @unique @db.VarChar(50) // '1.0', '1.1', '2.0'
+  effective_date     DateTime  @db.Date
+  policy_content     String // Full HTML content of policy
+  policy_summary     String? // Brief summary of key changes
+  changelog          String? // Detailed changes from previous version
+  is_current         Boolean   @default(false) // Only one version can be current
+  requires_reconsent Boolean   @default(false) // Whether existing users need to re-consent
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  created_by         String?   @db.VarChar(255) // Admin user who created this version
+
+  @@index([version], map: "idx_policy_version")
+  @@index([is_current], map: "idx_policy_current")
+  @@index([effective_date(sort: Desc)], map: "idx_policy_effective")
+}

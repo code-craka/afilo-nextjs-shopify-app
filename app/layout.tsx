@@ -9,6 +9,8 @@ import PerformanceMonitor from "@/components/PerformanceMonitor";
 import { Toaster } from "@/components/ui/toaster";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import CookieConsentBanner from "@/components/cookies/CookieConsentBanner";
+import { ConsentAwareAnalytics } from "@/components/analytics/ConsentAwareAnalytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -135,54 +137,10 @@ export default function RootLayout({
             <Toaster />
             <DigitalCartWidget />
             <ChatWidget />
+            <CookieConsentBanner />
+            <ConsentAwareAnalytics />
             {/* <PerformanceMonitor /> */}
           </ThemeProvider>
-          {GA_MEASUREMENT_ID && (
-            <>
-              <Script
-                src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-                strategy="lazyOnload"
-              />
-              <Script id="ga-init" strategy="lazyOnload">
-                {`
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${GA_MEASUREMENT_ID}', {
-                    page_path: window.location.pathname,
-                    send_page_view: true,
-                    // Enhanced tracking for enterprise customers
-                    custom_map: {
-                      'dimension1': 'user_type',
-                      'dimension2': 'subscription_tier',
-                      'dimension3': 'company_size'
-                    },
-                    // Privacy settings
-                    anonymize_ip: true,
-                    allow_google_signals: true,
-                    allow_ad_personalization_signals: false
-                  });
-
-                  // Track initial page load with enhanced context
-                  gtag('event', 'page_view', {
-                    page_title: document.title,
-                    page_location: window.location.href,
-                    content_group1: 'Enterprise Platform'
-                  });
-                `}
-              </Script>
-            </>
-          )}
-
-          {/* Cloudflare Web Analytics - Production Only */}
-          {process.env.NODE_ENV === 'production' && (
-            <Script
-              defer
-              src='https://static.cloudflareinsights.com/beacon.min.js'
-              data-cf-beacon='{"token": "5871c7284ba4474ca46670b50b73502c"}'
-              strategy="lazyOnload"
-            />
-          )}
         </body>
       </html>
     </ClerkProvider>

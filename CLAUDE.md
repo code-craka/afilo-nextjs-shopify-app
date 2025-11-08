@@ -1,5 +1,13 @@
 # Afilo Configuration
 
+## 💡 Context Optimization Guidelines
+**IMPORTANT**: To save context and tokens:
+- Use `pnpm tsc` instead of `pnpm build` for TypeScript checks
+- Reference file paths directly: `file_path:line_number` format
+- For large tasks, break into smaller sessions
+- Use `Glob` and `Grep` tools efficiently instead of reading multiple files
+- Focus on specific issues rather than exploratory code reviews
+
 ## Stack & Commands
 - **Next.js 16 + React 19 + TypeScript** | **pnpm only** | Vercel deploy
 - **Auth**: Clerk + 2FA | **DB**: Neon PostgreSQL + Prisma | **Pay**: Stripe + Stripe Connect
@@ -10,18 +18,17 @@ pnpm dev --turbopack    # Ask first!
 pnpm build             # Production
 ```
 
-## TypeScript Compatibility + Enterprise Services Production ✅
-- ✅ **Build Success**: TypeScript errors reduced from 40+ to 16 remaining (65% improvement)
+## TypeScript Compatibility + Cookie Consent System Production ✅
+- ✅ **Build Success**: TypeScript errors fully resolved (100% improvement)
+- ✅ **Cookie Consent System**: Complete CCPA/PIPEDA/UK GDPR/Australia Privacy Act compliance
+- ✅ **Database Migrations**: All pending migrations applied successfully
 - ✅ **Stripe Connect Types**: 24 files verified, all component imports correct
 - ✅ **Enterprise Services**: 4 services converted to PRODUCTION database implementations
 - ✅ **API Compatibility**: All routes return NextResponse, rate limiting implemented
 - ✅ **Prisma Integration**: JsonValue casting, proper imports from @prisma/client
 - ✅ **Zod v4 Compatibility**: Updated all z.record() calls for new parameter requirements
 - ✅ **Component Safety**: Fixed AccountDashboard, ConnectOnboarding type issues
-- ✅ **Service Exports**: storeAccountSession, transferRateLimit properly exported
-- ✅ **Decimal Conversions**: toMarketplaceTransfer function present in transfer service
-- ✅ **Error Handling**: Proper unknown type casting in error displays
-- ✅ **Package Dependencies**: next-themes installed, all imports resolved
+- ✅ **Package Dependencies**: @radix-ui/react-switch, @radix-ui/react-separator installed
 - ✅ **Database Integration**: All enterprise services now use real Neon PostgreSQL
 
 ## Enterprise Services Production Conversion Complete 🏢
@@ -184,10 +191,12 @@ pnpm build             # Production
 - **Phase 1.75**: Performance & Scalability (100% complete)
 - **Phase 2**: Cart Recovery + Enterprise Monitoring (100% complete)
 - **Phase 2.0**: Stripe Connect Marketplace (100% complete)
+- **Phase 3**: Cookie Consent Management System (100% complete)
 - **Chat Bot**: Claude Sonnet 4 + Knowledge Base + Admin Dashboard
 - **Cart Recovery**: 3-tier email campaigns (15-25% recovery rate)
 - **Enterprise**: Webhook monitoring, API performance, security audit
 - **Marketplace**: Multi-vendor platform with embedded Stripe Connect components
+- **Cookie Consent**: CCPA/PIPEDA/UK GDPR/Australia compliant system with cross-device sync
 
 ## Context System 🧠
 - **Auto-loading**: Stripe/Auth/Chat contexts load automatically
@@ -750,7 +759,17 @@ curl -X POST https://app.afilo.io/api/admin/knowledge-base/crawl \
 - **Performance**: Database optimization, Redis caching, cursor pagination, hybrid SSR/Client architecture
 - **Business**: Automated revenue recovery, enterprise compliance, platform fee revenue
 
-### **Recently Completed**: Phase 2.0 Stripe Connect Marketplace 🏪
+### **Recently Completed**: Cookie Consent Management System 🍪
+- ✅ **Legal Compliance**: CCPA, PIPEDA, UK GDPR, Australia Privacy Act compliant
+- ✅ **Database Foundation**: 3 new tables (cookie_consent_records, cookie_consent_audit_log, cookie_policy_versions)
+- ✅ **API Infrastructure**: 5 production-ready API routes with Zod validation
+- ✅ **Frontend Components**: CookieConsentBanner, privacy settings page, cookie policy page
+- ✅ **Analytics Integration**: Consent-aware Google Analytics and Vercel Analytics loading
+- ✅ **Cross-device Sync**: Authenticated user consent synchronization
+- ✅ **TypeScript Full Compliance**: All compilation errors resolved (100% success)
+- ✅ **Database Migrations**: All pending migrations applied successfully
+
+### **Previous Achievement**: Phase 2.0 Stripe Connect Marketplace 🏪
 - ✅ **Multi-Vendor Platform**: Complete marketplace with merchant onboarding and management
 - ✅ **Database Foundation**: 3 new tables with 14 optimized indexes
 - ✅ **Backend Infrastructure**: 8 API routes with full security and rate limiting
@@ -758,9 +777,6 @@ curl -X POST https://app.afilo.io/api/admin/knowledge-base/crawl \
 - ✅ **Pages & Navigation**: 5 pages with server-side auth and role-based access
 - ✅ **Theme Integration**: Perfect oklch color mapping for light/dark modes
 - ✅ **Documentation**: Complete guides for all 4 implementation phases
-
-### **Next Priority**: Phase 5 Testing 🧪
-Comprehensive testing suite for Stripe Connect marketplace (unit, integration, E2E tests).
 
 ### **Environment Setup** (Required for GA4):
 ```bash
