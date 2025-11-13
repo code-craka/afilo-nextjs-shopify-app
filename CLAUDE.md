@@ -9,13 +9,17 @@
 - Focus on specific issues rather than exploratory code reviews
 
 ## Stack & Commands
-- **Next.js 16 + React 19 + TypeScript** | **pnpm only** | Vercel deploy
+- **Next.js 16 + React 19 + TypeScript** | **pnpm only** | Hetzner + Vercel deploy
 - **Auth**: Clerk + 2FA | **DB**: Neon PostgreSQL + Prisma | **Pay**: Stripe + Stripe Connect
 - **Dependencies**: @stripe/connect-js (3.3.31) for embedded marketplace components
+- **Infrastructure**: Hetzner Cloud + Ubuntu 22.04/24.04 + PM2 + Nginx + SSL
 
 ```bash
 pnpm dev --turbopack    # Ask first!
 pnpm build             # Production
+# Production deployment (see DEPLOYMENT_QUICKSTART.md)
+./scripts/deploy.sh     # Full deployment with health checks
+./scripts/quick-deploy.sh  # Fast deployment for minor updates
 ```
 
 ## TypeScript Compatibility + Cookie Consent System Production ✅
@@ -816,3 +820,127 @@ NEXT_PUBLIC_GA_TRACKING_ID="G-XXXXXXXXXX"    # Legacy support
 - 🔐 **Role-Based Access**: Merchant and admin roles with granular permissions
 - 📊 **Real-Time Analytics**: Account status, transfer volume, marketplace metrics
 - 🎨 **Design System**: Perfect TailwindCSS v4 oklch theme integration (light/dark)
+
+---
+
+## 🚀 **HETZNER CLOUD DEPLOYMENT** (Nov 2025)
+
+### ✅ **COMPLETE PRODUCTION DEPLOYMENT PACKAGE**
+
+**What's Included:**
+- 📚 **Comprehensive Documentation**: Step-by-step deployment guides for Hetzner Cloud
+- 🤖 **Automated Scripts**: 8 production-ready deployment and management scripts
+- 🔒 **Enterprise Security**: SSL, rate limiting, security headers, and monitoring
+- 📊 **Production Monitoring**: Real-time system and application health monitoring
+- 🔄 **Zero-Downtime Deployment**: Blue-green deployment with automatic rollback
+- 💾 **Automated Backups**: Database and application file backup systems
+
+### **Deployment Files Created:**
+- `docs/HETZNER_DEPLOYMENT.md` - Comprehensive 9-phase deployment guide
+- `DEPLOYMENT_QUICKSTART.md` - 30-minute quick deployment walkthrough
+- `.env.production.template` - Complete production environment configuration
+- `app/api/health/route.ts` - Production health check endpoint with system metrics
+
+### **Automated Scripts (8 Total):**
+- `scripts/server-setup.sh` - Initial Ubuntu server configuration and security
+- `scripts/app-setup.sh` - Application installation and PM2 configuration
+- `scripts/setup-env.sh` - Interactive environment variable configuration
+- `scripts/db-setup.sh` - Database migrations, indexes, and health checks
+- `scripts/deploy.sh` - Full production deployment with health checks and rollback
+- `scripts/quick-deploy.sh` - Fast deployment for minor updates
+- `scripts/setup-ssl.sh` - Let's Encrypt SSL certificates with A+ security
+- `scripts/setup-monitoring.sh` - Comprehensive monitoring and logging system
+
+### **Production Infrastructure:**
+- **Server**: Hetzner Cloud CPX31+ (4 vCPU, 8GB RAM, 160GB SSD)
+- **OS**: Ubuntu 22.04/24.04 LTS with security hardening
+- **Runtime**: Node.js 20 + pnpm + PM2 (cluster mode)
+- **Web Server**: Nginx with HTTP/2, gzip compression, rate limiting
+- **SSL**: Let's Encrypt certificates with A+ grade security headers
+- **Monitoring**: System resources, application health, performance metrics
+- **Backups**: Automated daily backups with 7-day retention
+
+### **Security Features:**
+- 🔐 **SSL A+ Grade**: Let's Encrypt certificates with HSTS and security headers
+- 🛡️ **Rate Limiting**: API endpoint protection (5-30 req/min configurable)
+- 🔥 **Firewall**: UFW configuration with fail2ban for brute force protection
+- 🔒 **Security Headers**: CSP, HSTS, X-Frame-Options, and more
+- 🚫 **Access Control**: Sensitive file blocking and directory protection
+
+### **Monitoring & Alerting:**
+- 📊 **System Monitoring**: CPU, memory, disk usage every 5 minutes
+- ⚡ **Performance Monitoring**: API response times, database performance
+- 🏥 **Health Checks**: Application status, database connectivity, SSL expiry
+- 🧹 **Automated Cleanup**: Log rotation, old backup removal, cache cleanup
+- 📈 **Status Dashboard**: Real-time system overview with color-coded status
+- 🚨 **Alert System**: Configurable thresholds for critical resource usage
+
+### **Quick Deployment (30 Minutes):**
+```bash
+# 1. Server setup (5 min)
+ssh root@YOUR_SERVER_IP
+curl -fsSL https://raw.githubusercontent.com/your-repo/afilo/main/scripts/server-setup.sh | bash
+
+# 2. Application setup (5 min)
+su - deploy
+git clone https://github.com/your-repo/afilo.git /var/www/afilo
+cd /var/www/afilo && ./scripts/app-setup.sh
+
+# 3. Environment configuration (5 min)
+./scripts/setup-env.sh
+
+# 4. Database setup (3 min)
+./scripts/db-setup.sh
+
+# 5. SSL setup (5 min)
+./scripts/setup-ssl.sh
+
+# 6. Monitoring setup (2 min)
+./scripts/setup-monitoring.sh
+
+# 7. Deploy! (5 min)
+./scripts/deploy.sh
+```
+
+### **Management Commands:**
+```bash
+# Deployment
+./scripts/deploy.sh              # Full deployment with health checks
+./scripts/quick-deploy.sh        # Fast deployment for minor changes
+./scripts/deploy.sh --rollback   # Emergency rollback to previous version
+
+# Monitoring
+./status-dashboard.sh            # Real-time system status overview
+./check-db-health.sh            # Database connectivity and performance
+pm2 monit                       # Live application monitoring
+
+# Maintenance
+./backup-db.sh                  # Manual database backup
+./cleanup-logs.sh               # Clean old logs and caches
+pm2 logs afilo-app             # View application logs
+```
+
+### **Production Capabilities:**
+- 🌐 **HTTPS Domain**: Automatic SSL certificate management with A+ grade security
+- 📊 **Real-Time Monitoring**: System resources, application health, performance metrics
+- 💾 **Automated Backups**: Daily database and file backups with retention policies
+- 🔄 **Zero-Downtime Deployment**: Health checks and automatic rollback on failure
+- ⚡ **High Performance**: PM2 cluster mode, Nginx caching, optimized database queries
+- 🛡️ **Enterprise Security**: Rate limiting, security headers, firewall protection
+- 📈 **Scalability**: Cursor-based pagination, Redis caching, performance optimization
+
+### **Expected Performance:**
+- **Response Time**: <200ms for cached content, <500ms for dynamic content
+- **Uptime**: 99.9% with automated health checks and restart capabilities
+- **Security**: A+ SSL grade, comprehensive rate limiting, security headers
+- **Monitoring**: 5-minute system checks, real-time alerting, automated cleanup
+
+### **Documentation:**
+- 📖 **Complete Guide**: `docs/HETZNER_DEPLOYMENT.md` (9-phase deployment)
+- ⚡ **Quick Start**: `DEPLOYMENT_QUICKSTART.md` (30-minute walkthrough)
+- 🔧 **Environment**: `.env.production.template` (all required variables)
+- 🛠️ **Scripts**: Fully automated deployment and management tools
+
+**Status**: 🎯 **PRODUCTION-READY** - Complete enterprise deployment package with monitoring, security, and automation
+
+---
