@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSignIn } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, ArrowLeft, LoaderCircle } from 'lucide-react';
+import { Shield, ArrowLeft, LoaderCircle, Mail, Phone, Smartphone } from 'lucide-react';
 
 interface TwoFactorVerificationProps {
   onBack: () => void;
@@ -16,9 +16,71 @@ export default function TwoFactorVerification({ onBack }: TwoFactorVerificationP
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [useBackupCode, setUseBackupCode] = useState(false);
+  const [selectedFactor, setSelectedFactor] = useState<string | null>(null);
+  const [supportedFactors, setSupportedFactors] = useState<any[]>([]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams?.get('redirect_url') || searchParams?.get('redirect') || '/dashboard';
+
+  // Get supported second factors when component mounts
+  useEffect(() => {
+    if (isLoaded && signIn && signIn.supportedSecondFactors) {
+      setSupportedFactors(signIn.supportedSecondFactors);
+      // Auto-select the first available factor
+      if (signIn.supportedSecondFactors.length > 0) {
+        setSelectedFactor(signIn.supportedSecondFactors[0].strategy);
+      }
+    }
+  }, [isLoaded, signIn]);
+
+  // Helper function to get factor description
+  const getFactorDescription = (strategy: string | null) => {
+    switch (strategy) {
+      case 'email_code':
+        return 'Enter the 6-digit code sent to your email';
+      case 'phone_code':
+        return 'Enter the 6-digit code sent to your phone';
+      case 'email_link':
+        return 'Check your email and click the verification link, or enter the code';
+      case 'totp':
+        return 'Enter the 6-digit code from your authenticator app';
+      default:
+        return 'Enter your verification code';
+    }
+  };
+
+  // Helper function to get factor icon
+  const getFactorIcon = (strategy: string) => {
+    switch (strategy) {
+      case 'email_code':
+      case 'email_link':
+        return <Mail className="h-5 w-5" />;
+      case 'phone_code':
+        return <Phone className="h-5 w-5" />;
+      case 'totp':
+        return <Smartphone className="h-5 w-5" />;
+      default:
+        return <Shield className="h-5 w-5" />;
+    }
+  };
+
+  // Handle sending verification code for email/phone
+  const handleSendCode = async (strategy: string) => {
+    if (!signIn) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await signIn.prepareSecondFactor({ strategy: strategy as any });
+      setSelectedFactor(strategy);
+    } catch (err: any) {
+      console.error('Failed to send verification code:', err);
+      setError(err.errors?.[0]?.message || 'Failed to send verification code');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleVerification = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,9 +98,11 @@ export default function TwoFactorVerification({ onBack }: TwoFactorVerificationP
     setError('');
 
     try {
-      // Attempt to complete the sign-in with 2FA
+      let strategy = useBackupCode ? 'backup_code' : (selectedFactor || 'totp');
+
+      // Attempt to complete the sign-in with the selected factor
       const result = await signIn.attemptSecondFactor({
-        strategy: 'totp',
+        strategy: strategy as any,
         code: verificationCode,
       });
 
@@ -54,7 +118,7 @@ export default function TwoFactorVerification({ onBack }: TwoFactorVerificationP
 
       // Handle specific error cases
       if (errorMessage.includes('invalid')) {
-        setError('Invalid verification code. Please check your authenticator app and try again.');
+        setError('Invalid verification code. Please check and try again.');
       } else if (errorMessage.includes('expired')) {
         setError('Verification code has expired. Please try with a new code.');
       } else {
@@ -122,7 +186,7 @@ export default function TwoFactorVerification({ onBack }: TwoFactorVerificationP
             <p className="text-gray-600 dark:text-gray-400 mt-2">
               {useBackupCode
                 ? 'Enter one of your backup codes'
-                : 'Enter the 6-digit code from your authenticator app'
+                : getFactorDescription(selectedFactor)
               }
             </p>
           </div>
@@ -130,6 +194,57 @@ export default function TwoFactorVerification({ onBack }: TwoFactorVerificationP
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 p-4 rounded-lg text-sm mb-6 border border-red-200 dark:border-red-800">
               {error}
+            </div>
+          )}
+
+          {/* Factor Selection */}
+          {!useBackupCode && supportedFactors.length > 1 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Choose verification method:
+              </label>
+              <div className="grid gap-2">
+                {supportedFactors.map((factor) => (
+                  <button
+                    key={factor.strategy}
+                    type="button"
+                    onClick={() => {
+                      if (['email_code', 'phone_code', 'email_link'].includes(factor.strategy)) {
+                        handleSendCode(factor.strategy);
+                      } else {
+                        setSelectedFactor(factor.strategy);
+                      }
+                    }}
+                    disabled={loading}
+                    className={`w-full flex items-center gap-3 p-3 border rounded-lg text-left transition ${
+                      selectedFactor === factor.strategy
+                        ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-700 dark:text-blue-300'
+                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'
+                    } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {getFactorIcon(factor.strategy)}
+                    <div className="flex-1">
+                      <div className="font-medium">
+                        {factor.strategy === 'email_code' && 'Email verification code'}
+                        {factor.strategy === 'phone_code' && 'SMS verification code'}
+                        {factor.strategy === 'email_link' && 'Email verification link'}
+                        {factor.strategy === 'totp' && 'Authenticator app'}
+                        {factor.strategy === 'backup_code' && 'Backup code'}
+                      </div>
+                      <div className="text-sm opacity-75">
+                        {factor.strategy === 'email_code' && 'Get a code via email'}
+                        {factor.strategy === 'phone_code' && 'Get a code via SMS'}
+                        {factor.strategy === 'email_link' && 'Click link in email or enter code'}
+                        {factor.strategy === 'totp' && 'Use your authenticator app'}
+                        {factor.strategy === 'backup_code' && 'Use a saved backup code'}
+                      </div>
+                    </div>
+                    {selectedFactor === factor.strategy && (
+                      <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
