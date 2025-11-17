@@ -2,11 +2,16 @@
 /**
  * Cache Manager for Shopify API responses
  *
- * Implements intelligent caching with proper key generation,
- * TTL management, and memory cleanup.
+ * Implements 2-layer intelligent caching:
+ * - Layer 1: In-memory cache (fastest, 60s TTL)
+ * - Layer 2: Redis cache (persistent, 5-min TTL)
+ *
+ * Part of Performance Optimization - Option A
+ * Expected Impact: Products page 2.7s → 0.3s (90% faster)
  */
 
 import { log } from './logger';
+import { LocalRedisCache } from './cache/local-redis';
 
 export interface CacheEntry<T = any> {
   data: T;
@@ -75,33 +80,122 @@ export class CacheManager {
 
   /**
    * Get cached data if available and not expired
+   * Synchronous L1 (memory) check with background L2 (Redis) promotion
    */
   get<T = any>(key: string, defaultTtl: number = 60000): T | null {
+    // Layer 1: Check in-memory cache first (fastest)
     const entry = this.cache.get(key);
 
-    if (!entry) {
-      this.stats.misses++;
-      return null;
-    }
+    if (entry) {
+      // Check if entry has expired
+      if (Date.now() - entry.timestamp <= entry.ttl) {
+        // Update hit statistics
+        entry.hits++;
+        this.stats.hits++;
+        log.debug('Cache hit (L1 memory)', { key });
+        return entry.data as T;
+      }
 
-    // Check if entry has expired
-    if (Date.now() - entry.timestamp > entry.ttl) {
+      // Expired in memory
       this.cache.delete(key);
-      this.stats.misses++;
-      return null;
     }
 
-    // Update hit statistics
-    entry.hits++;
-    this.stats.hits++;
+    // Layer 2: Check Redis cache (async, non-blocking)
+    // This runs in background and promotes to L1 for next request
+    LocalRedisCache.get<T>(key).then(redisData => {
+      if (redisData) {
+        log.debug('Cache hit (L2 Redis) - promoting to L1', { key });
+        // Promote to L1 cache for next request
+        this.setSync(key, redisData, defaultTtl);
+      }
+    }).catch(error => {
+      log.warn('Redis cache read error', { key, error });
+    });
 
-    return entry.data as T;
+    // Cache miss (returns null, but Redis might populate L1 for next request)
+    this.stats.misses++;
+    return null;
+  }
+
+  /**
+   * Async version for when you need to wait for Redis
+   * Uses 2-layer caching: Memory (L1) → Redis (L2)
+   */
+  async getAsync<T = any>(key: string, defaultTtl: number = 60000): Promise<T | null> {
+    // Layer 1: Check in-memory cache first (fastest)
+    const entry = this.cache.get(key);
+
+    if (entry) {
+      // Check if entry has expired
+      if (Date.now() - entry.timestamp <= entry.ttl) {
+        // Update hit statistics
+        entry.hits++;
+        this.stats.hits++;
+        log.debug('Cache hit (L1 memory)', { key });
+        return entry.data as T;
+      }
+
+      // Expired in memory
+      this.cache.delete(key);
+    }
+
+    // Layer 2: Check Redis cache (persistent)
+    try {
+      const redisData = await LocalRedisCache.get<T>(key);
+
+      if (redisData) {
+        log.debug('Cache hit (L2 Redis)', { key });
+
+        // Promote to L1 cache
+        this.setSync(key, redisData, defaultTtl);
+        this.stats.hits++;
+
+        return redisData;
+      }
+    } catch (error) {
+      log.warn('Redis cache read error, continuing without cache', { key, error });
+    }
+
+    // Cache miss on both layers
+    this.stats.misses++;
+    return null;
   }
 
   /**
    * Set data in cache with TTL
+   * Writes to both L1 (memory) and L2 (Redis)
    */
   set<T = any>(key: string, data: T, ttl: number = 60000): void {
+    // Layer 1: Set in memory
+    const entry: CacheEntry<T> = {
+      data,
+      timestamp: Date.now(),
+      ttl,
+      hits: 0
+    };
+
+    this.cache.set(key, entry);
+
+    // Enforce size limit
+    if (this.cache.size > this.maxEntries) {
+      this.evictLeastUsed();
+    }
+
+    // Layer 2: Async write to Redis (fire and forget)
+    const redisTtl = Math.max(ttl / 1000, 300); // At least 5 minutes in Redis
+    LocalRedisCache.set(key, data, redisTtl)
+      .then(() => {
+        log.debug('Cache set (L1+L2)', { key, memoryTtl: ttl, redisTtl });
+      })
+      .catch(error => {
+        log.warn('Redis cache write error, continuing with memory cache only', { key, error });
+      });
+  }
+
+  /**
+   * Internal sync version (for Redis promotion)
+   */
+  private setSync<T = any>(key: string, data: T, ttl: number = 60000): void {
     const entry: CacheEntry<T> = {
       data,
       timestamp: Date.now(),
