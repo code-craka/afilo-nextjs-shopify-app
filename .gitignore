@@ -50,3 +50,5 @@ AUTHENTICATION_SETUP_GUIDE.md
 .claude/context/client_secret_2_829539499949-2loj9uq445s2db3f0i706bh96lrs5qo8.apps.googleusercontent.com.json
 
 # Only keep pnpm-lock.yaml
+# clerk configuration (can include secrets)
+/.clerk/

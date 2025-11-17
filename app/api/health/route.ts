@@ -24,30 +24,30 @@ export async function GET(request: NextRequest) {
     const [
       userCount,
       productCount,
-      categoryCount,
-      orderCount
+      subscriptionCount,
+      cartItemCount
     ] = await Promise.all([
-      prisma.userProfile.count().catch(() => 0),
-      prisma.product.count().catch(() => 0),
-      prisma.category.count().catch(() => 0),
-      prisma.order.count().catch(() => 0)
+      prisma.user_profiles.count().catch(() => 0),
+      prisma.products.count().catch(() => 0),
+      prisma.subscriptions.count().catch(() => 0),
+      prisma.cart_items.count().catch(() => 0)
     ]);
 
     // Check recent activity (last 24 hours)
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const [
-      recentOrders,
+      recentSubscriptions,
       recentAuditLogs,
       recentApiCalls
     ] = await Promise.all([
-      prisma.order.count({
-        where: { createdAt: { gte: twentyFourHoursAgo } }
+      prisma.subscriptions.count({
+        where: { created_at: { gte: twentyFourHoursAgo } }
       }).catch(() => 0),
-      prisma.auditLog.count({
-        where: { timestamp: { gte: twentyFourHoursAgo } }
+      prisma.audit_logs.count({
+        where: { created_at: { gte: twentyFourHoursAgo } }
       }).catch(() => 0),
-      prisma.apiMonitoring.count({
-        where: { timestamp: { gte: twentyFourHoursAgo } }
+      prisma.api_monitoring.count({
+        where: { created_at: { gte: twentyFourHoursAgo } }
       }).catch(() => 0)
     ]);
 
@@ -95,12 +95,12 @@ export async function GET(request: NextRequest) {
         tables: {
           users: userCount,
           products: productCount,
-          categories: categoryCount,
-          orders: orderCount
+          subscriptions: subscriptionCount,
+          cartItems: cartItemCount
         }
       },
       activity: {
-        recentOrders,
+        recentSubscriptions,
         recentAuditLogs,
         recentApiCalls
       },
